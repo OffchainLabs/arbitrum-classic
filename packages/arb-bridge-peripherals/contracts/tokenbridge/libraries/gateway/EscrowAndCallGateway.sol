@@ -32,7 +32,7 @@ abstract contract EscrowAndCallGateway is IEscrowAndCallGateway, TokenGateway {
         address indexed _from,
         address indexed _to,
         uint256 _amount,
-        bytes callHookData
+        bytes _data
     );
 
     function inboundEscrowAndCall(

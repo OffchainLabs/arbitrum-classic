@@ -18,60 +18,74 @@
 
 pragma solidity ^0.6.11;
 
+// using a struct to workaround stack too deep issues
+struct CallHookData {
+    uint256 gas;
+    address refundAddrOnRevert;
+    bytes data;
+}
+
 /// @notice this library manages encoding and decoding of gateway communication
 library GatewayMessageHandler {
     // these are for communication from L1 to L2 gateway
 
-    function encodeToL2GatewayMsg(bytes memory gatewayData, bytes memory callHookExtraData)
+    function encodeToL2GatewayMsg(bytes memory gatewayData, bytes memory extraData)
         internal
         pure
         returns (bytes memory res)
     {
-        res = abi.encode(gatewayData, callHookExtraData);
+        res = abi.encode(gatewayData, extraData);
     }
 
     function parseFromL1GatewayMsg(bytes calldata _data)
         internal
         pure
-        returns (
-            bytes memory gatewayData,
-            uint256 callHookGas,
-            bytes memory callHookData
-        )
+        returns (bytes memory gatewayData, CallHookData memory callHookData)
     {
         // abi decode may revert, but the encoding is done by L1 gateway, so we trust it
-        bytes memory callHookExtraData;
-        (gatewayData, callHookExtraData) = abi.decode(_data, (bytes, bytes));
-        if (callHookExtraData.length != 0){
-            (callHookGas, callHookData) = abi.decode(callHookExtraData, (uint256, bytes));
+        bytes memory extraData;
+        (gatewayData, extraData) = abi.decode(_data, (bytes, bytes));
+        if (extraData.length != 0) {
+            callHookData = parseCallHookData(extraData);
         }
     }
 
     // these are for communication from L2 to L1 gateway
 
-    function encodeFromL2GatewayMsg(uint256 exitNum, bytes memory callHookExtraData)
+    function encodeFromL2GatewayMsg(uint256 exitNum, bytes memory extraData)
         internal
         pure
         returns (bytes memory res)
     {
-        res = abi.encode(exitNum, callHookExtraData);
+        res = abi.encode(exitNum, extraData);
     }
 
     function parseToL1GatewayMsg(bytes calldata _data)
         internal
         pure
-        returns (
-            uint256 exitNum,
-            uint256 callHookGas,
-            bytes memory callHookData
-        )
+        returns (uint256 exitNum, CallHookData memory callHookData)
     {
         // abi decode may revert, but the encoding is done by L1 gateway, so we trust it
-        bytes memory callHookExtraData;
-        (exitNum, callHookExtraData) = abi.decode(_data, (uint256, bytes));
-        if (callHookExtraData.length != 0){
-            (callHookGas, callHookData) = abi.decode(callHookExtraData, (uint256, bytes));
+        bytes memory extraData;
+        (exitNum, extraData) = abi.decode(_data, (uint256, bytes));
+        if (extraData.length != 0) {
+            callHookData = parseCallHookData(extraData);
         }
+    }
+
+    // TODO: alternatively we can expect user to supply a CallHookData struct
+    // n.t. (bytes) and struct{bytes} have different encoding
+    function parseCallHookData(bytes memory _data)
+        internal
+        pure
+        returns (CallHookData memory callHookData)
+    {
+        // abi decode may revert
+        (uint256 gas, address refundAddrOnRevert, bytes memory data) = abi.decode(
+            _data,
+            (uint256, address, bytes)
+        );
+        return CallHookData({ gas: gas, refundAddrOnRevert: refundAddrOnRevert, data: data });
     }
 
     // these are for communication from router to gateway

@@ -106,33 +106,26 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         bytes calldata _data
     ) public payable virtual override onlyCounterpartGateway {
         // this function is marked as virtual so superclasses can override it to add modifiers
-        (uint256 exitNum, uint256 callHookGas, bytes memory callHookData) = GatewayMessageHandler
+        (uint256 exitNum, CallHookData memory callHookData) = GatewayMessageHandler
             .parseToL1GatewayMsg(_data);
-        (_to, callHookData) = getExternalCall(exitNum, _to, callHookData);
+        (_to, callHookData.data) = getExternalCall(exitNum, _to, callHookData.data);
 
-        if (callHookData.length > 0) {
+        if (callHookData.gas != 0) {
             bool success;
             // we check for gasleft() here and forward all gas to the call hook
             // callHookGas would need to cover the inboundEscrowAndCall call + some overhead
-            require(gasleft() > callHookGas, "Insufficient gas for call hook");
+            require(gasleft() > callHookData.gas, "Insufficient gas for call hook");
             // if we do `try this.inboundEscrowAndCall{ gas: callHookGas }` instead
             // the transaction will not revert upon insufficient gas to forward
-            try
-                this.inboundEscrowAndCall(
-                    _token,
-                    _from,
-                    _to,
-                    _amount,
-                    callHookData
-                )
-            {
+            try this.inboundEscrowAndCall(_token, _from, _to, _amount, callHookData.data) {
                 success = true;
             } catch {
-                // if reverted, then credit _from's account
-                inboundEscrowTransfer(_token, _from, _amount);
+                // if reverted, then credit callHookRefundTo's account
+                // TODO: should we handle the case if refund to address(0)?
+                inboundEscrowTransfer(_token, callHookData.refundAddrOnRevert, _amount);
                 // success default value is false
             }
-            emit TransferAndCallTriggered(success, _from, _to, _amount, callHookData);
+            emit TransferAndCallTriggered(success, _from, _to, _amount, _data);
         } else {
             inboundEscrowTransfer(_token, _to, _amount);
         }

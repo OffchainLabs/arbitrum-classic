@@ -243,11 +243,8 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         uint256 _amount,
         bytes calldata _data
     ) external payable override onlyCounterpartGateway {
-        (
-            bytes memory gatewayData,
-            uint256 callHookGas,
-            bytes memory callHookData
-        ) = GatewayMessageHandler.parseFromL1GatewayMsg(_data);
+        (bytes memory gatewayData, CallHookData memory callHookData) = GatewayMessageHandler
+            .parseFromL1GatewayMsg(_data);
         address expectedAddress = calculateL2TokenAddress(_token);
 
         if (!expectedAddress.isContract()) {
@@ -290,29 +287,22 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
             }
         }
 
-        if (callHookData.length > 0) {
+        if (callHookData.gas != 0) {
             bool success;
             // we check for gasleft() here and forward all gas to the call hook
             // callHookGas would need to cover the inboundEscrowAndCall call + some overhead
-            require(gasleft() > callHookGas, "Insufficient gas for call hook");
+            require(gasleft() > callHookData.gas, "Insufficient gas for call hook");
             // if we do `try this.inboundEscrowAndCall{ gas: callHookGas }` instead
             // the transaction will not revert upon insufficient gas to forward
-            try
-                this.inboundEscrowAndCall(
-                    expectedAddress,
-                    _from,
-                    _to,
-                    _amount,
-                    callHookData
-                )
-            {
+            try this.inboundEscrowAndCall(expectedAddress, _from, _to, _amount, callHookData.data) {
                 success = true;
             } catch {
-                // if reverted, then credit _from's account
-                inboundEscrowTransfer(expectedAddress, _from, _amount);
+                // if reverted, then credit callHookRefundTo's account
+                // TODO: should we handle the case if refund to address(0)?
+                inboundEscrowTransfer(expectedAddress, callHookData.refundAddrOnRevert, _amount);
                 // success default value is false
             }
-            emit TransferAndCallTriggered(success, _from, _to, _amount, callHookData);
+            emit TransferAndCallTriggered(success, _from, _to, _amount, _data);
         } else {
             inboundEscrowTransfer(expectedAddress, _to, _amount);
         }
