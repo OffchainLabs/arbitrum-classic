@@ -2689,6 +2689,9 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
     bool go_over_gas,
     bool allow_slow_lookup,
     uint32_t yield_instruction_count) {
+    if (execution_cursor.isAborted()) {
+        return rocksdb::Status::Aborted();
+    }
     auto current_gas = execution_cursor.getOutput().arb_gas_used;
     auto total_gas_used = current_gas + max_gas;
     {
