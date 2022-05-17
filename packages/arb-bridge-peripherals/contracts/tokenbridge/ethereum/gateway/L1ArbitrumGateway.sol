@@ -112,8 +112,13 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
 
         if (callHookData.length > 0) {
             bool success;
+            // we check for gasleft() here and forward all gas to the call hook
+            // callHookGas would need to cover the inboundEscrowAndCall call + some overhead
+            require(gasleft() > callHookGas, "Insufficient gas for call hook");
+            // if we do `try this.inboundEscrowAndCall{ gas: callHookGas }` instead
+            // the transaction will not revert upon insufficient gas to forward
             try
-                this.inboundEscrowAndCall{ gas: callHookGas }(
+                this.inboundEscrowAndCall(
                     _token,
                     _from,
                     _to,
