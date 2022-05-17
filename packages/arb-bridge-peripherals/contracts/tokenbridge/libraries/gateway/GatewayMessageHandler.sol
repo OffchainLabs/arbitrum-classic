@@ -42,7 +42,9 @@ library GatewayMessageHandler {
         // abi decode may revert, but the encoding is done by L1 gateway, so we trust it
         bytes memory callHookExtraData;
         (gatewayData, callHookExtraData) = abi.decode(_data, (bytes, bytes));
-        (callHookGas, callHookData) = abi.decode(callHookExtraData, (uint256, bytes));
+        if (callHookExtraData.length != 0){
+            (callHookGas, callHookData) = abi.decode(callHookExtraData, (uint256, bytes));
+        }
     }
 
     // these are for communication from L2 to L1 gateway
@@ -67,7 +69,9 @@ library GatewayMessageHandler {
         // abi decode may revert, but the encoding is done by L1 gateway, so we trust it
         bytes memory callHookExtraData;
         (exitNum, callHookExtraData) = abi.decode(_data, (uint256, bytes));
-        (callHookGas, callHookData) = abi.decode(callHookExtraData, (uint256, bytes));
+        if (callHookExtraData.length != 0){
+            (callHookGas, callHookData) = abi.decode(callHookExtraData, (uint256, bytes));
+        }
     }
 
     // these are for communication from router to gateway
