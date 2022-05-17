@@ -348,17 +348,17 @@ jobs:
       - run:
           name: test arb-bridge-peripherals l1
           command: |
-            yarn test:l1
+            yarn hardhat compile && yarn test:l1
           working_directory: /home/user/project/packages/arb-bridge-peripherals
       - run:
           name: test arb-bridge-peripherals l2
           command: |
-            yarn test:l2
+            yarn hardhat compile && yarn test:l2
           working_directory: /home/user/project/packages/arb-bridge-peripherals
       - run:
           name: test arb-bridge-peripherals e2e
           command: |
-            yarn test:e2e
+            yarn hardhat compile && yarn test:e2e
           working_directory: /home/user/project/packages/arb-bridge-peripherals
       - store_test_results:
           path: *test-path

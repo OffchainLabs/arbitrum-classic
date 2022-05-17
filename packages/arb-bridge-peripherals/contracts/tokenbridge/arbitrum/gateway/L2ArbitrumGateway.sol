@@ -69,7 +69,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         // this has no other logic since the current upgrade doesn't require this logic
     }
 
-    function _initialize(address _l1Counterpart, address _router) internal virtual override {
+    function _initialize(address _l1Counterpart, address _router) internal override {
         TokenGateway._initialize(_l1Counterpart, _router);
         // L1 gateway must have a router
         require(_router != address(0), "BAD_ROUTER");
@@ -103,7 +103,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         bytes memory _data
     ) public view override returns (bytes memory outboundCalldata) {
         outboundCalldata = abi.encodeWithSelector(
-            TokenGateway.finalizeInboundTransfer.selector,
+            ITokenGateway.finalizeInboundTransfer.selector,
             _token,
             _from,
             _to,
