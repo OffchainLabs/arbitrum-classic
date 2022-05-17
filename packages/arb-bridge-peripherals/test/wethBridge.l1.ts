@@ -343,4 +343,8 @@ describe('Bridge peripherals layer 1', () => {
     const escrowedWeth = await weth.balanceOf(l1WethGateway.address)
     assert.equal(escrowedWeth.toNumber(), 0, 'Weth should not be escrowed')
   })
+  it('should support IEscrowAndCallGateway interface', async function () {
+    // type(IEscrowAndCallGateway).interfaceId = 0x494db046
+    expect(await testBridge.supportsInterface('0x494db046')).is.true
+  })
 })

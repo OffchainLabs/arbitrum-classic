@@ -83,7 +83,7 @@ abstract contract GatewayRouter is TokenGateway {
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable virtual override returns (bytes memory) {
-        // this function is kept instead of delegating to outboundTransferCustomRefund to allow 
+        // this function is kept instead of delegating to outboundTransferCustomRefund to allow
         // compatibility with older gateways that did not implement outboundTransferCustomRefund
         address gateway = getGateway(_token);
         bytes memory gatewayData = GatewayMessageHandler.encodeFromRouterToGateway(
@@ -182,5 +182,13 @@ abstract contract GatewayRouter is TokenGateway {
             return ZERO_ADDR;
         }
         return TokenGateway(gateway).calculateL2TokenAddress(l1ERC20);
+    }
+
+    function inboundEscrowTransfer(
+        address _l2Address,
+        address _dest,
+        uint256 _amount
+    ) internal virtual override {
+        revert("ONLY_OUTBOUND_ROUTER");
     }
 }

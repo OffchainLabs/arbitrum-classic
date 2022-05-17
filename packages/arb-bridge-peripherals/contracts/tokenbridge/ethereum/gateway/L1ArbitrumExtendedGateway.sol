@@ -18,8 +18,6 @@
 
 pragma solidity ^0.6.11;
 
-import "../../libraries/ITransferAndCall.sol";
-
 import "./L1ArbitrumGateway.sol";
 
 interface ITradeableExitReceiver {
@@ -80,8 +78,6 @@ abstract contract L1ArbitrumExtendedGateway is L1ArbitrumGateway {
 
         // if you want to transfer your exit, you must be the current destination
         require(msg.sender == expectedSender, "NOT_EXPECTED_SENDER");
-        // the inboundEscrowAndCall functionality has been disabled, so no data is allowed
-        require(_newData.length == 0, "NO_DATA_ALLOWED");
 
         setRedirectedExit(_exitNum, _initialDestination, _newDestination, _newData);
 

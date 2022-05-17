@@ -19,9 +19,10 @@
 pragma solidity ^0.6.11;
 
 import "./ITokenGateway.sol";
+import "../ERC165.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
-abstract contract TokenGateway is ITokenGateway {
+abstract contract TokenGateway is ITokenGateway, ERC165 {
     using Address for address;
 
     address public counterpartGateway;
@@ -96,4 +97,10 @@ abstract contract TokenGateway is ITokenGateway {
         uint256 _amount,
         bytes calldata _data
     ) external payable virtual override;
+
+    function inboundEscrowTransfer(
+        address _l2Address,
+        address _dest,
+        uint256 _amount
+    ) internal virtual;
 }

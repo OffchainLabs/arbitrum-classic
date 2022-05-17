@@ -66,7 +66,16 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable override nonReentrant returns (bytes memory res) {
-        return super.outboundTransferCustomRefund(_l1Token, _refundTo, _to, _amount, _maxGas, _gasPriceBid, _data);
+        return
+            super.outboundTransferCustomRefund(
+                _l1Token,
+                _refundTo,
+                _to,
+                _amount,
+                _maxGas,
+                _gasPriceBid,
+                _data
+            );
     }
 
     function finalizeInboundTransfer(

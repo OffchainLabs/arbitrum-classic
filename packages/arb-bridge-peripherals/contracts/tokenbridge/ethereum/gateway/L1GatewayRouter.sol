@@ -279,7 +279,16 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         _outboundTransferChecks(_maxGas, _gasPriceBid, _data);
 
         // will revert if msg.sender is not whitelisted
-        return super.outboundTransferCustomRefund(_token, _refundTo, _to, _amount, _maxGas, _gasPriceBid, _data);
+        return
+            super.outboundTransferCustomRefund(
+                _token,
+                _refundTo,
+                _to,
+                _amount,
+                _maxGas,
+                _gasPriceBid,
+                _data
+            );
     }
 
     modifier onlyCounterpartGateway() override {

@@ -276,4 +276,9 @@ describe('Bridge peripherals layer 1', () => {
     const escrowedTokens = await token.balanceOf(l1ERC20Gateway.address)
     assert.equal(escrowedTokens.toNumber(), tokenAmount, 'Tokens not escrowed')
   })
+
+  it('should support IEscrowAndCallGateway interface', async function () {
+    // type(IEscrowAndCallGateway).interfaceId = 0x494db046
+    expect(await testBridge.supportsInterface('0x494db046')).is.true
+  })
 })

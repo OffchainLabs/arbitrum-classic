@@ -392,4 +392,9 @@ describe('Bridge peripherals layer 2', () => {
       expect(res.toLowerCase()).to.equal(expectedOutput.toLowerCase())
     }
   })
+
+  it('should support IEscrowAndCallGateway interface', async function () {
+    // type(IEscrowAndCallGateway).interfaceId = 0x494db046
+    expect(await testBridge.supportsInterface('0x494db046')).is.true
+  })
 })

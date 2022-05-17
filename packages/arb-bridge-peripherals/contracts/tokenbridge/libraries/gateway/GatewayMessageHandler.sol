@@ -22,40 +22,52 @@ pragma solidity ^0.6.11;
 library GatewayMessageHandler {
     // these are for communication from L1 to L2 gateway
 
-    function encodeToL2GatewayMsg(bytes memory gatewayData, bytes memory callHookData)
+    function encodeToL2GatewayMsg(bytes memory gatewayData, bytes memory callHookExtraData)
         internal
         pure
         returns (bytes memory res)
     {
-        res = abi.encode(gatewayData, callHookData);
+        res = abi.encode(gatewayData, callHookExtraData);
     }
 
     function parseFromL1GatewayMsg(bytes calldata _data)
         internal
         pure
-        returns (bytes memory gatewayData, bytes memory callHookData)
+        returns (
+            bytes memory gatewayData,
+            uint256 callHookGas,
+            bytes memory callHookData
+        )
     {
         // abi decode may revert, but the encoding is done by L1 gateway, so we trust it
-        (gatewayData, callHookData) = abi.decode(_data, (bytes, bytes));
+        bytes memory callHookExtraData;
+        (gatewayData, callHookExtraData) = abi.decode(_data, (bytes, bytes));
+        (callHookGas, callHookData) = abi.decode(callHookExtraData, (uint256, bytes));
     }
 
     // these are for communication from L2 to L1 gateway
 
-    function encodeFromL2GatewayMsg(uint256 exitNum, bytes memory callHookData)
+    function encodeFromL2GatewayMsg(uint256 exitNum, bytes memory callHookExtraData)
         internal
         pure
         returns (bytes memory res)
     {
-        res = abi.encode(exitNum, callHookData);
+        res = abi.encode(exitNum, callHookExtraData);
     }
 
     function parseToL1GatewayMsg(bytes calldata _data)
         internal
         pure
-        returns (uint256 exitNum, bytes memory callHookData)
+        returns (
+            uint256 exitNum,
+            uint256 callHookGas,
+            bytes memory callHookData
+        )
     {
         // abi decode may revert, but the encoding is done by L1 gateway, so we trust it
-        (exitNum, callHookData) = abi.decode(_data, (uint256, bytes));
+        bytes memory callHookExtraData;
+        (exitNum, callHookExtraData) = abi.decode(_data, (uint256, bytes));
+        (callHookGas, callHookData) = abi.decode(callHookExtraData, (uint256, bytes));
     }
 
     // these are for communication from router to gateway
