@@ -326,4 +326,9 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         uint256 _amount,
         bytes memory gatewayData
     ) internal virtual returns (bool shouldHalt);
+
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, EscrowAndCallGateway) returns (bool) {
+        return EscrowAndCallGateway.supportsInterface(interfaceId) ||
+               ERC165.supportsInterface(interfaceId);
+    }
 }

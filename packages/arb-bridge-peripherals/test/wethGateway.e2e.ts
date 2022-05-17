@@ -310,4 +310,9 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       'Tokens not spent in allowance'
     )
   })
+  it('should support IEscrowAndCallGateway interface', async function () {
+    // type(IEscrowAndCallGateway).interfaceId = 0x494db046
+    expect(await l1TestBridge.supportsInterface('0x494db046')).is.true
+    expect(await l2TestBridge.supportsInterface('0x494db046')).is.true
+  })
 })

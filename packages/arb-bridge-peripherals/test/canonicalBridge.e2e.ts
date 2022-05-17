@@ -441,4 +441,9 @@ describe('Bridge peripherals end-to-end', () => {
     await expect(l2Token.symbol()).to.be.revertedWith('')
     await expect(l2Token.decimals()).to.be.revertedWith('')
   })
+  it('should support IEscrowAndCallGateway interface', async function () {
+    // type(IEscrowAndCallGateway).interfaceId = 0x494db046
+    expect(await l1TestBridge.supportsInterface('0x494db046')).is.true
+    expect(await l2TestBridge.supportsInterface('0x494db046')).is.true
+  })
 })

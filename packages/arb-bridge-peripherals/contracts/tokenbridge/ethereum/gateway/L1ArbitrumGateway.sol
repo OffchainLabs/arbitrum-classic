@@ -326,4 +326,9 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
 
         return outboundCalldata;
     }
+
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, EscrowAndCallGateway) returns (bool) {
+        return EscrowAndCallGateway.supportsInterface(interfaceId) ||
+               ERC165.supportsInterface(interfaceId);
+    }
 }

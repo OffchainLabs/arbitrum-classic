@@ -19,9 +19,10 @@
 pragma solidity ^0.6.11;
 
 import "./ITokenGateway.sol";
+import "../ERC165.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
-abstract contract TokenGateway is ITokenGateway {
+abstract contract TokenGateway is ITokenGateway, ERC165 {
     using Address for address;
 
     address public counterpartGateway;
