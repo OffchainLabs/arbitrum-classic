@@ -18,8 +18,6 @@
 
 pragma solidity ^0.6.11;
 
-import "../../libraries/ITransferAndCall.sol";
-
 import "./L1ArbitrumGateway.sol";
 
 interface ITradeableExitReceiver {

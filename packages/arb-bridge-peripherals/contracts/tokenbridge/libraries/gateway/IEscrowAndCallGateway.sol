@@ -20,12 +20,7 @@ pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 
-import "../ITransferAndCall.sol";
-import "./IEscrowAndCallGateway.sol";
-import "./TokenGateway.sol";
-
-abstract contract EscrowAndCallGateway is IEscrowAndCallGateway, TokenGateway {
-    using Address for address;
+ interface IEscrowAndCallGateway {
 
     event TransferAndCallTriggered(
         bool success,
@@ -41,13 +36,6 @@ abstract contract EscrowAndCallGateway is IEscrowAndCallGateway, TokenGateway {
         address _to,
         uint256 _amount,
         bytes memory _data
-    ) external virtual override {
-        require(msg.sender == address(this), "Mint can only be called by self");
-        require(_to.isContract(), "Destination must be a contract");
-
-        inboundEscrowTransfer(_l2Address, _to, _amount);
-
-        ITransferAndCallReceiver(_to).onTokenTransfer(_from, _amount, _data);
-    }
+    ) external;
 
 }

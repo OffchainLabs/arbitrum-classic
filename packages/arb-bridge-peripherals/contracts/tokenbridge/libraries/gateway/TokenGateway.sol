@@ -96,4 +96,10 @@ abstract contract TokenGateway is ITokenGateway {
         uint256 _amount,
         bytes calldata _data
     ) external payable virtual override;
+
+    function inboundEscrowTransfer(
+        address _l2Address,
+        address _dest,
+        uint256 _amount
+    ) internal virtual;
 }

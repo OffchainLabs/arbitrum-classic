@@ -31,7 +31,6 @@ import "../L1ArbitrumMessenger.sol";
 import "../../libraries/gateway/GatewayMessageHandler.sol";
 import "../../libraries/gateway/EscrowAndCallGateway.sol";
 import "../../libraries/gateway/TokenGateway.sol";
-import "../../libraries/ITransferAndCall.sol";
 
 /**
  * @title Common interface for gatways on L1 messaging to Arbitrum.

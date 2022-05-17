@@ -183,4 +183,12 @@ abstract contract GatewayRouter is TokenGateway {
         }
         return TokenGateway(gateway).calculateL2TokenAddress(l1ERC20);
     }
+
+    function inboundEscrowTransfer(
+        address _l2Address,
+        address _dest,
+        uint256 _amount
+    ) internal virtual override {
+        revert("ONLY_OUTBOUND_ROUTER");
+    }
 }
