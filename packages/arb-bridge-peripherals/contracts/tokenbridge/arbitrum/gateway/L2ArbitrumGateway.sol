@@ -243,8 +243,11 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         uint256 _amount,
         bytes calldata _data
     ) external payable override onlyCounterpartGateway {
-        (bytes memory gatewayData, uint256 callHookGas, bytes memory callHookData) = GatewayMessageHandler
-            .parseFromL1GatewayMsg(_data);
+        (
+            bytes memory gatewayData,
+            uint256 callHookGas,
+            bytes memory callHookData
+        ) = GatewayMessageHandler.parseFromL1GatewayMsg(_data);
         address expectedAddress = calculateL2TokenAddress(_token);
 
         if (!expectedAddress.isContract()) {
@@ -289,7 +292,15 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
 
         if (callHookData.length > 0) {
             bool success;
-            try this.inboundEscrowAndCall{gas: callHookGas}(expectedAddress, _from, _to, _amount, callHookData) {
+            try
+                this.inboundEscrowAndCall{ gas: callHookGas }(
+                    expectedAddress,
+                    _from,
+                    _to,
+                    _amount,
+                    callHookData
+                )
+            {
                 success = true;
             } catch {
                 // if reverted, then credit _from's account

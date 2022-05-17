@@ -33,7 +33,11 @@ library GatewayMessageHandler {
     function parseFromL1GatewayMsg(bytes calldata _data)
         internal
         pure
-        returns (bytes memory gatewayData, uint256 callHookGas, bytes memory callHookData)
+        returns (
+            bytes memory gatewayData,
+            uint256 callHookGas,
+            bytes memory callHookData
+        )
     {
         // abi decode may revert, but the encoding is done by L1 gateway, so we trust it
         bytes memory callHookExtraData;
@@ -54,7 +58,11 @@ library GatewayMessageHandler {
     function parseToL1GatewayMsg(bytes calldata _data)
         internal
         pure
-        returns (uint256 exitNum, uint256 callHookGas, bytes memory callHookData)
+        returns (
+            uint256 exitNum,
+            uint256 callHookGas,
+            bytes memory callHookData
+        )
     {
         // abi decode may revert, but the encoding is done by L1 gateway, so we trust it
         bytes memory callHookExtraData;

@@ -49,5 +49,4 @@ abstract contract EscrowAndCallGateway is IEscrowAndCallGateway, TokenGateway {
 
         ITransferAndCallReceiver(_to).onTokenTransfer(_from, _amount, _data);
     }
-
 }

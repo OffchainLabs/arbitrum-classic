@@ -83,7 +83,7 @@ abstract contract GatewayRouter is TokenGateway {
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable virtual override returns (bytes memory) {
-        // this function is kept instead of delegating to outboundTransferCustomRefund to allow 
+        // this function is kept instead of delegating to outboundTransferCustomRefund to allow
         // compatibility with older gateways that did not implement outboundTransferCustomRefund
         address gateway = getGateway(_token);
         bytes memory gatewayData = GatewayMessageHandler.encodeFromRouterToGateway(

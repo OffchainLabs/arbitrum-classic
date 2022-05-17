@@ -20,8 +20,7 @@ pragma solidity ^0.6.11;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 
- interface IEscrowAndCallGateway {
-
+interface IEscrowAndCallGateway {
     event TransferAndCallTriggered(
         bool success,
         address indexed _from,
@@ -37,5 +36,4 @@ import "@openzeppelin/contracts/utils/Address.sol";
         uint256 _amount,
         bytes memory _data
     ) external;
-
 }
