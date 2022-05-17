@@ -89,7 +89,7 @@ describe('Bridge peripherals layer 1', () => {
     assert.equal(escrowedTokens.toNumber(), tokenAmount, 'Tokens not escrowed')
   })
 
-  it('should revert post mint call correctly in outbound', async function () {
+  it('should allow post mint call correctly in outbound', async function () {
     const Token = await ethers.getContractFactory('TestERC20')
     const token = await Token.deploy()
     // send escrowed tokens to bridge
@@ -108,16 +108,14 @@ describe('Bridge peripherals layer 1', () => {
       [accounts[0].address, data]
     )
 
-    await expect(
-      testBridge.outboundTransfer(
-        token.address,
-        accounts[0].address,
-        tokenAmount,
-        maxGas,
-        gasPrice,
-        data
-      )
-    ).to.be.revertedWith('EXTRA_DATA_DISABLED')
+    await testBridge.outboundTransfer(
+      token.address,
+      accounts[0].address,
+      tokenAmount,
+      maxGas,
+      gasPrice,
+      data
+    )
   })
 
   it('should revert on inbound if there is data for post mint call', async function () {

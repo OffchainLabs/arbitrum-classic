@@ -22,7 +22,7 @@ import { Contract, ContractFactory } from 'ethers'
 import { AeWETH, L2WethGateway, L2WethGateway__factory } from '../build/types'
 import { applyAlias, impersonateAccount } from './testhelper'
 
-describe.only('Bridge peripherals weth layer 2', () => {
+describe('Bridge peripherals weth layer 2', () => {
   let accounts: SignerWithAddress[]
   let TestBridge: L2WethGateway__factory
   let testBridge: L2WethGateway

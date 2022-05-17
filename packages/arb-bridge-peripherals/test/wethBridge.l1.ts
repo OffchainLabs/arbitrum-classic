@@ -137,7 +137,7 @@ describe('Bridge peripherals layer 1', () => {
     )
   })
 
-  it('should revert post mint call correctly in outbound', async function () {
+  it('should allow post mint call correctly in outbound', async function () {
     const Weth = await ethers.getContractFactory('TestWETH9')
     const weth = await Weth.deploy('weth', 'weth')
 
@@ -165,16 +165,14 @@ describe('Bridge peripherals layer 1', () => {
       [accounts[0].address, data]
     )
 
-    await expect(
-      testBridge.outboundTransfer(
-        weth.address,
-        accounts[0].address,
-        wethAmount,
-        maxGas,
-        gasPrice,
-        data
-      )
-    ).to.be.revertedWith('EXTRA_DATA_DISABLED')
+    await testBridge.outboundTransfer(
+      weth.address,
+      accounts[0].address,
+      wethAmount,
+      maxGas,
+      gasPrice,
+      data
+    )
   })
 
   it('should revert on inbound if there is data for post mint call', async function () {

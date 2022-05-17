@@ -172,33 +172,50 @@ describe('Bridge peripherals layer 2', () => {
     assert.equal(balance.toString(), amount, 'Tokens not minted correctly')
   })
 
-  it('should revert post mint call correctly in outbound', async function () {
-    const l1ERC20 = '0x0000000000000000000000000000000000000325'
-    const sender = '0x0000000000000000000000000000000000000005'
+  it('should refund post mint call revert correctly in outbound', async function () {
+    const l1ERC20 = '0x0000000000000000000000000000000000000011'
+    const sender = '0x0000000000000000000000000000000000000002'
+    const dest = sender
     const amount = '1'
+    const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
 
     // connect to account 3 to query as if gateway router
     const l2ERC20Address = await testBridge
       .connect(accounts[3])
       .calculateL2TokenAddress(l1ERC20)
 
-    const L2Called = await ethers.getContractFactory('L2Called')
-    const l2Called = await L2Called.deploy()
-    const dest = l2Called.address
-    // 7 is revert()
-    const num = 7
-    const callHookData = ethers.utils.defaultAbiCoder.encode(['uint256'], [num])
+    const preTokenCode = await ethers.provider.getCode(l2ERC20Address)
+    assert.equal(preTokenCode, '0x', 'Something already deployed to address')
 
-    const data = ethers.utils.defaultAbiCoder.encode(['bytes'], [callHookData])
+    const callHookRefundAddr = accounts[4].address
+    // This call hook should fail
+    const callHookData = ethers.utils.defaultAbiCoder.encode(
+      ['uint256', 'address', 'bytes'],
+      [1, callHookRefundAddr, '0x']
+    )
 
-    await expect(
-      testBridge['outboundTransfer(address,address,uint256,bytes)'](
-        l1ERC20,
-        dest,
-        amount,
-        data
-      )
-    ).to.be.revertedWith('EXTRA_DATA_DISABLED')
+    const data = ethers.utils.defaultAbiCoder.encode(
+      ['bytes', 'bytes'],
+      [initializeData, callHookData]
+    )
+
+    const tx = await testBridge.finalizeInboundTransfer(
+      l1ERC20,
+      sender,
+      dest,
+      amount,
+      data
+    )
+
+    const Erc20 = await ethers.getContractFactory('StandardArbERC20')
+    const erc20 = await Erc20.attach(l2ERC20Address)
+
+    const balance = await erc20.balanceOf(callHookRefundAddr)
+    assert.equal(
+      balance.toString(),
+      amount,
+      'Tokens not minted or refuneded correctly'
+    )
   })
 
   it.skip('should reserve gas in post mint call to ensure rest of function can be executed', async function () {
