@@ -72,16 +72,27 @@ class ExecutionCursor {
     ExecutionCursor* clone();
 
     void abort() {
-        if (!is_aborted.load()) {
-            is_aborted = true;
-            if (std::holds_alternative<std::unique_ptr<Machine>>(machine) &&
-                std::get<std::unique_ptr<Machine>>(machine) != nullptr) {
+        if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
+            if (std::get<std::unique_ptr<Machine>>(machine) != nullptr) {
                 std::get<std::unique_ptr<Machine>>(machine)->abort();
             }
         }
+        is_aborted = true;
     }
 
-    bool isAborted() { return is_aborted.load(); }
+    bool isAborted() {
+        if (is_aborted) {
+            // Ensure machine is properly stopped
+            abort();
+            return true;
+        }
+
+        if (std::holds_alternative<std::unique_ptr<Machine>>(machine) &&
+            (std::get<std::unique_ptr<Machine>>(machine) != nullptr)) {
+            return std::get<std::unique_ptr<Machine>>(machine)->isAborted();
+        }
+        return is_aborted;
+    }
 
     [[nodiscard]] std::optional<uint256_t> machineHash() const {
         if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
