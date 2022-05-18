@@ -225,6 +225,16 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         IArbToken(_l2Address).bridgeMint(_dest, _amount);
     }
 
+    function finalizeInboundTransfer(
+        address _token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes calldata _data
+    ) external payable override {
+        finalizeInboundTransferAndCall(_token, _from, _to, _amount, address(0), 0, _data);
+    }
+
     /**
      * @notice Mint on L2 upon L1 deposit.
      * If token not yet deployed and symbol/name/decimal data is included, deploys StandardArbERC20
@@ -236,14 +246,16 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
      * @param _amount token amount to be minted to the user
      * @param _data encoded symbol/name/decimal data for deploy, in addition to any additional callhook data
      */
-    function finalizeInboundTransfer(
+    function finalizeInboundTransferAndCall(
         address _token,
         address _from,
         address _to,
         uint256 _amount,
+        address refundAddrOnRevert,
+        uint256 externalCallGas,
         bytes calldata _data
-    ) external payable override onlyCounterpartGateway {
-        (bytes memory gatewayData, CallHookData memory callHookData) = GatewayMessageHandler
+    ) public payable override onlyCounterpartGateway {
+        (bytes memory gatewayData, bytes memory callHookData) = GatewayMessageHandler
             .parseFromL1GatewayMsg(_data);
         address expectedAddress = calculateL2TokenAddress(_token);
 
@@ -287,27 +299,34 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
             }
         }
 
-        if (callHookData.gas != 0) {
+        if (externalCallGas > 0) {
             bool success;
             // callHookData.gas would need to cover inboundEscrowAndCall + some overhead
             // we forward at most callHookData.gas to prevent grieving so we have gas left for refund
             // the following check ensure at this point of execution we have at least callHookData.gas
             // so it will not be possible to trigger alternative code path by using a lower gas limit
             // Assuming the call hook will consume infinite gas
-            // Case 1: gasleft() <= callHookData.gas -> revert here
-            // Case 2: gasleft() ~= callHookData.gas -> oog during refund
-            // Case 3: gasleft() >> callHookData.gas -> refunded
-            require(gasleft() > callHookData.gas, "Insufficient gas for call hook");
+            // Case 1: gasleft() <= externalCallGas -> revert here
+            // Case 2: gasleft() ~= externalCallGas -> oog during refund
+            // Case 3: gasleft() >> externalCallGas -> refunded
+            require(gasleft() > externalCallGas, "Insufficient gas for call hook");
             // this.fn{ gas: callHookData.gas } doesn't check if there are sufficient gas to forward
-            try this.inboundEscrowAndCall{ gas: callHookData.gas }(expectedAddress, _from, _to, _amount, callHookData.data) {
+            try
+                this.inboundEscrowAndCall{ gas: externalCallGas }(
+                    expectedAddress,
+                    _from,
+                    _to,
+                    _amount,
+                    callHookData
+                )
+            {
                 success = true;
             } catch {
                 // if reverted, then credit callHookRefundTo's account
-                // TODO: should we handle the case if refund to address(0)?
-                inboundEscrowTransfer(expectedAddress, callHookData.refundAddrOnRevert, _amount);
+                inboundEscrowTransfer(expectedAddress, refundAddrOnRevert, _amount);
                 // success default value is false
             }
-            emit TransferAndCallTriggered(success, _from, _to, _amount, _data);
+            emit TransferAndCallTriggered(success, _from, _to, _amount, callHookData);
         } else {
             inboundEscrowTransfer(expectedAddress, _to, _amount);
         }
@@ -327,8 +346,15 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         bytes memory gatewayData
     ) internal virtual returns (bool shouldHalt);
 
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, EscrowAndCallGateway) returns (bool) {
-        return EscrowAndCallGateway.supportsInterface(interfaceId) ||
-               ERC165.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC165, EscrowAndCallGateway)
+        returns (bool)
+    {
+        return
+            EscrowAndCallGateway.supportsInterface(interfaceId) ||
+            ERC165.supportsInterface(interfaceId);
     }
 }

@@ -36,4 +36,14 @@ interface IEscrowAndCallGateway {
         uint256 _amount,
         bytes memory _data
     ) external;
+
+    function finalizeInboundTransferAndCall(
+        address _token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        address refundAddrOnRevert,
+        uint256 externalCallGas,
+        bytes calldata _data
+    ) external payable;
 }

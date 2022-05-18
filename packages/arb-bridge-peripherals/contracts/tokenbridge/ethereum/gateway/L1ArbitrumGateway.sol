@@ -90,6 +90,16 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         inbox = _inbox;
     }
 
+    function finalizeInboundTransfer(
+        address _token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes calldata _data
+    ) public payable virtual override {
+        finalizeInboundTransferAndCall(_token, _from, _to, _amount, address(0), 0, _data);
+    }
+
     /**
      * @notice Finalizes a withdrawal via Outbox message; callable only by L2Gateway.outboundTransfer
      * @param _token L1 address of token being withdrawn from
@@ -98,41 +108,52 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
      * @param _amount Token amount being withdrawn
      * @param _data encoded exitNum (Sequentially increasing exit counter determined by the L2Gateway) and additinal hook data
      */
-    function finalizeInboundTransfer(
+    function finalizeInboundTransferAndCall(
         address _token,
         address _from,
         address _to,
         uint256 _amount,
+        address refundAddrOnRevert,
+        uint256 externalCallGas,
         bytes calldata _data
     ) public payable virtual override onlyCounterpartGateway {
         // this function is marked as virtual so superclasses can override it to add modifiers
-        (uint256 exitNum, CallHookData memory callHookData) = GatewayMessageHandler
-            .parseToL1GatewayMsg(_data);
-        (_to, callHookData.data) = getExternalCall(exitNum, _to, callHookData.data);
+        uint256 exitNum;
+        {
+            bytes memory callHookData;
+            (exitNum, callHookData) = GatewayMessageHandler.parseToL1GatewayMsg(_data);
+            (_to, callHookData) = getExternalCall(exitNum, _to, callHookData);
 
-        if (callHookData.gas != 0) {
-            bool success;
-            // callHookData.gas would need to cover inboundEscrowAndCall + some overhead
-            // we forward at most callHookData.gas to prevent grieving so we have gas left for refund
-            // the following check ensure at this point of execution we have at least callHookData.gas
-            // so it will not be possible to trigger alternative code path by using a lower gas limit
-            // Assuming the call hook will consume infinite gas
-            // Case 1: gasleft() <= callHookData.gas -> revert here
-            // Case 2: gasleft() ~= callHookData.gas -> oog during refund
-            // Case 3: gasleft() >> callHookData.gas -> refunded
-            require(gasleft() > callHookData.gas, "Insufficient gas for call hook");
-            // this.fn{ gas: callHookData.gas } doesn't check if there are sufficient gas to forward
-            try this.inboundEscrowAndCall{ gas: callHookData.gas }(_token, _from, _to, _amount, callHookData.data) {
-                success = true;
-            } catch {
-                // if reverted, then credit callHookRefundTo's account
-                // TODO: should we handle the case if refund to address(0)?
-                inboundEscrowTransfer(_token, callHookData.refundAddrOnRevert, _amount);
-                // success default value is false
+            if (externalCallGas > 0) {
+                // callHookData.gas would need to cover inboundEscrowAndCall + some overhead
+                // we forward at most callHookData.gas to prevent grieving so we have gas left for refund
+                // the following check ensure at this point of execution we have at least callHookData.gas
+                // so it will not be possible to trigger alternative code path by using a lower gas limit
+                // Assuming the call hook will consume infinite gas
+                // Case 1: gasleft() <= callHookData.gas -> revert here
+                // Case 2: gasleft() ~= callHookData.gas -> oog during refund
+                // Case 3: gasleft() >> callHookData.gas -> refunded
+                require(gasleft() > externalCallGas, "Insufficient gas for call hook");
+                // this.fn{ gas: externalCallGas } doesn't check if there are sufficient gas to forward
+                try
+                    this.inboundEscrowAndCall{ gas: externalCallGas }(
+                        _token,
+                        _from,
+                        _to,
+                        _amount,
+                        callHookData
+                    )
+                {
+                    emit TransferAndCallTriggered(true, _from, _to, _amount, callHookData);
+                } catch {
+                    // if reverted, then credit callHookRefundTo's account
+                    // TODO: should we handle the case if refund to address(0)?
+                    inboundEscrowTransfer(_token, refundAddrOnRevert, _amount);
+                    emit TransferAndCallTriggered(false, _from, _to, _amount, callHookData);
+                }
+            } else {
+                inboundEscrowTransfer(_token, _to, _amount);
             }
-            emit TransferAndCallTriggered(success, _from, _to, _amount, _data);
-        } else {
-            inboundEscrowTransfer(_token, _to, _amount);
         }
 
         emit WithdrawalFinalized(_token, _from, _to, exitNum, _amount);
@@ -330,8 +351,15 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         return outboundCalldata;
     }
 
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, EscrowAndCallGateway) returns (bool) {
-        return EscrowAndCallGateway.supportsInterface(interfaceId) ||
-               ERC165.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC165, EscrowAndCallGateway)
+        returns (bool)
+    {
+        return
+            EscrowAndCallGateway.supportsInterface(interfaceId) ||
+            ERC165.supportsInterface(interfaceId);
     }
 }

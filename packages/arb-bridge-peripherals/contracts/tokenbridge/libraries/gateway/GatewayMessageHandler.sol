@@ -18,13 +18,6 @@
 
 pragma solidity ^0.6.11;
 
-// using a struct to workaround stack too deep issues
-struct CallHookData {
-    uint256 gas;
-    address refundAddrOnRevert;
-    bytes data;
-}
-
 /// @notice this library manages encoding and decoding of gateway communication
 library GatewayMessageHandler {
     // these are for communication from L1 to L2 gateway
@@ -40,14 +33,10 @@ library GatewayMessageHandler {
     function parseFromL1GatewayMsg(bytes calldata _data)
         internal
         pure
-        returns (bytes memory gatewayData, CallHookData memory callHookData)
+        returns (bytes memory gatewayData, bytes memory extraData)
     {
         // abi decode may revert, but the encoding is done by L1 gateway, so we trust it
-        bytes memory extraData;
         (gatewayData, extraData) = abi.decode(_data, (bytes, bytes));
-        if (extraData.length != 0) {
-            callHookData = parseCallHookData(extraData);
-        }
     }
 
     // these are for communication from L2 to L1 gateway
@@ -63,29 +52,10 @@ library GatewayMessageHandler {
     function parseToL1GatewayMsg(bytes calldata _data)
         internal
         pure
-        returns (uint256 exitNum, CallHookData memory callHookData)
+        returns (uint256 exitNum, bytes memory extraData)
     {
         // abi decode may revert, but the encoding is done by L1 gateway, so we trust it
-        bytes memory extraData;
         (exitNum, extraData) = abi.decode(_data, (uint256, bytes));
-        if (extraData.length != 0) {
-            callHookData = parseCallHookData(extraData);
-        }
-    }
-
-    // TODO: alternatively we can expect user to supply a CallHookData struct
-    // n.t. (bytes) and struct{bytes} have different encoding
-    function parseCallHookData(bytes memory _data)
-        internal
-        pure
-        returns (CallHookData memory callHookData)
-    {
-        // abi decode may revert
-        (uint256 gas, address refundAddrOnRevert, bytes memory data) = abi.decode(
-            _data,
-            (uint256, address, bytes)
-        );
-        return CallHookData({ gas: gas, refundAddrOnRevert: refundAddrOnRevert, data: data });
     }
 
     // these are for communication from router to gateway
