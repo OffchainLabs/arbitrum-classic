@@ -893,16 +893,16 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 		doingReorg := b.consecutiveShouldReorgGaps >= 10
 
 		var msg string
-		var log *zerolog.Event
+		var partialLog *zerolog.Event
 		if doingReorg {
 			msg = "Exceeded max sequencer delay! Reorganizing to compensate..."
-			log = logger.Error()
+			partialLog = logger.Error()
 		} else {
 			msg = "Exceeded max sequencer delay! Waiting to see if this is consistent..."
-			log = logger.Warn()
+			partialLog = logger.Warn()
 		}
 
-		log.
+		partialLog.
 			Str("delayBlocks", delayBlocks.String()).
 			Str("delaySeconds", delaySeconds.String()).
 			Str("aheadBlocks", aheadBlocks.String()).
