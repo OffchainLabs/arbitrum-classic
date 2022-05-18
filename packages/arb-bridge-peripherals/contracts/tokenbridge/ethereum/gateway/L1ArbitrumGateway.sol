@@ -112,12 +112,17 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
 
         if (callHookData.gas != 0) {
             bool success;
-            // we check for gasleft() here and forward all gas to the call hook
-            // callHookGas would need to cover the inboundEscrowAndCall call + some overhead
+            // callHookData.gas would need to cover inboundEscrowAndCall + some overhead
+            // we forward at most callHookData.gas to prevent grieving so we have gas left for refund
+            // the following check ensure at this point of execution we have at least callHookData.gas
+            // so it will not be possible to trigger alternative code path by using a lower gas limit
+            // Assuming the call hook will consume infinite gas
+            // Case 1: gasleft() <= callHookData.gas -> revert here
+            // Case 2: gasleft() ~= callHookData.gas -> oog during refund
+            // Case 3: gasleft() >> callHookData.gas -> refunded
             require(gasleft() > callHookData.gas, "Insufficient gas for call hook");
-            // if we do `try this.inboundEscrowAndCall{ gas: callHookGas }` instead
-            // the transaction will not revert upon insufficient gas to forward
-            try this.inboundEscrowAndCall(_token, _from, _to, _amount, callHookData.data) {
+            // this.fn{ gas: callHookData.gas } doesn't check if there are sufficient gas to forward
+            try this.inboundEscrowAndCall{ gas: callHookData.gas }(expectedAddress, _from, _to, _amount, callHookData.data) {
                 success = true;
             } catch {
                 // if reverted, then credit callHookRefundTo's account
