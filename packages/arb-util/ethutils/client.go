@@ -19,7 +19,6 @@ package ethutils
 import (
 	"context"
 	"encoding/json"
-	"github.com/rs/zerolog/log"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -32,9 +31,15 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/rs/zerolog"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 )
 
+var logger = arblog.Logger.With().Str("component", "ethutils").Logger()
+
 const maxErrCount = 5
+const errorCountError = maxErrCount * 10
 
 type ReceiptFetcher interface {
 	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
@@ -108,7 +113,18 @@ func (r *RPCEthClient) handleCallErr(err error) error {
 
 	// If we've had above a threshold number of errors, reinitialize the connection
 	if totalErrCount >= maxErrCount {
-		log.Warn().Err(err).Str("url", r.url).Msg("Reconnecting to client endpoint after repeated errors")
+		var partialLog *zerolog.Event
+		if totalErrCount < errorCountError {
+			partialLog = logger.Warn()
+		} else {
+			partialLog = logger.Error()
+		}
+		partialLog.
+			Err(err).
+			Str("url", r.url).
+			Uint64("count", totalErrCount).
+			Msg("Reconnecting to client endpoint after repeated errors")
+
 		if err := r.reconnect(); err != nil {
 			return err
 		}
