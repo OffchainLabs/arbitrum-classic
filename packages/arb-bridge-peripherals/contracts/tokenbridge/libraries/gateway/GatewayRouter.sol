@@ -22,11 +22,12 @@ import "arb-bridge-eth/contracts/libraries/ProxyUtil.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./TokenGateway.sol";
 import "./GatewayMessageHandler.sol";
+import "./IEscrowAndCallGateway.sol";
 
 /**
  * @title Common interface for L1 and L2 Gateway Routers
  */
-abstract contract GatewayRouter is TokenGateway {
+abstract contract GatewayRouter is TokenGateway, IEscrowAndCallGateway {
     using Address for address;
 
     address internal constant ZERO_ADDR = address(0);
@@ -143,6 +144,72 @@ abstract contract GatewayRouter is TokenGateway {
             );
     }
 
+    /**
+     * @notice Bridge ERC20 token using the registered or otherwise default gateway
+     * @dev Some legacy gateway might not have the outboundTransferCustomRefund method and will revert, in such case use outboundTransfer instead
+     * @param _token L1 address of ERC20
+     * @param _refundTo account to be credited with the excess gas refund in the L2, subject to L2 alias rewrite if its a L1 contract
+     * @param _to account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
+     * @param _amount Token Amount
+     * @param _maxGas Max gas deducted from user's L2 balance to cover L2 execution
+     * @param _gasPriceBid Gas price for L2 execution
+     * @param _data encoded data from router and user
+     * @return res abi encoded inbox sequence number
+     */
+    function outboundTransferWithCall(
+        address _token,
+        address _refundTo,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        address refundAddrOnRevert,
+        uint256 externalCallGas,
+        bytes calldata _data
+    ) public payable override returns (bytes memory) {
+        address gateway = getGateway(_token);
+        bytes memory gatewayData = GatewayMessageHandler.encodeFromRouterToGateway(
+            msg.sender,
+            _data
+        );
+
+        emit TransferRouted(_token, msg.sender, _to, gateway);
+        return
+            IEscrowAndCallGateway(gateway).outboundTransferWithCall{ value: msg.value }(
+                _token,
+                _refundTo,
+                _to,
+                _amount,
+                _maxGas,
+                _gasPriceBid,
+                refundAddrOnRevert,
+                externalCallGas,
+                gatewayData
+            );
+    }
+
+    function getOutboundCalldataWithCall(
+        address _token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        address refundAddrOnRevert,
+        uint256 externalCallGas,
+        bytes memory _data
+    ) public view virtual override returns (bytes memory) {
+        address gateway = getGateway(_token);
+        return
+            IEscrowAndCallGateway(gateway).getOutboundCalldataWithCall(
+                _token,
+                _from,
+                _to,
+                _amount,
+                refundAddrOnRevert,
+                externalCallGas,
+                _data
+            );
+    }
+
     function getOutboundCalldata(
         address _token,
         address _from,
@@ -190,5 +257,27 @@ abstract contract GatewayRouter is TokenGateway {
         uint256 _amount
     ) internal virtual override {
         revert("ONLY_OUTBOUND_ROUTER");
+    }
+
+    function inboundEscrowAndCall(
+        address _l2Address,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes memory _data
+    ) external override {
+        revert("NOT_AVAILABLE_IN_ROUTER");
+    }
+
+    function finalizeInboundTransferAndCall(
+        address _token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        address refundAddrOnRevert,
+        uint256 externalCallGas,
+        bytes calldata _data
+    ) external payable override {
+        revert("NOT_AVAILABLE_ON_ROUTER");
     }
 }

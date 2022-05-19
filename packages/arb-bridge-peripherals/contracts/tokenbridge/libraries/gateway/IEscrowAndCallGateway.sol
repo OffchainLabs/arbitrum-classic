@@ -18,8 +18,6 @@
 
 pragma solidity ^0.6.11;
 
-import "@openzeppelin/contracts/utils/Address.sol";
-
 interface IEscrowAndCallGateway {
     event TransferAndCallTriggered(
         bool success,
@@ -46,4 +44,26 @@ interface IEscrowAndCallGateway {
         uint256 externalCallGas,
         bytes calldata _data
     ) external payable;
+
+    function outboundTransferWithCall(
+        address _token,
+        address _refundTo,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        address refundAddrOnRevert,
+        uint256 externalCallGas,
+        bytes calldata _data
+    ) external payable returns (bytes memory);
+
+    function getOutboundCalldataWithCall(
+        address _token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        address refundAddrOnRevert,
+        uint256 externalCallGas,
+        bytes memory _data
+    ) external view returns (bytes memory);
 }

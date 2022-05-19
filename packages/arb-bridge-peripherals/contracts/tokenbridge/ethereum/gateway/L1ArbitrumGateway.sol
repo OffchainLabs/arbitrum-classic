@@ -248,7 +248,40 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         bytes calldata _data
     ) public payable override returns (bytes memory res) {
         return
-            outboundTransferCustomRefund(_l1Token, _to, _to, _amount, _maxGas, _gasPriceBid, _data);
+            outboundTransferWithCall(
+                _l1Token,
+                _to,
+                _to,
+                _amount,
+                _maxGas,
+                _gasPriceBid,
+                address(0),
+                0,
+                _data
+            );
+    }
+
+    function outboundTransferCustomRefund(
+        address _l1Token,
+        address _refundTo,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) public payable virtual override returns (bytes memory res) {
+        return
+            outboundTransferWithCall(
+                _l1Token,
+                _refundTo,
+                _to,
+                _amount,
+                _maxGas,
+                _gasPriceBid,
+                address(0),
+                0,
+                _data
+            );
     }
 
     /**
@@ -263,15 +296,17 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
      * @return res abi encoded inbox sequence number
      */
     //  * @param maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
-    function outboundTransferCustomRefund(
+    function outboundTransferWithCall(
         address _l1Token,
         address _refundTo,
         address _to,
         uint256 _amount,
         uint256 _maxGas,
         uint256 _gasPriceBid,
+        address refundAddrOnRevert,
+        uint256 externalCallGas,
         bytes calldata _data
-    ) public payable virtual override returns (bytes memory res) {
+    ) public payable override returns (bytes memory res) {
         require(isRouter(msg.sender), "NOT_FROM_ROUTER");
         // This function is set as public and virtual so that subclasses can override
         // it and add custom validation for callers (ie only whitelisted users)
@@ -297,7 +332,17 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
             _amount = outboundEscrowTransfer(_l1Token, _from, _amount);
 
             // we override the res field to save on the stack
-            res = getOutboundCalldata(_l1Token, _from, _to, _amount, extraData);
+            res = externalCallGas > 0
+                ? getOutboundCalldataWithCall(
+                    _l1Token,
+                    _from,
+                    _to,
+                    _amount,
+                    refundAddrOnRevert,
+                    externalCallGas,
+                    extraData
+                )
+                : getOutboundCalldata(_l1Token, _from, _to, _amount, extraData);
 
             seqNum = createOutboundTxCustomRefund(
                 _refundTo,
@@ -345,6 +390,37 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
             _from,
             _to,
             _amount,
+            // TODO: is this encoding not in the wrong order?
+            GatewayMessageHandler.encodeToL2GatewayMsg(emptyBytes, _data)
+        );
+
+        return outboundCalldata;
+    }
+
+    function getOutboundCalldataWithCall(
+        address _l1Token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        address refundAddrOnRevert,
+        uint256 externalCallGas,
+        bytes memory _data
+    ) public view override returns (bytes memory outboundCalldata) {
+        // this function is public so users can query how much calldata will be sent to the L2
+        // before execution
+        // it is virtual since different gateway subclasses can build this calldata differently
+        // ( ie the standard ERC20 gateway queries for a tokens name/symbol/decimals )
+        bytes memory emptyBytes = "";
+
+        outboundCalldata = abi.encodeWithSelector(
+            IEscrowAndCallGateway.finalizeInboundTransferAndCall.selector,
+            _l1Token,
+            _from,
+            _to,
+            _amount,
+            refundAddrOnRevert,
+            externalCallGas,
+            // TODO: fix encoding here?
             GatewayMessageHandler.encodeToL2GatewayMsg(emptyBytes, _data)
         );
 

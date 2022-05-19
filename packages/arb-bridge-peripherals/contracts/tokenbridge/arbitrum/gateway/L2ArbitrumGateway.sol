@@ -96,6 +96,29 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
             );
     }
 
+    function getOutboundCalldataWithCall(
+        address _token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        address refundAddrOnRevert,
+        uint256 externalCallGas,
+        bytes memory _data
+    ) public view override returns (bytes memory outboundCalldata) {
+        outboundCalldata = abi.encodeWithSelector(
+            IEscrowAndCallGateway.finalizeInboundTransferAndCall.selector,
+            _token,
+            _from,
+            _to,
+            _amount,
+            refundAddrOnRevert,
+            externalCallGas,
+            GatewayMessageHandler.encodeFromL2GatewayMsg(exitNum, _data)
+        );
+
+        return outboundCalldata;
+    }
+
     function getOutboundCalldata(
         address _token,
         address _from,
@@ -121,7 +144,18 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         uint256 _amount,
         bytes calldata _data
     ) public payable returns (bytes memory) {
-        return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
+        return
+            outboundTransferWithCall(
+                _l1Token,
+                address(0),
+                _to,
+                _amount,
+                0,
+                0,
+                address(0),
+                0,
+                _data
+            );
     }
 
     function outboundTransferCustomRefund(
@@ -133,7 +167,40 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
         uint256, /* _gasPriceBid */
         bytes calldata _data
     ) public payable override returns (bytes memory res) {
-        return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
+        return
+            outboundTransferWithCall(
+                _l1Token,
+                address(0),
+                _to,
+                _amount,
+                0,
+                0,
+                address(0),
+                0,
+                _data
+            );
+    }
+
+    function outboundTransfer(
+        address _l1Token,
+        address _to,
+        uint256 _amount,
+        uint256, /* _maxGas */
+        uint256, /* _gasPriceBid */
+        bytes calldata _data
+    ) public payable override returns (bytes memory res) {
+        return
+            outboundTransferWithCall(
+                _l1Token,
+                address(0),
+                _to,
+                _amount,
+                0,
+                0,
+                address(0),
+                0,
+                _data
+            );
     }
 
     /**
@@ -144,12 +211,15 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
      * @param _data encoded data from router and user (uint256 callHookGas, uint256 callHookData)
      * @return res encoded unique identifier for withdrawal
      */
-    function outboundTransfer(
+    function outboundTransferWithCall(
         address _l1Token,
+        address, /* refundTo */
         address _to,
         uint256 _amount,
         uint256, /* _maxGas */
         uint256, /* _gasPriceBid */
+        address refundAddrOnRevert,
+        uint256 externalCallGas,
         bytes calldata _data
     ) public payable override returns (bytes memory res) {
         // This function is set as public and virtual so that subclasses can override
@@ -178,9 +248,48 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway, Escrow
             require(IArbToken(l2Token).l1Address() == _l1Token, "NOT_EXPECTED_L1_TOKEN");
 
             _amount = outboundEscrowTransfer(l2Token, _from, _amount);
-            id = triggerWithdrawal(_l1Token, _from, _to, _amount, _extraData);
+            id = externalCallGas > 0
+                ? triggerWithdrawalWithCall(
+                    _l1Token,
+                    _from,
+                    _to,
+                    _amount,
+                    refundAddrOnRevert,
+                    externalCallGas,
+                    _extraData
+                )
+                : triggerWithdrawal(_l1Token, _from, _to, _amount, _extraData);
         }
         return abi.encode(id);
+    }
+
+    function triggerWithdrawalWithCall(
+        address _l1Token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        address refundAddrOnRevert,
+        uint256 externalCallGas,
+        bytes memory _data
+    ) internal returns (uint256) {
+        // exit number used for tradeable exits
+        uint256 currExitNum = exitNum;
+        // unique id used to identify the L2 to L1 tx
+        uint256 id = createOutboundTx(
+            _from,
+            _amount,
+            getOutboundCalldataWithCall(
+                _l1Token,
+                _from,
+                _to,
+                _amount,
+                refundAddrOnRevert,
+                externalCallGas,
+                _data
+            )
+        );
+        emit WithdrawalInitiated(_l1Token, _from, _to, id, currExitNum, _amount);
+        return id;
     }
 
     function triggerWithdrawal(
