@@ -284,6 +284,11 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
             );
     }
 
+    struct OutboundCallFrame {
+        address from;
+        uint256 seqNum;
+    }
+
     /**
      * @notice Deposit ERC20 token from Ethereum into Arbitrum. If L2 side hasn't been deployed yet, includes name/symbol/decimals data for initial L2 deploy. Initiate by GatewayRouter.
      * @param _l1Token L1 address of ERC20
@@ -310,43 +315,42 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
         require(isRouter(msg.sender), "NOT_FROM_ROUTER");
         // This function is set as public and virtual so that subclasses can override
         // it and add custom validation for callers (ie only whitelisted users)
-        address _from;
-        uint256 seqNum;
-        bytes memory extraData;
+        OutboundCallFrame memory frame;
         {
             uint256 _maxSubmissionCost;
+            // we use the `res` return value field to avoid stack too deep errors
             if (super.isRouter(msg.sender)) {
                 // router encoded
-                (_from, extraData) = GatewayMessageHandler.parseFromRouterToGateway(_data);
+                (frame.from, res) = GatewayMessageHandler.parseFromRouterToGateway(_data);
             } else {
-                _from = msg.sender;
-                extraData = _data;
+                frame.from = msg.sender;
+                res = _data;
             }
             // user encoded
-            (_maxSubmissionCost, extraData) = abi.decode(extraData, (uint256, bytes));
+            (_maxSubmissionCost, res) = abi.decode(res, (uint256, bytes));
 
             require(_l1Token.isContract(), "L1_NOT_CONTRACT");
             address l2Token = calculateL2TokenAddress(_l1Token);
             require(l2Token != address(0), "NO_L2_TOKEN_SET");
 
-            _amount = outboundEscrowTransfer(_l1Token, _from, _amount);
+            _amount = outboundEscrowTransfer(_l1Token, frame.from, _amount);
 
             // we override the res field to save on the stack
             res = externalCallGas > 0
                 ? getOutboundCalldataWithCall(
                     _l1Token,
-                    _from,
+                    frame.from,
                     _to,
                     _amount,
                     refundAddrOnRevert,
                     externalCallGas,
-                    extraData
+                    res
                 )
-                : getOutboundCalldata(_l1Token, _from, _to, _amount, extraData);
+                : getOutboundCalldata(_l1Token, frame.from, _to, _amount, res);
 
-            seqNum = createOutboundTxCustomRefund(
+            frame.seqNum = createOutboundTxCustomRefund(
                 _refundTo,
-                _from,
+                frame.from,
                 _amount,
                 _maxGas,
                 _gasPriceBid,
@@ -354,8 +358,8 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, Escrow
                 res
             );
         }
-        emit DepositInitiated(_l1Token, _from, _to, seqNum, _amount);
-        return abi.encode(seqNum);
+        emit DepositInitiated(_l1Token, frame.from, _to, frame.seqNum, _amount);
+        return abi.encode(frame.seqNum);
     }
 
     function outboundEscrowTransfer(
