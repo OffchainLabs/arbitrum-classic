@@ -194,8 +194,9 @@ func (ta *FireblocksTransactAuth) TransactionReceipt(ctx context.Context, tx *ar
 			Warn().
 			Err(err).
 			Str("hash", tx.Hash().String()).
+			Str("id", tx.Id()).
 			Msg("error getting fireblocks transaction for receipt")
-		return nil, errors.Wrapf(err, "error getting fireblocks transaction for receipt: %s", details.Status)
+		return nil, errors.Wrapf(err, "error getting fireblocks transaction for receipt")
 	}
 	if ta.fb.IsTransactionStatusFailed(details.Status) {
 		logger.
@@ -217,9 +218,13 @@ func (ta *FireblocksTransactAuth) NonceAt(ctx context.Context, account ethcommon
 }
 
 func (ta *FireblocksTransactAuth) SendTransaction(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*arbtransaction.ArbTransaction, error) {
+	var destinationId string
+	if tx.To() != nil {
+		destinationId = tx.To().Hex()
+	}
 	input := fireblocks.CreateTransactionInput{
 		DestinationType:     accounttype.OneTimeAddress,
-		DestinationId:       tx.To().Hex(),
+		DestinationId:       destinationId,
 		DestinationTag:      "",
 		AmountWei:           tx.Value(),
 		GasLimitWei:         big.NewInt(int64(tx.Gas())),
@@ -257,10 +262,6 @@ func (ta *FireblocksTransactAuth) SendTransaction(ctx context.Context, tx *types
 				Warn().
 				Err(err).
 				Str("id", txResponse.Id)
-
-			if details != nil {
-				partial.Str("status", details.Status)
-			}
 
 			if tx.To() != nil {
 				partial.Hex("to", tx.To().Bytes())
