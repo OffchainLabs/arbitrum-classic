@@ -12,6 +12,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -196,7 +197,9 @@ type OurStakerInfo struct {
 	*ethbridge.StakerInfo
 }
 
-func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStakerInfo, strategy Strategy, fromBlock int64) (nodeAction, bool, error) {
+var maxAssertionSendCount *big.Int = big.NewInt(100) // From MAX_SEND_COUNT in RollupCore.sol
+
+func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStakerInfo, strategy configuration.ValidatorStrategy, fromBlock int64) (nodeAction, bool, error) {
 	startState, err := lookupNodeStartState(ctx, v.rollup.RollupWatcher, stakerInfo.LatestStakedNode, stakerInfo.LatestStakedNodeHash)
 	if err != nil {
 		return nil, false, err
@@ -272,7 +275,8 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		}
 	}
 
-	gasesUsed := make([]*big.Int, 0, len(successorNodes)+1)
+	gasesUsed := make([]*big.Int, 0, len(successorNodes)+2)
+	gasesUsed = append(gasesUsed, startState.TotalGasConsumed)
 	for _, nd := range successorNodes {
 		gasesUsed = append(gasesUsed, nd.Assertion.After.TotalGasConsumed)
 	}
@@ -285,12 +289,13 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 	minimumGasToConsume := new(big.Int).Mul(timeSinceProposed, arbGasSpeedLimitPerBlock)
 	maximumGasTarget := new(big.Int).Mul(minimumGasToConsume, big.NewInt(4))
 	maximumGasTarget = maximumGasTarget.Add(maximumGasTarget, startState.TotalGasConsumed)
+	maxTotalSendCount := new(big.Int).Add(startState.TotalSendCount, maxAssertionSendCount)
 
-	if strategy > WatchtowerStrategy {
+	if strategy.IsActive() || strategy == configuration.DefensiveStrategy {
 		gasesUsed = append(gasesUsed, maximumGasTarget)
 	}
 
-	execTracker := core.NewExecutionTrackerWithInitialCursor(v.lookup, false, gasesUsed, cursor, false)
+	execTracker := core.NewExecutionTrackerWithInitialCursor(v.lookup, false, gasesUsed, cursor, true)
 
 	var correctNode nodeAction
 	wrongNodesExist := false
@@ -347,15 +352,47 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		wrongNodesExist = true
 	}
 
-	if strategy == WatchtowerStrategy || correctNode != nil || (strategy < MakeNodesStrategy && !wrongNodesExist) {
+	if strategy == configuration.WatchtowerStrategy || correctNode != nil || (strategy != configuration.MakeNodesStrategy && !wrongNodesExist) {
 		return correctNode, wrongNodesExist, nil
 	}
 
-	execState, _, err := execTracker.GetExecutionState(maximumGasTarget)
-	if err != nil {
-		return nil, false, err
+	for i := len(gasesUsed) - 1; i >= 0; i-- {
+		requestingGas := gasesUsed[i]
+		if requestingGas.Cmp(maximumGasTarget) > 0 {
+			continue
+		}
+		cursor, err = execTracker.GetExecutionCursor(requestingGas, true)
+		if err != nil {
+			return nil, false, err
+		}
+		if cursor.TotalSendCount().Cmp(maxTotalSendCount) > 0 {
+			maximumGasTarget = new(big.Int).Sub(cursor.TotalGasConsumed(), big.NewInt(1))
+			continue
+		}
+		// Binary search to find the maximum gas target that doesn't exceed the maxTotalSendCount
+		for cursor.TotalGasConsumed().Cmp(maximumGasTarget) < 0 {
+			advance := new(big.Int).Sub(maximumGasTarget, cursor.TotalGasConsumed())
+			advance.Add(advance, big.NewInt(1))
+			advance.Div(advance, big.NewInt(2))
+			// At this point, advance = (maximumGasTarget - cursor.TotalGasConsumed() + 1) / 2
+			// In other words, half the distance from cursor.TotalGasConsumed() to maximumGasTarget, rounding up.
+			newCursor := cursor.Clone()
+			v.lookup.AdvanceExecutionCursor(newCursor, advance, false, true)
+			if cursor.TotalGasConsumed().Cmp(newCursor.TotalGasConsumed()) == 0 {
+				// We've binary searched down to one instruction. This is good enough.
+				break
+			}
+			if newCursor.TotalSendCount().Cmp(maxTotalSendCount) > 0 {
+				maximumGasTarget = new(big.Int).Sub(newCursor.TotalGasConsumed(), big.NewInt(1))
+			} else {
+				cursor = newCursor
+			}
+		}
+		break
 	}
-	stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(maximumGasTarget, true)
+
+	stakerInfo.latestExecutionCursor = cursor
+	execState, err := core.NewExecutionState(cursor)
 	if err != nil {
 		return nil, false, err
 	}
@@ -380,18 +417,34 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		After:  execState,
 	}
 
-	executionHash := assertion.ExecutionHash()
-	newNodeHash := hashing.SoliditySHA3(hasSiblingByte[:], lastHash[:], executionHash[:], inboxAcc[:])
-
 	var seqBatchProof []byte
+	var batchEndAcc common.Hash
 	if execState.TotalMessagesRead.Cmp(big.NewInt(0)) > 0 {
-		batch, err := v.sequencerInbox.LookupBatchContaining(ctx, v.lookup, new(big.Int).Sub(execState.TotalMessagesRead, big.NewInt(1)))
+		lastMessageRead := new(big.Int).Sub(execState.TotalMessagesRead, big.NewInt(1))
+		batch, err := v.sequencerInbox.LookupBatchContaining(ctx, v.lookup, lastMessageRead)
 		if err != nil {
 			return nil, false, err
 		}
 		if batch == nil {
 			return nil, false, errors.New("Failed to lookup batch containing message")
 		}
+
+		batchEndAcc = batch.GetAfterAcc()
+		if execState.TotalMessagesRead.Cmp(batch.GetAfterCount()) == 0 {
+			if inboxAcc != batchEndAcc {
+				return nil, false, errors.New("Assertion inbox accumulator doesn't match on-chain accumulator (reorg?)")
+			}
+		} else {
+			lastBatchMessage := new(big.Int).Sub(batch.GetAfterCount(), big.NewInt(1))
+			haveInboxAcc, haveBatchEndAcc, err := v.lookup.GetInboxAccPair(lastMessageRead, lastBatchMessage)
+			if err != nil {
+				return nil, false, err
+			}
+			if haveInboxAcc != inboxAcc || haveBatchEndAcc != batchEndAcc {
+				return nil, false, errors.New("Reorg while producing assertion")
+			}
+		}
+
 		seqBatchProof = append(seqBatchProof, math.U256Bytes(batch.GetBatchIndex())...)
 		proofPart, err := v.generateBatchEndProof(batch.GetBeforeCount())
 		if err != nil {
@@ -404,6 +457,9 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		}
 		seqBatchProof = append(seqBatchProof, proofPart...)
 	}
+
+	executionHash := assertion.ExecutionHash()
+	newNodeHash := hashing.SoliditySHA3(hasSiblingByte[:], lastHash[:], executionHash[:], batchEndAcc[:])
 
 	action := createNodeAction{
 		assertion:           assertion,

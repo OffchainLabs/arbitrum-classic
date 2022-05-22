@@ -33,15 +33,8 @@ func TestRelayRebroadcasts(t *testing.T) {
 	ctx := context.Background()
 
 	// Start up an Arbitrum sequencer broadcaster
-	broadcasterSettings := configuration.FeedOutput{
-		Addr:          "0.0.0.0",
-		IOTimeout:     2 * time.Second,
-		Port:          "9742",
-		Ping:          5 * time.Second,
-		ClientTimeout: 15 * time.Second,
-		Queue:         1,
-		Workers:       128,
-	}
+	broadcasterSettings := configuration.DefaultFeedOutput()
+	broadcasterSettings.Port = "9742"
 
 	bc := broadcaster.NewBroadcaster(broadcasterSettings)
 
@@ -56,16 +49,9 @@ func TestRelayRebroadcasts(t *testing.T) {
 			Timeout: 20 * time.Second,
 			URLs:    []string{"ws://127.0.0.1:9742"},
 		},
-		Output: configuration.FeedOutput{
-			Addr:          "0.0.0.0",
-			IOTimeout:     2 * time.Second,
-			Port:          "7429",
-			Ping:          5 * time.Second,
-			ClientTimeout: 15 * time.Second,
-			Queue:         1,
-			Workers:       128,
-		},
+		Output: *configuration.DefaultFeedOutput(),
 	}
+	relaySettings.Output.Port = "7429"
 
 	// Start up an arbitrum sequencer relay
 	arbRelay := NewArbRelay(relaySettings)
@@ -105,7 +91,8 @@ func makeRelayClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 	// connect returns
 	messageReceiver, err := broadcastClient.Connect(ctx)
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
+		return
 	}
 	for {
 		select {

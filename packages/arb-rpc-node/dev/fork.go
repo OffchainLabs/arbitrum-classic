@@ -66,7 +66,7 @@ func NewForkNode(
 	}
 
 	if !persistState {
-		if err := core.ReorgAndWait(mon.Core, new(big.Int).SetInt64(reorgMessage)); err != nil {
+		if err := core.ReorgAndWait(ctx, mon.Core, new(big.Int).SetInt64(reorgMessage)); err != nil {
 			return returnErr(err, "error reorging")
 		}
 	}

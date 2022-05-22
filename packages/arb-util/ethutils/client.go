@@ -19,6 +19,7 @@ package ethutils
 import (
 	"context"
 	"encoding/json"
+	"github.com/rs/zerolog/log"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -38,6 +39,11 @@ const maxErrCount = 5
 type ReceiptFetcher interface {
 	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
 	NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error)
+}
+
+type BasicEthClient interface {
+	bind.ContractBackend
+	ReceiptFetcher
 }
 
 type EthClient interface {
@@ -102,6 +108,7 @@ func (r *RPCEthClient) handleCallErr(err error) error {
 
 	// If we've had above a threshold number of errors, reinitialize the connection
 	if totalErrCount >= maxErrCount {
+		log.Warn().Err(err).Str("url", r.url).Msg("Reconnecting to client endpoint after repeated errors")
 		if err := r.reconnect(); err != nil {
 			return err
 		}

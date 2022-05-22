@@ -36,15 +36,8 @@ var ClientCount = 10
 func TestBroadcasterLoad(t *testing.T) {
 	ctx := context.Background()
 
-	broadcasterSettings := configuration.FeedOutput{
-		Addr:          "0.0.0.0",
-		IOTimeout:     2 * time.Second,
-		Port:          "9942",
-		Ping:          5 * time.Second,
-		ClientTimeout: 15 * time.Second,
-		Queue:         1,
-		Workers:       128,
-	}
+	broadcasterSettings := configuration.DefaultFeedOutput()
+	broadcasterSettings.Port = "9942"
 
 	b := NewBroadcaster(broadcasterSettings)
 
