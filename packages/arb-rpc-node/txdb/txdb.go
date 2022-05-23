@@ -18,11 +18,16 @@ package txdb
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
+	"os"
+	"path"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
@@ -289,6 +294,52 @@ func (db *TxDB) DeleteLogs(avmLogs []core.ValueAndInbox) error {
 	return nil
 }
 
+func getFile(taskName string, blockNumber uint64, perFolder, perFile uint64) (*os.File, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("get current work dir failed: %w", err)
+	}
+
+	logPath := path.Join(cwd, "dump", taskName, strconv.FormatUint(blockNumber/perFolder, 10), strconv.FormatUint(blockNumber/perFile, 10)+".log")
+	fmt.Printf("log path: %v, block: %v\n", logPath, blockNumber)
+	if err := os.MkdirAll(path.Dir(logPath), 0755); err != nil {
+		return nil, fmt.Errorf("mkdir for all parents [%v] failed: %w", path.Dir(logPath), err)
+	}
+
+	file, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
+	if err != nil {
+		return nil, fmt.Errorf("create file %s failed: %w", logPath, err)
+	}
+	return file, nil
+}
+
+func BlockDumpLogger(block *types.Block, perFolder, perFile uint64) error {
+	file, err := getFile("blocks", block.NumberU64(), perFolder, perFile)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	entry := map[string]interface{}{
+		"timestamp":      block.Time(),
+		"blockNumber":    block.NumberU64(),
+		"blockHash":      block.Hash(),
+		"parentHash":     block.ParentHash(),
+		"gasLimit":       block.GasLimit(),
+		"gasUsed":        block.GasUsed(),
+		"miner":          block.Coinbase(),
+		"difficulty":     block.Difficulty(),
+		"nonce":          block.Nonce(),
+		"size":           block.Size(),
+		"extdataGasUsed": block.ExtDataGasUsed(),
+	}
+	encoder := json.NewEncoder(file)
+	if err := encoder.Encode(entry); err != nil {
+		return fmt.Errorf("failed to encode transaction entry %w", err)
+	}
+	return nil
+}
+
 func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) (*types.Header, error) {
 	logger.Debug().
 		Uint64("number", blockInfo.BlockNum.Uint64()).
@@ -362,6 +413,7 @@ func (db *TxDB) handleBlockReceipt(blockInfo *evm.BlockInfo) (*types.Header, err
 	}
 
 	block := types.NewBlock(header, ethTxes, nil, ethReceipts, new(trie.Trie))
+	BlockDumpLogger(block, 10000, 100)
 	avmLogIndex := blockInfo.ChainStats.AVMLogCount.Uint64() - 1
 	ethLogs := make([]*types.Log, 0)
 	for _, res := range processedResults {
