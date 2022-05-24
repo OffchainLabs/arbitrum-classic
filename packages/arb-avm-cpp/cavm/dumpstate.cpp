@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include "cmachine.h"
 #include <data_storage/arbstorage.hpp>
 
 #include <nlohmann/json.hpp>
@@ -241,12 +242,11 @@ nlohmann::json serializeAccount(ValueLoader loader, Value account) {
 template <typename F>
 void writeKvsToFile(ValueLoader loader,
                     Tuple kvs,
-                    const std::string& name,
+                    const std::string& filename,
                     F&& serialize) {
-    std::cerr << "Serializing " << name << "..." << std::endl;
     std::mutex mutex;
     std::ofstream retryables;
-    retryables.open(name + ".json", std::ios::out | std::ios::trunc);
+    retryables.open(filename, std::ios::out | std::ios::trunc);
     uint64_t count = 0;
     kvsForAll(loader, kvs, [&](Value key, Value val) {
         auto serialized = serialize(loader, val);
@@ -255,63 +255,40 @@ void writeKvsToFile(ValueLoader loader,
         count++;
         mutex.unlock();
     });
-    std::cout << "Finished serializing " << count << " " << name << std::endl;
     retryables.close();
 }
 
-int main(int argc, char* argv[]) {
-    if (argc < 3) {
-        std::cout << "Usage: \narbcore_runner dbpath arbospath\n";
-        return 1;
-    }
-    auto dbpath = std::string(argv[1]);
-    auto arbospath = std::string(argv[2]);
-    ArbCoreConfig coreConfig{};
-    coreConfig.lazy_load_core_machine = true;
 
-    std::cout << "Loading db\n";
-    ArbStorage storage{dbpath, coreConfig};
-    std::cout << "Initializing arbstorage\n";
-    auto result = storage.initialize(arbospath);
-    if (result.finished) {
-        // Nothing left to do
-        return 0;
-    }
-    if (!result.status.ok()) {
-        std::cerr << "Failed to initialize storage" << result.status.ToString()
-                  << std::endl;
-        return -1;
-    }
-    auto core = storage.getArbCore();
-    auto msgCount = core->messageEntryInsertedCount();
-    if (!msgCount.status.ok()) {
-        std::cerr << "Failed to get message count" << msgCount.status.ToString()
-                  << std::endl;
-        return -1;
-    }
-    while (core->getLastMachineOutput().fully_processed_inbox.count <
-           msgCount.data) {
-        std::cerr << "Waiting for core machine to catch up..." << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-    }
-    auto mach = core->getLastMachine();
-    std::cout << "At L2 block " << mach->machine_state.output.l2_block_number
-              << std::endl;
-    std::cout << "Got register hash "
-              << intx::to_string(hash_value(mach->machine_state.registerVal),
-                                 16)
-              << std::endl;
-
-    auto l = ValueLoader{
-        std::make_unique<SimpleValueLoader>(storage.getDataStorage())};
+int dumpRetriables(CArbCore* a, CMachine* m, const char* filename) {
+    assert(m);
+    assert(a);
+    auto mach = static_cast<Machine*>(m);
+    auto arbCore = static_cast<ArbCore*>(a);
+    std::string stringFileName(filename);
+    auto l = arbCore->makeValueLoader();
 
     auto root = resolveTuple(l, mach->machine_state.registerVal);
     auto accountStore = indexTup(l, indexTup(l, root, 6), 1);
     auto retryKvs = indexTup(l, indexTup(l, accountStore, 1), 0);
+
+    writeKvsToFile(l, retryKvs, stringFileName, serializeRetryable);
+
+    return 0;
+}
+
+int dumpAccounts(CArbCore* a, CMachine* m, const char* filename) {
+    assert(m);
+    assert(a);
+    auto mach = static_cast<Machine*>(m);
+    auto arbCore = static_cast<ArbCore*>(a);
+    std::string stringFileName(filename);
+    auto l = arbCore->makeValueLoader();
+
+    auto root = resolveTuple(l, mach->machine_state.registerVal);
+    auto accountStore = indexTup(l, indexTup(l, root, 6), 1);
     auto accountsKvs = indexTup(l, accountStore, 0);
 
-    writeKvsToFile(l, retryKvs, "retryables", serializeRetryable);
-    writeKvsToFile(l, accountsKvs, "accounts", serializeAccount);
+    writeKvsToFile(l, accountsKvs, stringFileName, serializeAccount);
 
     return 0;
 }

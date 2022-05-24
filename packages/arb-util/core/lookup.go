@@ -97,6 +97,8 @@ type ArbCoreLookup interface {
 
 	// SaveRocksdbCheckpoint tells rocksdb to save a copy of the current database state
 	SaveRocksdbCheckpoint()
+
+	DumpAccounts(mach machine.Machine, filename string) error
 }
 
 type ArbCoreInbox interface {

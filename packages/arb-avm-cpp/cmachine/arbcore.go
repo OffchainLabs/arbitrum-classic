@@ -18,6 +18,7 @@ package cmachine
 
 /*
 #include "../cavm/carbcore.h"
+#include "../cavm/cmachine.h"
 #include <stdio.h>
 #include <stdlib.h>
 */
@@ -491,6 +492,23 @@ func (ac *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Ma
 	return ret, nil
 }
 
+func (ac *ArbCore) DumpAccounts(m machine.Machine, filename string) error {
+	defer runtime.KeepAlive(ac)
+	mach, ok := m.(*Machine)
+	if !ok {
+		return errors.Errorf("bad machine")
+	}
+	defer runtime.KeepAlive(mach)
+	cfname := C.CString(filename)
+	defer C.free(unsafe.Pointer(cfname))
+
+	retval := C.dumpAccounts(ac.c, mach.c, cfname)
+	if retval != 0 {
+		return errors.Errorf("dumpAccounts failed")
+	}
+	return nil
+}
+
 func (ac *ArbCore) LogsCursorPosition(cursorIndex *big.Int) (*big.Int, error) {
 	defer runtime.KeepAlive(ac)
 	cursorIndexData := math.U256Bytes(cursorIndex)
@@ -523,6 +541,9 @@ func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []core.Val
 	defer runtime.KeepAlive(ac)
 	cursorIndexData := math.U256Bytes(cursorIndex)
 	result := C.arbCoreLogsCursorGetLogs(ac.c, unsafeDataPointer(cursorIndexData))
+	if result.first_index == nil {
+		return nil, nil, nil, errors.New("get logs failed")
+	}
 	if result.found == 0 {
 		if err := ac.CheckError(); err != nil {
 			return nil, nil, nil, err

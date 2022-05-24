@@ -323,6 +323,7 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 
 	evmLogs := r.EthLogs(blockHash)
 	return &types.Receipt{
+		GasUsedForL1:      0, //TODO
 		PostState:         []byte{0},
 		Status:            status,
 		CumulativeGasUsed: r.CumulativeGas.Uint64(),
