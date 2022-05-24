@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#include "cmachine.h"
 #include <data_storage/arbstorage.hpp>
+#include "cmachine.h"
 
 #include <nlohmann/json.hpp>
 
@@ -153,7 +153,7 @@ void storageMapForAll(ValueLoader loader, Tuple map, F&& func) {
 std::string hexLengthString(uint256_t x, size_t len) {
     auto hex = intx::to_string(x, 16);
     std::string prefix = "0x";
-    for (auto i = 0; i < len * 2 - hex.size(); i++) {
+    for (size_t i = 0; i < len * 2 - hex.size(); i++) {
         prefix += "0";
     }
     return prefix + hex;
@@ -180,7 +180,7 @@ std::vector<uint8_t> serializeBytes(ValueLoader loader, Tuple tup) {
     return bytes;
 }
 
-nlohmann::json serializeRetryable(ValueLoader loader, Value retryable) {
+nlohmann::json serializeRetryable(ValueLoader loader, Value, Value retryable) {
     nlohmann::json json;
     auto tup = resolveTuple(loader, retryable);
     json["Id"] = hashString(indexInt(tup, 0));
@@ -194,7 +194,7 @@ nlohmann::json serializeRetryable(ValueLoader loader, Value retryable) {
     return json;
 }
 
-nlohmann::json serializeAccount(ValueLoader loader, Value account) {
+nlohmann::json serializeAccount(ValueLoader loader, Value, Value account) {
     nlohmann::json json;
     auto tup = resolveTuple(loader, account);
     json["Addr"] = addressString(indexInt(tup, 0));
@@ -239,6 +239,10 @@ nlohmann::json serializeAccount(ValueLoader loader, Value account) {
     return json;
 }
 
+nlohmann::json serializeAddressKey(ValueLoader, Value address, Value) {
+    return addressString(assertInt(address));
+}
+
 template <typename F>
 void writeKvsToFile(ValueLoader loader,
                     Tuple kvs,
@@ -249,7 +253,7 @@ void writeKvsToFile(ValueLoader loader,
     retryables.open(filename, std::ios::out | std::ios::trunc);
     uint64_t count = 0;
     kvsForAll(loader, kvs, [&](Value key, Value val) {
-        auto serialized = serialize(loader, val);
+        auto serialized = serialize(loader, key, val);
         mutex.lock();
         retryables << serialized << std::endl;
         count++;
@@ -257,7 +261,6 @@ void writeKvsToFile(ValueLoader loader,
     });
     retryables.close();
 }
-
 
 int dumpRetriables(CArbCore* a, CMachine* m, const char* filename) {
     assert(m);
@@ -289,6 +292,23 @@ int dumpAccounts(CArbCore* a, CMachine* m, const char* filename) {
     auto accountsKvs = indexTup(l, accountStore, 0);
 
     writeKvsToFile(l, accountsKvs, stringFileName, serializeAccount);
+
+    return 0;
+}
+
+int dumpAddressTable(CArbCore* a, CMachine* m, const char* filename) {
+    assert(m);
+    assert(a);
+    auto mach = static_cast<Machine*>(m);
+    auto arbCore = static_cast<ArbCore*>(a);
+    std::string stringFileName(filename);
+    auto l = arbCore->makeValueLoader();
+
+    auto root = resolveTuple(l, mach->machine_state.registerVal);
+    auto addressTable = indexTup(l, indexTup(l, root, 5), 4);
+    auto addressKvs = indexTup(l, addressTable, 1);
+
+    writeKvsToFile(l, addressTable, stringFileName, serializeAddressKey);
 
     return 0;
 }
