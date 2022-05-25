@@ -26,6 +26,7 @@ import "C"
 import (
 	"bytes"
 	"math/big"
+	"path/filepath"
 	"runtime"
 	"unsafe"
 
@@ -492,20 +493,35 @@ func (ac *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Ma
 	return ret, nil
 }
 
-func (ac *ArbCore) DumpAccounts(m machine.Machine, filename string) error {
+func (ac *ArbCore) DumpArbosState(m machine.Machine, dirname string) error {
 	defer runtime.KeepAlive(ac)
 	mach, ok := m.(*Machine)
 	if !ok {
 		return errors.Errorf("bad machine")
 	}
 	defer runtime.KeepAlive(mach)
-	cfname := C.CString(filename)
-	defer C.free(unsafe.Pointer(cfname))
 
-	retval := C.dumpAccounts(ac.c, mach.c, cfname)
+	caccountspath := C.CString(filepath.Join(dirname, "accounts.json"))
+	defer C.free(unsafe.Pointer(caccountspath))
+	retval := C.dumpAccounts(ac.c, mach.c, caccountspath)
 	if retval != 0 {
 		return errors.Errorf("dumpAccounts failed")
 	}
+
+	cretryablespath := C.CString(filepath.Join(dirname, "retryables.json"))
+	defer C.free(unsafe.Pointer(cretryablespath))
+	retval = C.dumpRetryables(ac.c, mach.c, cretryablespath)
+	if retval != 0 {
+		return errors.Errorf("dumpRetryables failed")
+	}
+
+	caddresstablepath := C.CString(filepath.Join(dirname, "addresstable.json"))
+	defer C.free(unsafe.Pointer(caddresstablepath))
+	retval = C.dumpAddressTable(ac.c, mach.c, caddresstablepath)
+	if retval != 0 {
+		return errors.Errorf("dumpAddressTable failed")
+	}
+
 	return nil
 }
 

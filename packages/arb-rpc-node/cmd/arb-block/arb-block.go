@@ -17,32 +17,28 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	golog "log"
-	"math/big"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"path"
-	"strings"
+	"path/filepath"
 	"time"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 var logger zerolog.Logger
@@ -80,76 +76,41 @@ func main() {
 	}
 }
 
-func printSampleUsage() {
-	fmt.Printf("\n")
-	fmt.Printf("Sample usage: arb-block --conf=<filename> \n")
-	fmt.Printf("          or: arb-block --l1.url=<L1 RPC> [optional arguments]\n\n")
-}
-
 func startup() error {
 	ctx, cancelFunc, _ := cmdhelp.CreateLaunchContext()
 	defer cancelFunc()
 
-	config, _, l1Client, _, err := configuration.ParseCLI(ctx)
-	if err != nil || len(config.Persistent.GlobalConfig) == 0 || len(config.L1.URL) == 0 ||
-		len(config.Rollup.Address) == 0 || len(config.BridgeUtilsAddress) == 0 ||
-		((config.Node.Type() != configuration.SequencerNodeType) && len(config.Node.Sequencer.Lockout.Redis) != 0) ||
-		((len(config.Node.Sequencer.Lockout.Redis) == 0) != (len(config.Node.Sequencer.Lockout.SelfRPCURL) == 0)) {
-		printSampleUsage()
-		if err != nil && !strings.Contains(err.Error(), "help requested") {
-			fmt.Printf("\n%s\n", err.Error())
-		}
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	chainDir := fs.String("chaindir", "", "chain directory to dump ArbOS state of")
+	arbosPath := fs.String("arbospath", "", "ArbOS mexe file path")
+	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(fs)
 
-		return nil
+	err := fs.Parse(os.Args[1:])
+	if err != nil {
+		return errors.Wrap(err, "error parsing arguments")
 	}
-
-	if config.Core.Database.Metadata {
-		return cmdhelp.PrintDatabaseMetadata(config.GetDatabasePath(), &config.Core)
+	if len(*chainDir) == 0 {
+		flag.Usage()
+		return errors.New("no chain directory specified")
 	}
-
-	if config.Persistent.Chain == "" {
-		return errors.Errorf("Missing --persistent.chain")
-	}
-	if config.Rollup.Address == "" {
-		return errors.Errorf("Missing --rollup.address")
-	}
-	if config.Node.ChainID == 0 {
-		return errors.Errorf("Missing --node.chain-id")
-	}
-	if config.Rollup.Machine.Filename == "" {
-		return errors.Errorf("Missing --rollup.machine.filename")
+	if len(*arbosPath) == 0 {
+		flag.Usage()
+		return errors.New("no ArbOS mexe path")
 	}
 
-	defer logger.Log().Msg("Cleanly shutting down node")
-
-	if err := cmdhelp.ParseLogFlags(&config.Log.RPC, &config.Log.Core, gethlog.StreamHandler(os.Stderr, gethlog.JSONFormat())); err != nil {
+	if err := cmdhelp.ParseLogFlags(gethLogLevel, arbLogLevel, gethlog.StreamHandler(os.Stderr, gethlog.TerminalFormat(true))); err != nil {
 		return err
 	}
 
-	l2ChainId := new(big.Int).SetUint64(config.Node.ChainID)
-	rollupAddress := common.HexToAddress(config.Rollup.Address)
-	logger.Info().
-		Hex("chainaddress", rollupAddress.Bytes()).
-		Hex("chainid", l2ChainId.Bytes()).
-		Str("type", config.Node.TypeImpl).
-		Int64("fromBlock", config.Rollup.FromBlock).
-		Msg("Launching arbitrum node")
-
-	rollup, err := ethbridge.NewRollupWatcher(rollupAddress.ToEthAddress(), config.Rollup.FromBlock, l1Client, bind.CallOpts{})
+	nodeConfig := configuration.DefaultNodeSettings()
+	coreConfig := configuration.DefaultCoreSettingsMaxExecution()
+	coreConfig.LazyLoadCoreMachine = true
+	coreConfig.LazyLoadArchiveQueries = true
+	mon, err := monitor.NewMonitor(filepath.Join(*chainDir, "db"), coreConfig)
 	if err != nil {
 		return err
 	}
-
-	if config.Node.Type() == configuration.ValidatorNodeType && config.Core.CheckpointMaxExecutionGas != 0 {
-		log.Warn().Msg("allowing for infinite core execution because running as validator")
-		config.Core.CheckpointMaxExecutionGas = 0
-	}
-
-	mon, err := monitor.NewMonitor(config.GetDatabasePath(), &config.Core)
-	if err != nil {
-		return err
-	}
-	if err := mon.Initialize(config.Rollup.Machine.Filename); err != nil {
+	if err := mon.Initialize(*arbosPath); err != nil {
 		return err
 	}
 	if err := mon.Start(); err != nil {
@@ -157,19 +118,15 @@ func startup() error {
 	}
 	defer mon.Close()
 
-	if err := cmdhelp.UpdatePrunePoint(ctx, rollup, mon.Core); err != nil {
-		logger.Error().Err(err).Msg("error pruning database")
-	}
-
 	nodeStore := mon.Storage.GetNodeStore()
 
-	txDB, _, err := txdb.New(ctx, mon.Core, nodeStore, &config.Node)
+	txDB, _, err := txdb.New(ctx, mon.Core, nodeStore, nodeConfig)
 	if err != nil {
 		return errors.Wrap(err, "error opening txdb")
 	}
 	defer txDB.Close()
 
-	crossDB, err := New(txDB, path.Join(config.Persistent.Chain, "ethdb"))
+	crossDB, err := New(txDB, path.Join(*chainDir, "ethdb"))
 	if err != nil {
 		return err
 	}
@@ -194,5 +151,5 @@ func startup() error {
 		return err
 	}
 
-	return dumpArbState(mon.Core, nextLimit, path.Join(config.Persistent.Chain, fmt.Sprint("state_", nextLimit)))
+	return dumpArbState(mon.Core, nextLimit, path.Join(*chainDir, fmt.Sprint("state_", nextLimit)))
 }

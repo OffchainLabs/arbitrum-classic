@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"path"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 )
@@ -21,5 +20,5 @@ func dumpArbState(arbcore core.ArbCore, height uint64, dirname string) error {
 	if err != nil {
 		return err
 	}
-	return arbcore.DumpAccounts(machine, path.Join(dirname, "accounts.json"))
+	return arbcore.DumpArbosState(machine, dirname)
 }

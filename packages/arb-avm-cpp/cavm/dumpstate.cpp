@@ -138,6 +138,9 @@ void kvsNodeForAll(ValueLoader loader,
 
 template <typename F>
 void kvsForAll(ValueLoader loader, Tuple kvs, F&& func) {
+    if (kvs.tuple_size() != 2) {
+        throw std::runtime_error("kvs container tuple must have 2 elements");
+    }
     kvsNodeForAll(loader, kvs.get_element(0), false, parallelKvsLayers,
                   std::forward<F>(func));
 }
@@ -262,13 +265,14 @@ void writeKvsToFile(ValueLoader loader,
     retryables.close();
 }
 
-int dumpRetriables(CArbCore* a, CMachine* m, const char* filename) {
+int dumpRetryables(CArbCore* a, CMachine* m, const char* filename) {
     assert(m);
     assert(a);
     auto mach = static_cast<Machine*>(m);
     auto arbCore = static_cast<ArbCore*>(a);
     std::string stringFileName(filename);
-    auto l = arbCore->makeValueLoader();
+    auto l = ValueLoader(
+        std::make_unique<SimpleValueLoader>(arbCore->getDataStorage()));
 
     auto root = resolveTuple(l, mach->machine_state.registerVal);
     auto accountStore = indexTup(l, indexTup(l, root, 6), 1);
@@ -285,7 +289,8 @@ int dumpAccounts(CArbCore* a, CMachine* m, const char* filename) {
     auto mach = static_cast<Machine*>(m);
     auto arbCore = static_cast<ArbCore*>(a);
     std::string stringFileName(filename);
-    auto l = arbCore->makeValueLoader();
+    auto l = ValueLoader(
+        std::make_unique<SimpleValueLoader>(arbCore->getDataStorage()));
 
     auto root = resolveTuple(l, mach->machine_state.registerVal);
     auto accountStore = indexTup(l, indexTup(l, root, 6), 1);
@@ -302,13 +307,14 @@ int dumpAddressTable(CArbCore* a, CMachine* m, const char* filename) {
     auto mach = static_cast<Machine*>(m);
     auto arbCore = static_cast<ArbCore*>(a);
     std::string stringFileName(filename);
-    auto l = arbCore->makeValueLoader();
+    auto l = ValueLoader(
+        std::make_unique<SimpleValueLoader>(arbCore->getDataStorage()));
 
     auto root = resolveTuple(l, mach->machine_state.registerVal);
     auto addressTable = indexTup(l, indexTup(l, root, 5), 4);
     auto addressKvs = indexTup(l, addressTable, 1);
 
-    writeKvsToFile(l, addressTable, stringFileName, serializeAddressKey);
+    writeKvsToFile(l, addressKvs, stringFileName, serializeAddressKey);
 
     return 0;
 }
