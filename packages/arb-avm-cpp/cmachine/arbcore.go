@@ -519,7 +519,7 @@ func (ac *ArbCore) DumpArbosState(m machine.Machine, dirname string) error {
 	defer C.free(unsafe.Pointer(caddresstablepath))
 	retval = C.dumpAddressTable(ac.c, mach.c, caddresstablepath)
 	if retval != 0 {
-		return errors.Errorf("dumpRetryables failed")
+		return errors.Errorf("dumpAddressTable failed")
 	}
 
 	return nil
