@@ -38,7 +38,7 @@ func TestReceiveMessages(t *testing.T) {
 
 	b := broadcaster.NewBroadcaster(settings)
 
-	err := b.Start(ctx)
+	_, err := b.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +106,7 @@ func TestServerClientDisconnect(t *testing.T) {
 
 	b := broadcaster.NewBroadcaster(settings)
 
-	err := b.Start(ctx)
+	_, err := b.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +157,7 @@ func TestBroadcastClientReconnectsOnServerDisconnect(t *testing.T) {
 
 	b1 := broadcaster.NewBroadcaster(settings)
 
-	err := b1.Start(ctx)
+	_, err := b1.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,7 +188,7 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 
 	b := broadcaster.NewBroadcaster(settings)
 
-	err := b.Start(ctx)
+	_, err := b.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

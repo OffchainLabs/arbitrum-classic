@@ -39,7 +39,7 @@ func TestBroadcasterSendsConfirmedAccumulatorMessages(t *testing.T) {
 
 	b := NewBroadcaster(broadcasterSettings)
 
-	err := b.Start(ctx)
+	_, err := b.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +153,7 @@ func TestBroadcasterRespondsToPing(t *testing.T) {
 
 	b := NewBroadcaster(broadcasterSettings)
 
-	err := b.Start(ctx)
+	_, err := b.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,7 +204,7 @@ func TestBroadcasterReorganizesCacheBasedOnAccumulator(t *testing.T) {
 
 	b := NewBroadcaster(broadcasterSettings)
 
-	err := b.Start(ctx)
+	_, err := b.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

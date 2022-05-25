@@ -325,7 +325,7 @@ func startup() error {
 		return crypto.Sign(hash, seqPrivKey)
 	}
 
-	batch, err := rpc.SetupBatcher(
+	batch, broadcasterErrChan, err := rpc.SetupBatcher(
 		ctx,
 		ethclint,
 		rollupAddress,
@@ -392,6 +392,8 @@ func startup() error {
 
 	select {
 	case err := <-txDBErrChan:
+		return err
+	case err := <-broadcasterErrChan:
 		return err
 	case err := <-errChan:
 		return err

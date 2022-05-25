@@ -50,7 +50,7 @@ func (b *Broadcaster) ClientCount() int32 {
 	return b.server.ClientCount()
 }
 
-func (b *Broadcaster) Start(ctx context.Context) error {
+func (b *Broadcaster) Start(ctx context.Context) (chan error, error) {
 	return b.server.Start(ctx)
 }
 
