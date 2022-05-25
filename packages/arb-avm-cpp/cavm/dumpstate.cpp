@@ -138,6 +138,9 @@ void kvsNodeForAll(ValueLoader loader,
 
 template <typename F>
 void kvsForAll(ValueLoader loader, Tuple kvs, F&& func) {
+    if (kvs.tuple_size() != 2) {
+        throw std::runtime_error("kvs container tuple must have 2 elements");
+    }
     kvsNodeForAll(loader, kvs.get_element(0), false, parallelKvsLayers,
                   std::forward<F>(func));
 }
@@ -311,7 +314,7 @@ int dumpAddressTable(CArbCore* a, CMachine* m, const char* filename) {
     auto addressTable = indexTup(l, indexTup(l, root, 5), 4);
     auto addressKvs = indexTup(l, addressTable, 1);
 
-    writeKvsToFile(l, addressTable, stringFileName, serializeAddressKey);
+    writeKvsToFile(l, addressKvs, stringFileName, serializeAddressKey);
 
     return 0;
 }
