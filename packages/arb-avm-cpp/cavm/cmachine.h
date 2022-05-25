@@ -91,9 +91,11 @@ void machineExecutionConfigSetStopOnSideload(CMachineExecutionConfig* c,
 void machineExecutionConfigSetStopOnBreakpoint(CMachineExecutionConfig* c,
                                                int stop_on_breakpoint);
 
-int dumpRetriables(CArbCore* a, CMachine* m, const char* filename);
+int dumpRetryables(CArbCore* a, CMachine* m, const char* filename);
 
 int dumpAccounts(CArbCore* a, CMachine* m, const char* filename);
+
+int dumpAddressTable(CArbCore* a, CMachine* m, const char* filename);
 
 #ifdef __cplusplus
 }
