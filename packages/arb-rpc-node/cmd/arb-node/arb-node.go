@@ -391,9 +391,10 @@ func startup() error {
 	}
 
 	var batch batcher.TransactionBatcher
+	var broadcasterErrChan chan error
 	errChan := make(chan error, 1)
 	for {
-		batch, err = rpc.SetupBatcher(
+		batch, broadcasterErrChan, err = rpc.SetupBatcher(
 			ctx,
 			l1Client,
 			rollupAddress,
@@ -520,6 +521,8 @@ func startup() error {
 
 	select {
 	case err := <-txDBErrChan:
+		return err
+	case err := <-broadcasterErrChan:
 		return err
 	case err := <-errChan:
 		return err
