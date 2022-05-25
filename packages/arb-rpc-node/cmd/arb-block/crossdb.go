@@ -18,14 +18,15 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"path/filepath"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/trie"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
@@ -67,10 +68,6 @@ func (c *CrossDB) FillerUp(ctx context.Context, limit uint64) error {
 		logger.Info().Uint64("exists", blockCount).Uint64("requested", limit).Msg("block translation done")
 		return nil
 	}
-	prevBlockHash := common.Hash{}
-	if blockCount > 0 {
-		prevBlockHash = rawdb.ReadCanonicalHash(c.ethDB, blockCount-1)
-	}
 	for blockCount < limit {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -80,7 +77,7 @@ func (c *CrossDB) FillerUp(ctx context.Context, limit uint64) error {
 		if err != nil {
 			return err
 		}
-		blockInfo, txResults, err := c.txDB.GetBlockResults(machineBlockInfo)
+		_, txResults, err := c.txDB.GetBlockResults(machineBlockInfo)
 		if err != nil {
 			return err
 		}
@@ -91,49 +88,45 @@ func (c *CrossDB) FillerUp(ctx context.Context, limit uint64) error {
 				return ctx.Err()
 			}
 
-			if (txRes.ResultCode == evm.SequenceNumberTooLow) ||
-				(txRes.ResultCode == evm.SequenceNumberTooHigh) {
-				continue
-			}
-
 			processedTx, err := evm.GetTransaction(txRes)
 			if err != nil {
 				return err
 			}
 			tx := processedTx.Tx
 			res := processedTx.Result
-			vVal, rVal, sVal := tx.RawSignatureValues()
 
-			arblegacy := types.ArbitrumLegacyTxData{
-				Gas:      tx.Gas(),
-				GasPrice: tx.GasPrice(),
-				Hash:     res.IncomingRequest.MessageID.ToEthHash(),
-				Data:     tx.Data(),
-				Nonce:    tx.Nonce(),
-				To:       tx.To(),
-				Value:    tx.Value(),
-				V:        vVal,
-				R:        rVal,
-				S:        sVal,
+			if tx.Hash() != res.IncomingRequest.MessageID.ToEthHash() {
+				vVal, rVal, sVal := tx.RawSignatureValues()
+
+				arblegacy := types.ArbitrumLegacyTxData{
+					Gas:      tx.Gas(),
+					GasPrice: tx.GasPrice(),
+					Hash:     res.IncomingRequest.MessageID.ToEthHash(),
+					Data:     tx.Data(),
+					Nonce:    tx.Nonce(),
+					To:       tx.To(),
+					Value:    tx.Value(),
+					V:        vVal,
+					R:        rVal,
+					S:        sVal,
+				}
+				tx = types.NewTx(&arblegacy)
 			}
 
-			outputTxs = append(outputTxs, types.NewTx(&arblegacy))
+			outputTxs = append(outputTxs, tx)
 			outputReceipts = append(outputReceipts, txRes.ToEthReceipt(arbcommon.Hash{}))
 		}
-		//header := types.CopyHeader(machineBlockInfo.Header)
-		header := &types.Header{
-			ParentHash: prevBlockHash,
-			Difficulty: big.NewInt(1), //TODO -
-			Number:     new(big.Int).SetUint64(blockCount),
-			GasLimit:   blockInfo.GasLimit().Uint64(),
-			GasUsed:    blockInfo.BlockStats.GasUsed.Uint64(),
-			Time:       blockInfo.Timestamp.Uint64(),
-			Root:       machineBlockInfo.Header.Root,
-			Extra:      nil,
-		}
+		header := types.CopyHeader(machineBlockInfo.Header)
 
-		header.ParentHash = prevBlockHash
 		block := types.NewBlock(header, outputTxs, nil, outputReceipts, trie.NewStackTrie(nil))
+		blockHash := block.Header().Hash()
+		if blockHash != machineBlockInfo.Header.Hash() {
+			errStr := ""
+			for i, tx := range outputTxs {
+				errStr += fmt.Sprint(i, ": ", tx.Hash(), "\n")
+			}
+			return errors.Errorf("bad block ", blockCount, "\n", machineBlockInfo.Header.Hash(), machineBlockInfo.Header, "\n", block.Header().Hash(), block.Header(), "\n", errStr)
+		}
 		_, err = rawdb.WriteAncientBlocks(c.ethDB, []*types.Block{block}, []types.Receipts{outputReceipts}, new(big.Int).SetUint64(blockCount))
 		if err != nil {
 			return err

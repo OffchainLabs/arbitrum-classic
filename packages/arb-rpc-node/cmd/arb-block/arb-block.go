@@ -83,6 +83,9 @@ func startup() error {
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	chainDir := fs.String("chaindir", "", "chain directory to dump ArbOS state of")
 	arbosPath := fs.String("arbospath", "", "ArbOS mexe file path")
+	blockNum := fs.Uint64("blocknum", 0, "block number to import")
+	skipBlocks := fs.Bool("skipblocks", false, "don't import blocks")
+	skipState := fs.Bool("skipstate", false, "don't import state")
 	gethLogLevel, arbLogLevel := cmdhelp.AddLogFlags(fs)
 
 	err := fs.Parse(os.Args[1:])
@@ -136,20 +139,28 @@ func startup() error {
 		return err
 	}
 
-	currBlocks, err := crossDB.EthBlockNum()
-	if err != nil {
-		return err
+	if *blockNum > maxBlocks {
+		return errors.Errorf("requested {} blocks but only {} exist", *blockNum, maxBlocks)
 	}
 
-	nextLimit := currBlocks + 1000
-	if nextLimit > maxBlocks {
-		nextLimit = maxBlocks
+	if *blockNum == 0 {
+		*blockNum = maxBlocks
+		logger.Info().Uint64("blocks", *blockNum)
 	}
 
-	err = crossDB.FillerUp(ctx, nextLimit)
-	if err != nil {
-		return err
+	if !*skipBlocks {
+		err = crossDB.FillerUp(ctx, *blockNum)
+		if err != nil {
+			return err
+		}
 	}
 
-	return dumpArbState(mon.Core, nextLimit, path.Join(*chainDir, fmt.Sprint("state_", nextLimit)))
+	if !*skipState {
+		err = dumpArbState(mon.Core, *blockNum, path.Join(*chainDir, fmt.Sprint("state_", *blockNum)))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
