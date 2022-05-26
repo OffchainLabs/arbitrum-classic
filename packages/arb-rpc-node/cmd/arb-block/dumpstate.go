@@ -20,5 +20,5 @@ func dumpArbState(arbcore core.ArbCore, height uint64, dirname string) error {
 	if err != nil {
 		return err
 	}
-	return arbcore.DumpArbosState(machine, dirname)
+	return arbcore.DumpArbosState(machine, height, dirname)
 }

@@ -25,6 +25,8 @@ package cmachine
 import "C"
 import (
 	"bytes"
+	"encoding/json"
+	"io/ioutil"
 	"math/big"
 	"path/filepath"
 	"runtime"
@@ -493,7 +495,7 @@ func (ac *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Ma
 	return ret, nil
 }
 
-func (ac *ArbCore) DumpArbosState(m machine.Machine, dirname string) error {
+func (ac *ArbCore) DumpArbosState(m machine.Machine, blockNum uint64, dirname string) error {
 	defer runtime.KeepAlive(ac)
 	mach, ok := m.(*Machine)
 	if !ok {
@@ -501,27 +503,50 @@ func (ac *ArbCore) DumpArbosState(m machine.Machine, dirname string) error {
 	}
 	defer runtime.KeepAlive(mach)
 
-	caccountspath := C.CString(filepath.Join(dirname, "accounts.json"))
+	type ArbosInitFileContents struct {
+		PreinitBlocks            uint64
+		AddressTableContentsPath string
+		RetryableDataPath        string
+		AccountsPath             string
+	}
+
+	indexJson := ArbosInitFileContents{
+		PreinitBlocks:            blockNum,
+		AddressTableContentsPath: "addresstable.json",
+		RetryableDataPath:        "retryables.json",
+		AccountsPath:             "accounts.json",
+	}
+
+	caccountspath := C.CString(filepath.Join(dirname, indexJson.AccountsPath))
 	defer C.free(unsafe.Pointer(caccountspath))
 	retval := C.dumpAccounts(ac.c, mach.c, caccountspath)
 	if retval != 0 {
 		return errors.Errorf("dumpAccounts failed")
 	}
 
-	cretryablespath := C.CString(filepath.Join(dirname, "retryables.json"))
+	cretryablespath := C.CString(filepath.Join(dirname, indexJson.RetryableDataPath))
 	defer C.free(unsafe.Pointer(cretryablespath))
 	retval = C.dumpRetryables(ac.c, mach.c, cretryablespath)
 	if retval != 0 {
 		return errors.Errorf("dumpRetryables failed")
 	}
 
-	caddresstablepath := C.CString(filepath.Join(dirname, "addresstable.json"))
+	caddresstablepath := C.CString(filepath.Join(dirname, indexJson.AddressTableContentsPath))
 	defer C.free(unsafe.Pointer(caddresstablepath))
 	retval = C.dumpAddressTable(ac.c, mach.c, caddresstablepath)
 	if retval != 0 {
 		return errors.Errorf("dumpAddressTable failed")
 	}
 
+	indexPath := filepath.Join(dirname, "index.json")
+	indexBytes, err := json.Marshal(indexJson)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(indexPath, indexBytes, 0644)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

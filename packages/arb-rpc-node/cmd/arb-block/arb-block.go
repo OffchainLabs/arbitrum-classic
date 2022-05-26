@@ -149,7 +149,7 @@ func startup() error {
 	}
 
 	if !*skipBlocks {
-		err = crossDB.FillerUp(ctx, *blockNum)
+		err = crossDB.FillerUp(ctx, *blockNum+1)
 		if err != nil {
 			return err
 		}

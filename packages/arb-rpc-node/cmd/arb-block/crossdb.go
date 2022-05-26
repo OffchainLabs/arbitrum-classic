@@ -64,6 +64,17 @@ func (c *CrossDB) FillerUp(ctx context.Context, limit uint64) error {
 	if err != nil {
 		return err
 	}
+	if blockCount > 0 {
+		lastBlock := blockCount - 1
+		storedHash := rawdb.ReadCanonicalHash(c.ethDB, lastBlock)
+		txBlockInfo, err := c.txDB.GetBlock(lastBlock)
+		if err != nil {
+			return err
+		}
+		if txBlockInfo.Header.Hash() != storedHash {
+			return errors.Errorf("ethDB holds bad last block")
+		}
+	}
 	if blockCount > limit {
 		logger.Info().Uint64("exists", blockCount).Uint64("requested", limit).Msg("block translation done")
 		return nil
@@ -72,7 +83,9 @@ func (c *CrossDB) FillerUp(ctx context.Context, limit uint64) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		logger.Info().Uint64("block", blockCount).Msg("importing block")
+		if blockCount%1000 == 0 {
+			logger.Info().Uint64("block", blockCount).Msg("importing block")
+		}
 		machineBlockInfo, err := c.txDB.GetBlock(blockCount)
 		if err != nil {
 			return err
@@ -96,21 +109,10 @@ func (c *CrossDB) FillerUp(ctx context.Context, limit uint64) error {
 			res := processedTx.Result
 
 			if tx.Hash() != res.IncomingRequest.MessageID.ToEthHash() {
-				vVal, rVal, sVal := tx.RawSignatureValues()
-
-				arblegacy := types.ArbitrumLegacyTxData{
-					Gas:      tx.Gas(),
-					GasPrice: tx.GasPrice(),
-					Hash:     res.IncomingRequest.MessageID.ToEthHash(),
-					Data:     tx.Data(),
-					Nonce:    tx.Nonce(),
-					To:       tx.To(),
-					Value:    tx.Value(),
-					V:        vVal,
-					R:        rVal,
-					S:        sVal,
+				tx, err = types.NewArbitrumLegacyTx(tx, res.IncomingRequest.MessageID.ToEthHash())
+				if err != nil {
+					return err
 				}
-				tx = types.NewTx(&arblegacy)
 			}
 
 			outputTxs = append(outputTxs, tx)
