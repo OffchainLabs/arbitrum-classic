@@ -116,7 +116,7 @@ func (c *CrossDB) FillerUp(ctx context.Context, limit uint64) error {
 			}
 
 			outputTxs = append(outputTxs, tx)
-			outputReceipts = append(outputReceipts, txRes.ToEthReceipt(arbcommon.Hash{}))
+			outputReceipts = append(outputReceipts, txRes.ToEthReceipt(arbcommon.NewHashFromEth(machineBlockInfo.Header.Hash())))
 		}
 		header := types.CopyHeader(machineBlockInfo.Header)
 
@@ -129,7 +129,7 @@ func (c *CrossDB) FillerUp(ctx context.Context, limit uint64) error {
 			}
 			return errors.Errorf("bad block ", blockCount, "\n", machineBlockInfo.Header.Hash(), machineBlockInfo.Header, "\n", block.Header().Hash(), block.Header(), "\n", errStr)
 		}
-		_, err = rawdb.WriteAncientBlocks(c.ethDB, []*types.Block{block}, []types.Receipts{outputReceipts}, new(big.Int).SetUint64(blockCount))
+		_, err = rawdb.WriteAncientBlocks(c.ethDB, []*types.Block{block}, []types.Receipts{outputReceipts}, big.NewInt(0))
 		if err != nil {
 			return err
 		}
