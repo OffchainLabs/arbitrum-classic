@@ -78,11 +78,15 @@ contract NitroMigrator is Ownable {
     }
 
     /// @dev this assumes this contract owns the rollup/inboxes/bridge before this function is called (else it will revert)
-    /// this will create the final input in the inbox, but there won't be the final assertion available yet
+    /// this will create the final input in the inbox, but there won't be the final assertion available yet.
+    /// it is assumed that at this point the sequencer has stopped receiving txs and has posted its final batch on-chain
     function nitroStep1() external onlyOwner {
         require(messageCountWithHalt == type(uint256).max, "STEP1_ALREADY_TRIGGERED");
         uint256 delayedMessageCount = inbox.shutdownForNitro();
 
+        // the `bridge` won't have any enabled inboxes after nitroStep2, so force inclusion after this shouldn't be possible
+        // the rollup event bridge will update the delayed accumulator after the final rollup shutdown events, but this
+        // shouldn't be an issue
         bridge.setInbox(address(inbox), false);
         bridge.setInbox(address(outboxV1), false);
         bridge.setInbox(address(outboxV2), false);
@@ -98,7 +102,10 @@ contract NitroMigrator is Ownable {
 
         bridge.setOutbox(address(this), false);
 
-        // TODO: will this cause a sequencer reorg?
+        // if the sequencer posted its final batch and was shutdown before `nitroStep1` this shouldn't be an issue
+        // we could lock the sequencer inbox with `forceInclusionNoDelay` but this wouldnt stop a reorg from accepting
+        // txs in the RPC interface without posting a batch.
+        // `nitroStep2` will only enforce inclusion of assertions that read up to this current point.
         sequencerInbox.forceInclusionNoDelay(
             delayedMessageCount,
             L1MessageType_shutdownForNitro,
@@ -114,8 +121,6 @@ contract NitroMigrator is Ownable {
         messageCountWithHalt = sequencerInbox.messageCount();
 
         // TODO: remove permissions from gas refunder to current sequencer inbox
-
-        // TODO: trigger inbox upgrade to new logic
     }
 
     /// @dev this assumes step 1 has executed succesfully and that a validator has made the final assertion that includes the inbox shutdownForNitro
@@ -159,8 +164,12 @@ contract NitroMigrator is Ownable {
 
         // TODO: forceResolveChallenge if any
         // TODO: double check that challenges can't be created and new stakes cant be added
-
         bridge.setInbox(address(rollupEventBridge), false);
+    }
+
+    function nitroStep3() external onlyOwner {
         // enable new Bridge with funds (ie set old outboxes)
+        // TODO: enable new elements of nitro chain (ie bridge, inbox, outbox, rollup, etc)
+        // TODO: trigger inbox upgrade to new logic
     }
 }
