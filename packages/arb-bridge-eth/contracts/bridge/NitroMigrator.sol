@@ -154,8 +154,7 @@ contract NitroMigrator is Ownable {
             stakers[i] = rollup.getStakerAddress(i);
         }
         // they now have withdrawable stake to claim
-        // rollup needs to be unpaused for this.
-        // TODO: we can remove `whenNotPaused` modifier from that function
+        // rollup doesn't need to be unpaused for this.
         rollup.forceRefundStaker(stakers);
 
         // TODO: forceResolveChallenge if any

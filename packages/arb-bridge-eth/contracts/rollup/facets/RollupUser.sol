@@ -591,7 +591,6 @@ contract RollupUserFacet is AbsRollupUserFacet {
         external
         override
         onlyValidator
-        whenNotPaused
         returns (uint256)
     {
         uint256 amount = withdrawFunds(msg.sender);
