@@ -225,6 +225,8 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
         onlyWhitelisted
         returns (uint256)
     {
+        // ensure the user's deposit alone will make submission succeed
+        require(msg.value >= maxSubmissionCost, "insufficient value");
         require(!isCreateRetryablePaused, "CREATE_RETRYABLES_PAUSED");
         address sender = msg.sender;
         address destinationAddress = msg.sender;
