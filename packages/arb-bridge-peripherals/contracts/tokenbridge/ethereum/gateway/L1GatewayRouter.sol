@@ -41,13 +41,13 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
     function initialize(
         address _owner,
         address _defaultGateway,
-        address _whitelist,
+        address , // was _whitelist, now unused
         address _counterpartGateway,
         address _inbox
     ) public {
         GatewayRouter._initialize(_counterpartGateway, address(0), _defaultGateway);
         owner = _owner;
-        WhitelistConsumer.whitelist = _whitelist;
+        WhitelistConsumer.whitelist = address(0);
         inbox = _inbox;
     }
 
@@ -249,7 +249,6 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
     ) public payable override returns (bytes memory) {
         _outboundTransferChecks(_maxGas, _gasPriceBid, _data);
 
-        // will revert if msg.sender is not whitelisted
         return super.outboundTransfer(_token, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
 
@@ -278,7 +277,6 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         require(_refundTo != address(0), "INVALID_REFUND_ADDR");
         _outboundTransferChecks(_maxGas, _gasPriceBid, _data);
 
-        // will revert if msg.sender is not whitelisted
         return super.outboundTransferCustomRefund(_token, _refundTo, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
 
