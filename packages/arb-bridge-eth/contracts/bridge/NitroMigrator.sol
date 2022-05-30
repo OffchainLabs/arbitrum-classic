@@ -98,16 +98,8 @@ contract NitroMigrator is Ownable {
 
         bridge.setOutbox(address(this), false);
 
-        // instead of a force include we can set maxDelayBlock and maxDelayTimestamp to (type(uint256).max - 2)
-        // there isn't an overflow protection, so this means it would overflow and return to the curr value - 1
-        // passing the time delta requirement
-        uint256 prevMaxDelayBlocks = sequencerInbox.maxDelayBlocks();
-        uint256 prevMaxDelaySeconds = sequencerInbox.maxDelaySeconds();
-
-        rollup.setSequencerInboxMaxDelay(type(uint256).max - 2, type(uint256).max - 2);
-
         // TODO: will this cause a sequencer reorg?
-        sequencerInbox.forceInclusion(
+        sequencerInbox.forceInclusionNoDelay(
             delayedMessageCount,
             L1MessageType_chainHalt,
             [block.number, block.timestamp],
@@ -117,8 +109,6 @@ contract NitroMigrator is Ownable {
             keccak256(abi.encodePacked("")),
             bridge.inboxAccs(delayedMessageCount - 1)
         );
-
-        rollup.setSequencerInboxMaxDelay(prevMaxDelayBlocks, prevMaxDelaySeconds);
 
         // we can use this to verify in step 2 that the assertion includes the chainHalt message
         messageCountWithHalt = sequencerInbox.messageCount();

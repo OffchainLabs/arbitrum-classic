@@ -92,7 +92,6 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
     /**
      * @notice Move messages from the delayed inbox into the Sequencer inbox. Callable by any address. Necessary iff Sequencer hasn't included them before delay period expired.
      */
-
     function forceInclusion(
         uint256 _totalDelayedMessagesRead,
         uint8 kind,
@@ -103,6 +102,57 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         bytes32 messageDataHash,
         bytes32 delayedAcc
     ) external {
+        // Can only force-include after the Sequencer-only window has expired.
+        require(l1BlockAndTimestamp[0] + maxDelayBlocks < block.number, "MAX_DELAY_BLOCKS");
+        require(l1BlockAndTimestamp[1] + maxDelaySeconds < block.timestamp, "MAX_DELAY_TIME");
+
+        forceInclusionImpl(
+            _totalDelayedMessagesRead,
+            kind,
+            l1BlockAndTimestamp,
+            inboxSeqNum,
+            gasPriceL1,
+            sender,
+            messageDataHash,
+            delayedAcc
+        );
+    }
+
+    function forceInclusionNoDelay(
+        uint256 _totalDelayedMessagesRead,
+        uint8 kind,
+        uint256[2] calldata l1BlockAndTimestamp,
+        uint256 inboxSeqNum,
+        uint256 gasPriceL1,
+        address sender,
+        bytes32 messageDataHash,
+        bytes32 delayedAcc
+    ) external {
+        // no delay on force inclusion, triggered only by rollup's owner
+        require(Rollup(payable(rollup)).owner() == msg.sender, "ONLY_ROLLUP_OWNER");
+
+        forceInclusionImpl(
+            _totalDelayedMessagesRead,
+            kind,
+            l1BlockAndTimestamp,
+            inboxSeqNum,
+            gasPriceL1,
+            sender,
+            messageDataHash,
+            delayedAcc
+        );
+    }
+
+    function forceInclusionImpl(
+        uint256 _totalDelayedMessagesRead,
+        uint8 kind,
+        uint256[2] calldata l1BlockAndTimestamp,
+        uint256 inboxSeqNum,
+        uint256 gasPriceL1,
+        address sender,
+        bytes32 messageDataHash,
+        bytes32 delayedAcc
+    ) internal {
         require(_totalDelayedMessagesRead > totalDelayedMessagesRead, "DELAYED_BACKWARDS");
         {
             bytes32 messageHash = Messages.messageHash(
@@ -114,9 +164,6 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
                 gasPriceL1,
                 messageDataHash
             );
-            // Can only force-include after the Sequencer-only window has expired.
-            require(l1BlockAndTimestamp[0] + maxDelayBlocks < block.number, "MAX_DELAY_BLOCKS");
-            require(l1BlockAndTimestamp[1] + maxDelaySeconds < block.timestamp, "MAX_DELAY_TIME");
 
             // Verify that message hash represents the last message sequence of delayed message to be included
             bytes32 prevDelayedAcc = 0;
