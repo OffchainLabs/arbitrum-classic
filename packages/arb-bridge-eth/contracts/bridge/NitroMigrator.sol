@@ -29,7 +29,7 @@ import "../rollup/RollupLib.sol";
 pragma solidity ^0.6.11;
 
 contract NitroMigrator is Ownable {
-    uint8 internal constant L1MessageType_chainHalt = 12;
+    uint8 internal constant L1MessageType_shutdownForNitro = 128;
 
     Inbox immutable inbox;
     SequencerInbox immutable sequencerInbox;
@@ -81,7 +81,7 @@ contract NitroMigrator is Ownable {
     /// this will create the final input in the inbox, but there won't be the final assertion available yet
     function nitroStep1() external onlyOwner {
         require(messageCountWithHalt == type(uint256).max, "STEP1_ALREADY_TRIGGERED");
-        uint256 delayedMessageCount = inbox.chainHalt();
+        uint256 delayedMessageCount = inbox.shutdownForNitro();
 
         bridge.setInbox(address(inbox), false);
         bridge.setInbox(address(outboxV1), false);
@@ -101,7 +101,7 @@ contract NitroMigrator is Ownable {
         // TODO: will this cause a sequencer reorg?
         sequencerInbox.forceInclusionNoDelay(
             delayedMessageCount,
-            L1MessageType_chainHalt,
+            L1MessageType_shutdownForNitro,
             [block.number, block.timestamp],
             delayedMessageCount,
             tx.gasprice,
@@ -110,7 +110,7 @@ contract NitroMigrator is Ownable {
             bridge.inboxAccs(delayedMessageCount - 1)
         );
 
-        // we can use this to verify in step 2 that the assertion includes the chainHalt message
+        // we can use this to verify in step 2 that the assertion includes the shutdownForNitro message
         messageCountWithHalt = sequencerInbox.messageCount();
 
         // TODO: remove permissions from gas refunder to current sequencer inbox
@@ -118,7 +118,7 @@ contract NitroMigrator is Ownable {
         // TODO: trigger inbox upgrade to new logic
     }
 
-    /// @dev this assumes step 1 has executed succesfully and that a validator has made the final assertion that includes the inbox chainHalt
+    /// @dev this assumes step 1 has executed succesfully and that a validator has made the final assertion that includes the inbox shutdownForNitro
     function nitroStep2(
         bytes32[3] memory bytes32Fields,
         uint256[4] memory intFields,
