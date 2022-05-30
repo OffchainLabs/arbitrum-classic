@@ -256,8 +256,9 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
      * @notice Deposit ERC20 token from Ethereum into Arbitrum using the registered or otherwise default gateway
      * @dev Some legacy gateway might not have the outboundTransferCustomRefund method and will revert, in such case use outboundTransfer instead
      * @param _token L1 address of ERC20
-     * @param _refundTo account to be credited with the excess gas refund in the L2, subject to L2 alias rewrite if its a L1 contract
-     * @param _to account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
+     * @param _refundTo Account, or its L2 alias if it have code in L1, to be credited with excess gas refund in L2
+     * @param _to Account to be credited with the tokens in the L2 (can be the user's L2 account or a contract), not subject to L2 aliasing
+                  This account, or its L2 alias if it have code in L1, will also be able to cancel the retryable ticket and receive callvalue refund
      * @param _amount Token Amount
      * @param _maxGas Max gas deducted from user's L2 balance to cover L2 execution
      * @param _gasPriceBid Gas price for L2 execution
@@ -273,7 +274,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable override returns (bytes memory) {
-        // _refundTo is subject to L2 alias rewrite
+        // _refundTo will be rewritten to L2 alias if the address have code in L1
         require(_refundTo != address(0), "INVALID_REFUND_ADDR");
         _outboundTransferChecks(_maxGas, _gasPriceBid, _data);
 
