@@ -31,23 +31,36 @@ pragma solidity ^0.6.11;
 contract NitroMigrator is Ownable {
     uint8 internal constant L1MessageType_shutdownForNitro = 128;
 
-    Inbox immutable inbox;
-    SequencerInbox immutable sequencerInbox;
-    Bridge immutable bridge;
-    RollupEventBridge immutable rollupEventBridge;
-    OldOutbox immutable outboxV1;
-    Outbox immutable outboxV2;
+    Inbox public immutable inbox;
+    SequencerInbox public immutable sequencerInbox;
+    Bridge public immutable bridge;
+    RollupEventBridge public immutable rollupEventBridge;
+    OldOutbox public immutable outboxV1;
+    Outbox public immutable outboxV2;
     // assumed this contract is now the rollup admin
-    RollupAdminFacet immutable rollup;
+    RollupAdminFacet public immutable rollup;
 
-    address immutable nitroBridge;
-    address immutable nitroOutbox;
-    address immutable nitroSequencerInbox;
-    address immutable nitroInboxLogic;
+    address public immutable nitroBridge;
+    address public immutable nitroOutbox;
+    address public immutable nitroSequencerInbox;
+    address public immutable nitroInboxLogic;
 
     // this is used track the message count in which the final inbox message was force included
     // initially set to max uint256. after step 1 its set to sequencer's inbox message count
-    uint256 messageCountWithHalt;
+    uint256 public messageCountWithHalt;
+
+    /// @dev The nitro migration includes various steps.
+    /// Step0 is setup with contract deployments and integrity checks
+    /// Step1 is settling the current state of inputs to the system (bridge, delayed and sequencer inbox) in a consistent way
+    /// Step2 is settling the current state of outputs to the system (rollup assertions) in a consistent way that includes state from step1
+    /// Step3 is enabling the nitro chain from the state settled in Step1 and Step2
+    enum NitroMigrationSteps {
+        Step0,
+        Step1,
+        Step2,
+        Step3
+    }
+    NitroMigrationSteps public latestCompleteStep;
 
     constructor(
         Inbox _inbox,
@@ -75,12 +88,14 @@ contract NitroMigrator is Ownable {
         nitroInboxLogic = _nitroInboxLogic;
         // setting to max value means it won't be possible to execute step 2 before step 1
         messageCountWithHalt = type(uint256).max;
+        latestCompleteStep = NitroMigrationSteps.Step0;
     }
 
     /// @dev this assumes this contract owns the rollup/inboxes/bridge before this function is called (else it will revert)
     /// this will create the final input in the inbox, but there won't be the final assertion available yet.
     /// it is assumed that at this point the sequencer has stopped receiving txs and has posted its final batch on-chain
     function nitroStep1(address[] calldata seqAddresses) external onlyOwner {
+        require(latestCompleteStep == NitroMigrationSteps.Step0, "WRONG_STEP");
         require(messageCountWithHalt == type(uint256).max, "STEP1_ALREADY_TRIGGERED");
         uint256 delayedMessageCount = inbox.shutdownForNitro();
 
@@ -91,6 +106,8 @@ contract NitroMigrator is Ownable {
         bridge.setInbox(address(outboxV1), false);
         bridge.setInbox(address(outboxV2), false);
         // we disable the rollupEventBridge later since its needed in order to create/confirm assertions
+        // TODO: will the nitro node process these events from the rollup event bridge? probably not since these aren't force included.
+        // is it a problem that we're dropping these delayed messages? probably not.
 
         bridge.setOutbox(address(this), true);
 
@@ -116,6 +133,7 @@ contract NitroMigrator is Ownable {
         messageCountWithHalt = sequencerInbox.messageCount();
 
         // TODO: remove permissions from gas refunder to current sequencer inbox
+        latestCompleteStep = NitroMigrationSteps.Step1;
     }
 
     /// @dev this assumes step 1 has executed succesfully and that a validator has made the final assertion that includes the inbox shutdownForNitro
@@ -123,7 +141,6 @@ contract NitroMigrator is Ownable {
         bytes32[3] memory bytes32Fields,
         uint256[4] memory intFields,
         uint256 proposedBlock,
-        uint256 inboxMaxCount,
         bytes32 beforeSendAcc,
         bytes calldata sendsData,
         uint256[] calldata sendLengths,
@@ -131,17 +148,15 @@ contract NitroMigrator is Ownable {
         bytes32 afterLogAcc,
         uint256 afterLogCount
     ) external onlyOwner {
-        require(inboxMaxCount == messageCountWithHalt, "WRONG_MESSAGE_COUNT");
-
+        require(latestCompleteStep == NitroMigrationSteps.Step1, "WRONG_STEP");
         RollupLib.ExecutionState memory afterExecutionState = RollupLib.decodeExecutionState(
             bytes32Fields,
             intFields,
             proposedBlock,
-            inboxMaxCount
+            messageCountWithHalt
         );
         bytes32 expectedStateHash = RollupLib.stateHash(afterExecutionState);
 
-        // TODO: should we provide the nodeNum instead as a param? can delete anything bigger than it from rollup
         uint256 nodeNum = rollup.latestNodeCreated();
         // the actual nodehash doesn't matter, only its after state of execution
         bytes32 actualStateHash = rollup.getNode(nodeNum).stateHash();
@@ -176,11 +191,15 @@ contract NitroMigrator is Ownable {
         // TODO: forceResolveChallenge if any
         // TODO: double check that challenges can't be created and new stakes cant be added
         bridge.setInbox(address(rollupEventBridge), false);
+
+        latestCompleteStep = NitroMigrationSteps.Step2;
     }
 
     function nitroStep3() external onlyOwner {
+        require(latestCompleteStep == NitroMigrationSteps.Step2, "WRONG_STEP");
         // enable new Bridge with funds (ie set old outboxes)
         // TODO: enable new elements of nitro chain (ie bridge, inbox, outbox, rollup, etc)
         // TODO: trigger inbox upgrade to new logic
+        latestCompleteStep = NitroMigrationSteps.Step3;
     }
 }
