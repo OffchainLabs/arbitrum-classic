@@ -87,8 +87,8 @@ contract NitroMigrator is Ownable {
         outboxV2 = _outboxV2;
 
         {
-            // we deploy a new contract to check if the rollup is ready so we can ensure the query
-            // is dispatched to the user facet, not the admin
+            // this contract is the rollup admin, and we want to check if the user facet is upgraded
+            // so we deploy a new contract to ensure the query is dispatched to the user facet, not the admin
             NitroReadyQuery queryContract = new NitroReadyQuery();
             require(queryContract.isNitroReady(address(_rollup)), "ROLLUP_NOT_NITRO_READY");
         }
@@ -124,8 +124,8 @@ contract NitroMigrator is Ownable {
         // the rollup event bridge will update the delayed accumulator after the final rollup shutdown events, but this
         // shouldn't be an issue
         bridge.setInbox(address(inbox), false);
-        bridge.setInbox(address(outboxV1), false);
-        bridge.setInbox(address(outboxV2), false);
+        bridge.setOutbox(address(outboxV1), false);
+        bridge.setOutbox(address(outboxV2), false);
         // we disable the rollupEventBridge later since its needed in order to create/confirm assertions
         // TODO: will the nitro node process these events from the rollup event bridge? probably not since these aren't force included.
         // is it a problem that we're dropping these delayed messages? probably not.
