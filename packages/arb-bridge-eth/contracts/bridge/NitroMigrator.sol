@@ -20,11 +20,12 @@ import "./Bridge.sol";
 import "./Outbox.sol";
 import "./Inbox.sol";
 import "./SequencerInbox.sol";
-import "../rollup/RollupEventBridge.sol";
 import "./Old_Outbox/OldOutbox.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "../rollup/facets/RollupAdmin.sol";
+import "../rollup/RollupEventBridge.sol";
 import "../rollup/RollupLib.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
 pragma solidity ^0.6.11;
 
@@ -83,10 +84,18 @@ contract NitroMigrator is Ownable {
         rollup = _rollup;
         outboxV1 = _outboxV1;
         outboxV2 = _outboxV2;
+
+        // we check that the new contracts that will receive permissions are actually contracts
+        require(Address.isContract(_nitroBridge), "BRIDGE_NOT_CONTRACT");
+        require(Address.isContract(_nitroOutbox), "OUTBOX_NOT_CONTRACT");
+        require(Address.isContract(_nitroSequencerInbox), "SEQINBOX_NOT_CONTRACT");
+        require(Address.isContract(_nitroInboxLogic), "INBOX_NOT_CONTRACT");
+
         nitroBridge = _nitroBridge;
         nitroOutbox = _nitroOutbox;
         nitroSequencerInbox = _nitroSequencerInbox;
         nitroInboxLogic = _nitroInboxLogic;
+
         // setting to max value means it won't be possible to execute step 2 before step 1
         messageCountWithHalt = type(uint256).max;
         latestCompleteStep = NitroMigrationSteps.Step0;
