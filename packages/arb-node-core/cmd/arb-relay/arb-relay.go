@@ -125,7 +125,7 @@ func NewArbRelay(settings configuration.Feed) *ArbRelay {
 		broadcastClients = append(broadcastClients, client)
 	}
 	return &ArbRelay{
-		broadcaster:              broadcaster.NewBroadcaster(settings.Output),
+		broadcaster:              broadcaster.NewBroadcaster(&settings.Output),
 		broadcastClients:         broadcastClients,
 		confirmedAccumulatorChan: confirmedAccumulatorChan,
 	}
@@ -136,7 +136,7 @@ const RECENT_FEED_ITEM_TTL time.Duration = time.Second * 10
 func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 	done := make(chan bool)
 
-	err := ar.broadcaster.Start(ctx)
+	broadcasterErrChan, err := ar.broadcaster.Start(ctx)
 	if err != nil {
 		return nil, errors.New("broadcast unable to start")
 	}
@@ -157,6 +157,9 @@ func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 		for {
 			select {
 			case <-ctx.Done():
+				return
+			case err := <-broadcasterErrChan:
+				logger.Error().Err(err).Msg("relay aborting")
 				return
 			case msg := <-messages:
 				newAcc := msg.FeedItem.BatchItem.Accumulator

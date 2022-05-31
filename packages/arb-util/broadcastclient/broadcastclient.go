@@ -160,6 +160,8 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 				}
 				if strings.Contains(err.Error(), "i/o timeout") {
 					logger.Error().Str("feed", bc.websocketUrl).Msg("Server connection timed out without receiving data")
+				} else if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+					logger.Warn().Err(err).Str("feed", bc.websocketUrl).Int("opcode", int(op)).Msgf("readData returned EOF")
 				} else {
 					logger.Error().Err(err).Str("feed", bc.websocketUrl).Int("opcode", int(op)).Msgf("error calling readData")
 				}
@@ -192,6 +194,10 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 					if res.ConfirmedAccumulator.IsConfirmed && bc.ConfirmedAccumulatorListener != nil {
 						bc.ConfirmedAccumulatorListener <- res.ConfirmedAccumulator.Accumulator
 					}
+				} else if res.Version == 2 {
+					logger.Fatal().Int("version", res.Version).Msg("connected to nitro feed with classic client")
+				} else {
+					logger.Fatal().Int("version", res.Version).Msg("unrecognized feed version")
 				}
 			}
 		}

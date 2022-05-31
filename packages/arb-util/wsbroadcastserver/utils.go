@@ -53,6 +53,12 @@ func logError(err error, msg string) {
 	}
 }
 
+func logWarn(err error, msg string) {
+	if !strings.Contains(err.Error(), "use of closed network connection") {
+		logger.Warn().Err(err).Msg(msg)
+	}
+}
+
 func ReadData(ctx context.Context, conn net.Conn, earlyFrameData io.Reader, idleTimeout time.Duration, state ws.State) ([]byte, ws.OpCode, error) {
 	controlHandler := wsutil.ControlFrameHandler(conn, state)
 	reader := wsutil.Reader{
