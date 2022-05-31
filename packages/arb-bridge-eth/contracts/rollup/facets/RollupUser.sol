@@ -598,6 +598,10 @@ contract RollupUserFacet is AbsRollupUserFacet {
         destination.transfer(amount);
         return amount;
     }
+
+    function isNitroReady() external pure returns (bool) {
+        return true;
+    }
 }
 
 contract ERC20RollupUserFacet is AbsRollupUserFacet {

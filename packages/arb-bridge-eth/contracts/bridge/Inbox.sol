@@ -52,6 +52,10 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
         WhitelistConsumer.whitelist = _whitelist;
     }
 
+    function isNitroReady() external pure returns (bool) {
+        return true;
+    }
+
     function shutdownForNitro() external returns (uint256) {
         require(msg.sender == Bridge(address(bridge)).owner(), "ONLY_BRIDGE_OWNER");
         return _deliverMessage(L1MessageType_shutdownForNitro, msg.sender, abi.encodePacked(""));

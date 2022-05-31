@@ -24,6 +24,7 @@ import "./Old_Outbox/OldOutbox.sol";
 import "../rollup/facets/RollupAdmin.sol";
 import "../rollup/RollupEventBridge.sol";
 import "../rollup/RollupLib.sol";
+import "../libraries/NitroReadyQuery.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
@@ -85,11 +86,21 @@ contract NitroMigrator is Ownable {
         outboxV1 = _outboxV1;
         outboxV2 = _outboxV2;
 
+        {
+            // we deploy a new contract to check if the rollup is ready so we can ensure the query
+            // is dispatched to the user facet, not the admin
+            NitroReadyQuery queryContract = new NitroReadyQuery();
+            require(queryContract.isNitroReady(address(_rollup)), "ROLLUP_NOT_NITRO_READY");
+        }
+
+        require(_inbox.isNitroReady(), "INBOX_NOT_UPGRADED");
+        require(_sequencerInbox.isNitroReady(), "SEQINBOX_NOT_UPGRADED");
+
         // we check that the new contracts that will receive permissions are actually contracts
-        require(Address.isContract(_nitroBridge), "BRIDGE_NOT_CONTRACT");
-        require(Address.isContract(_nitroOutbox), "OUTBOX_NOT_CONTRACT");
-        require(Address.isContract(_nitroSequencerInbox), "SEQINBOX_NOT_CONTRACT");
-        require(Address.isContract(_nitroInboxLogic), "INBOX_NOT_CONTRACT");
+        require(Address.isContract(_nitroBridge), "NITRO_BRIDGE_NOT_CONTRACT");
+        require(Address.isContract(_nitroOutbox), "NITRO_OUTBOX_NOT_CONTRACT");
+        require(Address.isContract(_nitroSequencerInbox), "NITRO_SEQINBOX_NOT_CONTRACT");
+        require(Address.isContract(_nitroInboxLogic), "NITRO_INBOX_NOT_CONTRACT");
 
         nitroBridge = _nitroBridge;
         nitroOutbox = _nitroOutbox;

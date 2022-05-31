@@ -89,6 +89,10 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         emit MaxDelayUpdated(newMaxDelayBlocks, newMaxDelaySeconds);
     }
 
+    function isNitroReady() external pure returns (bool) {
+        return true;
+    }
+
     /**
      * @notice Move messages from the delayed inbox into the Sequencer inbox. Callable by any address. Necessary iff Sequencer hasn't included them before delay period expired.
      */
