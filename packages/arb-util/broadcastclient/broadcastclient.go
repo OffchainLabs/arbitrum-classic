@@ -194,6 +194,10 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 					if res.ConfirmedAccumulator.IsConfirmed && bc.ConfirmedAccumulatorListener != nil {
 						bc.ConfirmedAccumulatorListener <- res.ConfirmedAccumulator.Accumulator
 					}
+				} else if res.Version == 2 {
+					logger.Fatal().Int("version", res.Version).Msg("connected to nitro feed with classic client")
+				} else {
+					logger.Fatal().Int("version", res.Version).Msg("unrecognized feed version")
 				}
 			}
 		}

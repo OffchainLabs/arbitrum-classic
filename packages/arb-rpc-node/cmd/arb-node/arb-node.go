@@ -41,7 +41,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
@@ -219,7 +218,7 @@ func startup() error {
 	if config.PProfEnable {
 		go func() {
 			err := http.ListenAndServe("localhost:8081", pprofMux)
-			log.Error().Err(err).Msg("profiling server failed")
+			logger.Error().Err(err).Msg("profiling server failed")
 		}()
 	}
 
@@ -238,7 +237,7 @@ func startup() error {
 	}
 
 	if config.Node.Type() == configuration.ValidatorNodeType && config.Core.CheckpointMaxExecutionGas != 0 {
-		log.Warn().Msg("allowing for infinite core execution because running as validator")
+		logger.Warn().Msg("allowing for infinite core execution because running as validator")
 		config.Core.CheckpointMaxExecutionGas = 0
 	}
 
@@ -272,7 +271,7 @@ func startup() error {
 		go func() {
 			err := nodehealth.StartNodeHealthCheck(ctx, healthChan, metricsConfig.Registry)
 			if err != nil {
-				log.Error().Err(err).Msg("healthcheck server failed")
+				logger.Error().Err(err).Msg("healthcheck server failed")
 			}
 		}()
 	}
@@ -392,9 +391,10 @@ func startup() error {
 	}
 
 	var batch batcher.TransactionBatcher
+	var broadcasterErrChan chan error
 	errChan := make(chan error, 1)
 	for {
-		batch, err = rpc.SetupBatcher(
+		batch, broadcasterErrChan, err = rpc.SetupBatcher(
 			ctx,
 			l1Client,
 			rollupAddress,
@@ -461,17 +461,17 @@ func startup() error {
 		go func() {
 			clnt, err := ethclient.DialContext(ctx, config.Node.Forwarder.Target)
 			if err != nil {
-				log.Warn().Err(err).Msg("failed to connect to forward target")
+				logger.Warn().Err(err).Msg("failed to connect to forward target")
 				clnt = nil
 			}
 			failCount := 0
 			for {
 				valid, err := checkBlockHash(ctx, clnt, db)
 				if err != nil {
-					log.Warn().Err(err).Msg("failed to lookup blockhash for consistency check")
+					logger.Warn().Err(err).Msg("failed to lookup blockhash for consistency check")
 					clnt, err = ethclient.DialContext(ctx, config.Node.Forwarder.Target)
 					if err != nil {
-						log.Warn().Err(err).Msg("failed to connect to forward target")
+						logger.Warn().Err(err).Msg("failed to connect to forward target")
 						clnt = nil
 					}
 				} else {
@@ -482,7 +482,7 @@ func startup() error {
 					}
 				}
 				if failCount >= failLimit {
-					log.Error().Msg("exiting due to repeated block hash mismatches")
+					logger.Error().Msg("exiting due to repeated block hash mismatches")
 					cancelFunc()
 					return
 				}
@@ -521,6 +521,8 @@ func startup() error {
 
 	select {
 	case err := <-txDBErrChan:
+		return err
+	case err := <-broadcasterErrChan:
 		return err
 	case err := <-errChan:
 		return err
@@ -585,7 +587,7 @@ func startValidator(
 	chainState := ChainState{}
 	if config.Validator.ContractWalletAddress != "" {
 		if !ethcommon.IsHexAddress(config.Validator.ContractWalletAddress) {
-			log.Error().Str("address", config.Validator.ContractWalletAddress).Msg("invalid validator smart contract wallet")
+			logger.Error().Str("address", config.Validator.ContractWalletAddress).Msg("invalid validator smart contract wallet")
 			return nil, errors.New("invalid validator smart contract wallet address")
 		}
 		chainState.ValidatorWallet = config.Validator.ContractWalletAddress
@@ -620,7 +622,7 @@ func startValidator(
 	}
 	var validatorAddress *ethcommon.Address
 	if chainState.ValidatorWallet != "" {
-		log.Info().Str("address", chainState.ValidatorWallet).Msg("validator using smart contract wallet")
+		logger.Info().Str("address", chainState.ValidatorWallet).Msg("validator using smart contract wallet")
 		addr := ethcommon.HexToAddress(chainState.ValidatorWallet)
 		validatorAddress = &addr
 
@@ -636,9 +638,9 @@ func startValidator(
 			return nil, fmt.Errorf("validator smart contract wallet owner %v doesn't match validator wallet %v", owner, valAuth.From())
 		}
 	} else if config.Validator.OnlyCreateWalletContract {
-		log.Info().Msg("only creating validator smart contract and exiting")
+		logger.Info().Msg("only creating validator smart contract and exiting")
 	} else {
-		log.Info().Msg("validator smart contract wallet creation delayed until needed")
+		logger.Info().Msg("validator smart contract wallet creation delayed until needed")
 	}
 
 	onValidatorWalletCreated := func(addr ethcommon.Address) {}
@@ -647,11 +649,11 @@ func startValidator(
 			chainState.ValidatorWallet = addr.String()
 			newChainStateData, err := json.Marshal(chainState)
 			if err != nil {
-				log.Warn().Err(err).Msg("failed to marshal chain state")
+				logger.Warn().Err(err).Msg("failed to marshal chain state")
 			} else if err := ioutil.WriteFile(config.Validator.ContractWalletAddressFilename, newChainStateData, 0644); err != nil {
-				log.Warn().Err(err).Msg("failed to write chain state config")
+				logger.Warn().Err(err).Msg("failed to write chain state config")
 			}
-			log.
+			logger.
 				Info().
 				Str("address", chainState.ValidatorWallet).
 				Str("filename", config.Validator.ContractWalletAddressFilename).
@@ -659,7 +661,7 @@ func startValidator(
 		}
 	} else {
 		onValidatorWalletCreated = func(addr ethcommon.Address) {
-			log.Error().Str("address", addr.String()).Msg("created wallet when --validator.wallet-address provided")
+			logger.Error().Str("address", addr.String()).Msg("created wallet when --validator.wallet-address provided")
 		}
 	}
 

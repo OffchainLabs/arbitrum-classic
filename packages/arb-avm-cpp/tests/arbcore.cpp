@@ -396,6 +396,50 @@ TEST_CASE("ArbCore backwards reorg") {
                 ->machine_state.output.fully_processed_inbox.count == 0);
 }
 
+TEST_CASE("ArbCore execution cursor abort") {
+    ArbCoreConfig coreConfig{};
+    ArbStorage storage(dbpath, coreConfig);
+    REQUIRE(
+        storage.initialize(std::string{machine_test_cases_path} + "/inbox.mexe")
+            .status.ok());
+    auto arbCore = storage.getArbCore();
+    REQUIRE(arbCore->startThread());
+
+    REQUIRE(arbCore->deliverMessages(
+        0, 0, std::vector<std::vector<unsigned char>>(),
+        std::vector<std::vector<unsigned char>>(), 0));
+    waitForDelivery(arbCore);
+    REQUIRE(arbCore->messageEntryInsertedCount().data == 0);
+
+    auto maxGas = 1'000'000'000;
+    auto initialState = arbCore->getExecutionCursor(maxGas, true);
+    REQUIRE(initialState.status.ok());
+    REQUIRE(initialState.data->getTotalMessagesRead() == 0);
+
+    auto message = InboxMessage(0, {}, 0, 0, 0, 0, {});
+
+    std::vector<std::vector<unsigned char>> rawSeqBatchItems;
+    for (const auto& batch_item : buildBatch(std::vector(1, message))) {
+        rawSeqBatchItems.push_back(serializeForCore(batch_item));
+    }
+
+    REQUIRE(arbCore->deliverMessages(0, 0, rawSeqBatchItems,
+                                     std::vector<std::vector<unsigned char>>(),
+                                     std::nullopt));
+    waitForDelivery(arbCore);
+
+    auto newState = arbCore->getExecutionCursor(0, true);
+    REQUIRE(newState.status.ok());
+    REQUIRE(newState.data->getOutput().arb_gas_used == 0);
+
+    newState.data->abort();
+    REQUIRE(newState.data->getOutput().arb_gas_used == 0);
+    auto status =
+        arbCore->advanceExecutionCursor(*newState.data, maxGas, true, true);
+    REQUIRE(!status.ok());
+    REQUIRE(newState.data->getOutput().arb_gas_used == 0);
+}
+
 TEST_CASE("ArbCore duplicate code segments") {
     DBDeleter deleter;
 
