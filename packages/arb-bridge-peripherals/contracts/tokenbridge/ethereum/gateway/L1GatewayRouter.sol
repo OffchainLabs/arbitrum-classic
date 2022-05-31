@@ -221,17 +221,14 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
     function _outboundTransferChecks(
         uint256 _maxGas,
         uint256 _gasPriceBid,
-        bytes memory _data
+        bytes calldata _data
     ) internal view {
         // when sending a L1 to L2 transaction, we expect the user to send
         // eth in flight in order to pay for L2 gas costs
         // this check prevents users from misconfiguring the msg.value
-        uint256 _maxSubmissionCost;
-        // assembly code block below is the gas optimized version of
-        // _maxSubmissionCost = abi.decode(_data, (uint256, bytes));
-        assembly {
-            _maxSubmissionCost := mload(add(_data, 0x20))
-        }
+
+        // _data is (uint256, bytes) encoded, but we don't need the bytes
+        uint256 _maxSubmissionCost = abi.decode(_data, (uint256));
 
         // here we don't use SafeMath since this validation is to prevent users
         // from shooting themselves on the foot.
