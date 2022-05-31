@@ -128,7 +128,13 @@ contract NitroMigrator is Ownable {
         bytes32[3] memory bytes32Fields,
         uint256[4] memory intFields,
         uint256 proposedBlock,
-        uint256 inboxMaxCount
+        uint256 inboxMaxCount,
+        bytes32 beforeSendAcc,
+        bytes calldata sendsData,
+        uint256[] calldata sendLengths,
+        uint256 afterSendCount,
+        bytes32 afterLogAcc,
+        uint256 afterLogCount
     ) external onlyOwner {
         require(inboxMaxCount == messageCountWithHalt, "WRONG_MESSAGE_COUNT");
 
@@ -145,6 +151,16 @@ contract NitroMigrator is Ownable {
         // the actual nodehash doesn't matter, only its after state of execution
         bytes32 actualStateHash = rollup.getNode(nodeNum).stateHash();
         require(expectedStateHash == actualStateHash, "WRONG_STATE_HASH");
+
+        rollup.forceConfirmNode(
+            nodeNum,
+            beforeSendAcc,
+            sendsData,
+            sendLengths,
+            afterSendCount,
+            afterLogAcc,
+            afterLogCount
+        );
 
         // TODO: we can forceCreate the assertion and have the rollup paused in step 1
         rollup.pause();
