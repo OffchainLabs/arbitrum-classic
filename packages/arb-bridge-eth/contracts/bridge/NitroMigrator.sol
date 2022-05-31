@@ -54,6 +54,7 @@ contract NitroMigrator is Ownable {
     /// Step1 is settling the current state of inputs to the system (bridge, delayed and sequencer inbox) in a consistent way
     /// Step2 is settling the current state of outputs to the system (rollup assertions) in a consistent way that includes state from step1
     /// Step3 is enabling the nitro chain from the state settled in Step1 and Step2
+    /// Between steps 1 and 2 a validator needs to make the final assertion that includes the inbox shutdownForNitro message
     enum NitroMigrationSteps {
         Step0,
         Step1,
