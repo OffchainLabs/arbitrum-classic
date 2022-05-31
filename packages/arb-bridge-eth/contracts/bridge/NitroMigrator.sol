@@ -80,7 +80,7 @@ contract NitroMigrator is Ownable {
     /// @dev this assumes this contract owns the rollup/inboxes/bridge before this function is called (else it will revert)
     /// this will create the final input in the inbox, but there won't be the final assertion available yet.
     /// it is assumed that at this point the sequencer has stopped receiving txs and has posted its final batch on-chain
-    function nitroStep1() external onlyOwner {
+    function nitroStep1(address[] calldata seqAddresses) external onlyOwner {
         require(messageCountWithHalt == type(uint256).max, "STEP1_ALREADY_TRIGGERED");
         uint256 delayedMessageCount = inbox.shutdownForNitro();
 
@@ -102,19 +102,14 @@ contract NitroMigrator is Ownable {
 
         bridge.setOutbox(address(this), false);
 
-        // if the sequencer posted its final batch and was shutdown before `nitroStep1` this shouldn't be an issue
-        // we could lock the sequencer inbox with `forceInclusionNoDelay` but this wouldnt stop a reorg from accepting
+        // if the sequencer posted its final batch and was shutdown before `nitroStep1` there shouldn't be any reorgs
+        // we could lock the sequencer inbox with `shutdownForNitro` but this wouldnt stop a reorg from accepting
         // txs in the RPC interface without posting a batch.
         // `nitroStep2` will only enforce inclusion of assertions that read up to this current point.
-        sequencerInbox.forceInclusionNoDelay(
+        sequencerInbox.shutdownForNitro(
             delayedMessageCount,
-            L1MessageType_shutdownForNitro,
-            [block.number, block.timestamp],
-            delayedMessageCount,
-            tx.gasprice,
-            address(this),
-            keccak256(abi.encodePacked("")),
-            bridge.inboxAccs(delayedMessageCount - 1)
+            bridge.inboxAccs(delayedMessageCount - 1),
+            seqAddresses
         );
 
         // we can use this to verify in step 2 that the assertion includes the shutdownForNitro message

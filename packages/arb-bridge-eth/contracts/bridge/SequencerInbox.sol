@@ -106,54 +106,6 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         require(l1BlockAndTimestamp[0] + maxDelayBlocks < block.number, "MAX_DELAY_BLOCKS");
         require(l1BlockAndTimestamp[1] + maxDelaySeconds < block.timestamp, "MAX_DELAY_TIME");
 
-        forceInclusionImpl(
-            _totalDelayedMessagesRead,
-            kind,
-            l1BlockAndTimestamp,
-            inboxSeqNum,
-            gasPriceL1,
-            sender,
-            messageDataHash,
-            delayedAcc
-        );
-    }
-
-    function forceInclusionNoDelay(
-        uint256 _totalDelayedMessagesRead,
-        uint8 kind,
-        uint256[2] calldata l1BlockAndTimestamp,
-        uint256 inboxSeqNum,
-        uint256 gasPriceL1,
-        address sender,
-        bytes32 messageDataHash,
-        bytes32 delayedAcc
-    ) external {
-        // no delay on force inclusion, triggered only by rollup's owner
-        require(Rollup(payable(rollup)).owner() == msg.sender, "ONLY_ROLLUP_OWNER");
-
-        forceInclusionImpl(
-            _totalDelayedMessagesRead,
-            kind,
-            l1BlockAndTimestamp,
-            inboxSeqNum,
-            gasPriceL1,
-            sender,
-            messageDataHash,
-            delayedAcc
-        );
-    }
-
-    function forceInclusionImpl(
-        uint256 _totalDelayedMessagesRead,
-        uint8 kind,
-        uint256[2] calldata l1BlockAndTimestamp,
-        uint256 inboxSeqNum,
-        uint256 gasPriceL1,
-        address sender,
-        bytes32 messageDataHash,
-        bytes32 delayedAcc
-    ) internal {
-        require(_totalDelayedMessagesRead > totalDelayedMessagesRead, "DELAYED_BACKWARDS");
         {
             bytes32 messageHash = Messages.messageHash(
                 kind,
@@ -176,6 +128,33 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
                 "DELAYED_ACCUMULATOR"
             );
         }
+        forceInclusionImpl(_totalDelayedMessagesRead, delayedAcc);
+    }
+
+    /// @dev this function is intended to force include the delayed inbox a final time in the nitro migration
+    function shutdownForNitro(
+        uint256 _totalDelayedMessagesRead,
+        bytes32 delayedAcc,
+        address[] calldata seqAddresses
+    ) external {
+        // no delay on force inclusion, triggered only by rollup's owner
+        require(Rollup(payable(rollup)).owner() == msg.sender, "ONLY_ROLLUP_OWNER");
+        forceInclusionImpl(_totalDelayedMessagesRead, delayedAcc);
+        // the delayed inbox has all inboxes disabled, so state won't progress there.
+        // if there are no delayed inboxes and no sequencer addresses, the state can't progress anymore.
+        for (uint64 i = 0; i < seqAddresses.length; ++i) {
+            isSequencer[seqAddresses[i]] = false;
+        }
+        deprecatedSequencer = address(0);
+    }
+
+    /// @dev allows anyone to disable sequencer addresses from the inbox in case the addresses provided in `shutdownForNitro` weren't exhaustive
+    function disableSequencer(address seqAddress) external {
+        isSequencer[seqAddress] = false;
+    }
+
+    function forceInclusionImpl(uint256 _totalDelayedMessagesRead, bytes32 delayedAcc) internal {
+        require(_totalDelayedMessagesRead > totalDelayedMessagesRead, "DELAYED_BACKWARDS");
 
         uint256 startNum = messageCount;
         bytes32 beforeAcc = 0;
