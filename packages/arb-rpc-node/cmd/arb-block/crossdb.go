@@ -105,14 +105,12 @@ func (c *CrossDB) FillerUp(ctx context.Context, limit uint64) error {
 			if err != nil {
 				return err
 			}
-			tx := processedTx.Tx
-			res := processedTx.Result
 
-			if tx.Hash() != res.IncomingRequest.MessageID.ToEthHash() {
-				tx, err = types.NewArbitrumLegacyTx(tx, res.IncomingRequest.MessageID.ToEthHash())
-				if err != nil {
-					return err
-				}
+			txHash := txRes.IncomingRequest.MessageID.ToEthHash()
+			effectiveGasPrice := txRes.FeeStats.Price.L2Computation.Uint64()
+			tx, err := types.NewArbitrumLegacyTx(processedTx.Tx, txHash, effectiveGasPrice, blockCount)
+			if err != nil {
+				return err
 			}
 
 			outputTxs = append(outputTxs, tx)
