@@ -7,7 +7,7 @@ require (
 	github.com/gobwas/ws v1.1.0
 	github.com/gobwas/ws-examples v0.0.0-20190625122829-a9e8908d9484
 	github.com/golang-jwt/jwt v3.2.2+incompatible
-	github.com/knadh/koanf v1.4.0
+	github.com/knadh/koanf v1.4.1
 	github.com/mailru/easygo v0.0.0-20190618140210-3c14a0dc985f
 	github.com/mitchellh/mapstructure v1.4.3
 	github.com/offchainlabs/go-solidity-sha3 v0.1.3-0.20220601192706-5a29bf66bcad
