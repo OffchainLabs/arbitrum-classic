@@ -53,8 +53,8 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
         WhitelistConsumer.whitelist = _whitelist;
     }
 
-    function isNitroReady() external pure returns (bool) {
-        return true;
+    function isNitroReady() external pure returns (uint8) {
+        return uint8(0xa4b1);
     }
 
     function shutdownForNitro() external returns (uint256 msgNum) {

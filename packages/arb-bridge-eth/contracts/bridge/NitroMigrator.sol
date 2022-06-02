@@ -90,11 +90,14 @@ contract NitroMigrator is Ownable {
             // this contract is the rollup admin, and we want to check if the user facet is upgraded
             // so we deploy a new contract to ensure the query is dispatched to the user facet, not the admin
             NitroReadyQuery queryContract = new NitroReadyQuery();
-            require(queryContract.isNitroReady(address(_rollup)), "ROLLUP_NOT_NITRO_READY");
+            require(
+                queryContract.isNitroReady(address(_rollup)) == uint8(0xa4b1),
+                "ROLLUP_NOT_NITRO_READY"
+            );
         }
 
-        require(_inbox.isNitroReady(), "INBOX_NOT_UPGRADED");
-        require(_sequencerInbox.isNitroReady(), "SEQINBOX_NOT_UPGRADED");
+        require(_inbox.isNitroReady() == uint8(0xa4b1), "INBOX_NOT_UPGRADED");
+        require(_sequencerInbox.isNitroReady() == uint8(0xa4b1), "SEQINBOX_NOT_UPGRADED");
 
         // we check that the new contracts that will receive permissions are actually contracts
         require(Address.isContract(_nitroBridge), "NITRO_BRIDGE_NOT_CONTRACT");

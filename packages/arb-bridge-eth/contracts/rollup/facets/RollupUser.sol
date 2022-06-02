@@ -599,8 +599,8 @@ contract RollupUserFacet is AbsRollupUserFacet {
         return amount;
     }
 
-    function isNitroReady() external pure returns (bool) {
-        return true;
+    function isNitroReady() external pure returns (uint8) {
+        return uint8(0xa4b1);
     }
 }
 
