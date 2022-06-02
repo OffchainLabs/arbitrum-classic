@@ -640,7 +640,7 @@ func startValidator(
 	} else if config.Validator.OnlyCreateWalletContract {
 		logger.Info().Msg("only creating validator smart contract and exiting")
 	} else {
-		logger.Info().Msg("validator smart contract wallet creation delayed until needed")
+		return nil, errors.New("validator smart contract wallet not present, add --validator.only-create-wallet-contract to create")
 	}
 
 	onValidatorWalletCreated := func(addr ethcommon.Address) {}
