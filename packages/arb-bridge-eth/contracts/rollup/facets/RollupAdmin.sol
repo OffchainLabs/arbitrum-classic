@@ -331,27 +331,47 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
     /// Even though the rollup is paused, we use the `shutdownForNitroMode` var to allow validators to go through the sequence of final nodes confirming them so their send values are added to the outbox
     /// The deadline for the nodes marked as final are ignored to a lower value to allow for these faster confirmations, which will make L2 to L1 txs available for execution sooner
     function shutdownForNitro(uint256 finalNodeNum) external whenNotPaused {
-        uint256 latestConfirmedNodeNum = latestConfirmed();
-        {
-            // first we destroy all nodes that aren't in the correct chain
-            uint256 curr = finalNodeNum;
-            uint256 expectedPrev = finalNodeNum;
-            // if finalNodeNum == latestConfirmed we don't need to delete any siblings
-            while (curr != latestConfirmedNodeNum) {
-                if (curr == expectedPrev) {
-                    INode currNode = getNode(curr);
-                    expectedPrev = currNode.prev();
-                } else {
-                    destroyNode(curr);
-                }
-                curr -= 1;
-            }
+        // TODO: prove that final node num includes the last send by arbos
+
+        uint256 latestCreated = latestNodeCreated();
+        // delete all nodes created after the final one (which should be none)
+        while (latestCreated > finalNodeNum) {
+            destroyNode(latestCreated);
+            latestCreated--;
         }
 
-        // TODO: should this remove stakers?
+        uint256 latestConfirmedNodeNum = latestConfirmed();
+
+        // first we destroy all nodes that aren't in the correct chain
+        uint256 curr = finalNodeNum;
+        uint256 expectedPrev = finalNodeNum;
+        // if finalNodeNum == latestConfirmed we don't need to delete any siblings
+        while (curr != latestConfirmedNodeNum) {
+            if (curr == expectedPrev) {
+                INode currNode = getNode(curr);
+                expectedPrev = currNode.prev();
+            } else {
+                destroyNode(curr);
+            }
+            curr--;
+        }
+
+        uint256 stakerCount = stakerCount();
+        for (uint64 i = 0; i < stakerCount; ++i) {
+            address stakerAddr = getStakerAddress(i);
+            if (getNode(latestStakedNode(stakerAddr)) == INode(0)) {
+                // this node got destroyed, so we force refund the staker
+                reduceStakeTo(stakerAddr, 0);
+                turnIntoZombie(stakerAddr);
+            }
+            // else the staker can unstake and withdraw regularly using `returnOldDeposit`
+        }
+
+        // TODO: do we force resolve challenges? shouldn't be needed
 
         shutdownForNitroMode = true;
         _pause();
+        emit OwnerFunctionCalled(25);
     }
 
     function isNitroReady() external pure returns (uint8) {

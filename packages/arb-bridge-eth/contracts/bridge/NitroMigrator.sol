@@ -47,16 +47,23 @@ contract NitroMigrator is Ownable {
     address public immutable nitroSequencerInbox;
     address public immutable nitroInboxLogic;
 
-    // this is used track the message count in which the final inbox message was force included
-    // initially set to max uint256. after step 1 its set to sequencer's inbox message count
-    uint256 public messageCountWithHalt;
-
     /// @dev The nitro migration includes various steps.
-    /// Step0 is setup with contract deployments and integrity checks
-    /// Step1 is settling the current state of inputs to the system (bridge, delayed and sequencer inbox) in a consistent way
-    /// Step2 is settling the current state of outputs to the system (rollup assertions) in a consistent way that includes state from step1
-    /// Step3 is enabling the nitro chain from the state settled in Step1 and Step2
-    /// Between steps 1 and 2 a validator needs to make the final assertion that includes the inbox shutdownForNitro message
+    ///
+    /// > Step0 is setup with contract deployments and integrity checks
+    ///
+    /// This is the setup for the upgrade, where all contracts are deployed but the upgrade migration hasn't started yet.
+    /// Before Step1 the ownership of the Inbox / Rollup / Outbox / Bridge / SequencerInbox must all be transferred to this contract
+    /// The sequencer should stop receiving messages over RPC and post its final batch before Step1 is called.
+    ///
+    /// > Step1 is settling the current state of inputs to the system (bridge, delayed and sequencer inbox) in a consistent way
+    ///
+    /// The validator must now post the final assertion that executes all messages included in Step1 (ie the shutdownForNitro message)
+    ///
+    /// > Step2 is settling the current state of outputs to the system (rollup assertions) in a consistent way that includes state from step1. This pauses most of the rollup functionality
+    ///
+    /// The validator is now able to confirm all pending nodes between latestConfirmed and latestCreated. Step3 is only possible after this happens.
+    ///
+    /// > Step3 is enabling the nitro chain from the state settled in Step1 and Step2.
     enum NitroMigrationSteps {
         Step0,
         Step1,
@@ -112,8 +119,6 @@ contract NitroMigrator is Ownable {
         nitroSequencerInbox = _nitroSequencerInbox;
         nitroInboxLogic = _nitroInboxLogic;
 
-        // setting to max value means it won't be possible to execute step 2 before step 1
-        messageCountWithHalt = type(uint256).max;
         latestCompleteStep = NitroMigrationSteps.Step0;
     }
 
@@ -122,7 +127,6 @@ contract NitroMigrator is Ownable {
     /// it is assumed that at this point the sequencer has stopped receiving txs and has posted its final batch on-chain
     function nitroStep1(address[] calldata seqAddresses) external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Step0, "WRONG_STEP");
-        require(messageCountWithHalt == type(uint256).max, "STEP1_ALREADY_TRIGGERED");
         uint256 delayedMessageCount = inbox.shutdownForNitro();
 
         // the `bridge` won't have any enabled inboxes after nitroStep2, so force inclusion after this shouldn't be possible
@@ -131,9 +135,10 @@ contract NitroMigrator is Ownable {
         bridge.setInbox(address(inbox), false);
         bridge.setOutbox(address(outboxV1), false);
         bridge.setOutbox(address(outboxV2), false);
+
         // we disable the rollupEventBridge later since its needed in order to create/confirm assertions
-        // TODO: will the nitro node process these events from the rollup event bridge? probably not since these aren't force included.
-        // is it a problem that we're dropping these delayed messages? probably not.
+        // the rollup event bridge will still add messages to the Bridge's accumulator, but these will never be included into the sequencer inbox
+        // it is not a problem that these messages will be lost, as long as classic shutdown and nitro boot are deterministic
 
         bridge.setOutbox(address(this), true);
 
@@ -146,8 +151,8 @@ contract NitroMigrator is Ownable {
         bridge.setOutbox(address(this), false);
 
         // if the sequencer posted its final batch and was shutdown before `nitroStep1` there shouldn't be any reorgs
-        // we could lock the sequencer inbox with `shutdownForNitro` but this wouldnt stop a reorg from accepting
-        // txs in the RPC interface without posting a batch.
+        // even though we remove the seqAddr from the sequencer inbox with `shutdownForNitro` this wouldnt stop a reorg from
+        // the sequencer accepting txs in the RPC interface without posting a batch.
         // `nitroStep2` will only enforce inclusion of assertions that read up to this current point.
         sequencerInbox.shutdownForNitro(
             delayedMessageCount,
@@ -155,77 +160,29 @@ contract NitroMigrator is Ownable {
             seqAddresses
         );
 
-        // we can use this to verify in step 2 that the assertion includes the shutdownForNitro message
-        messageCountWithHalt = sequencerInbox.messageCount();
-
         // TODO: remove permissions from gas refunder to current sequencer inbox
         latestCompleteStep = NitroMigrationSteps.Step1;
     }
 
     /// @dev this assumes step 1 has executed succesfully and that a validator has made the final assertion that includes the inbox shutdownForNitro
-    function nitroStep2(
-        bytes32[3] memory bytes32Fields,
-        uint256[4] memory intFields,
-        uint256 proposedBlock,
-        bytes32 beforeSendAcc,
-        bytes calldata sendsData,
-        uint256[] calldata sendLengths,
-        uint256 afterSendCount,
-        bytes32 afterLogAcc,
-        uint256 afterLogCount
-    ) external onlyOwner {
+    function nitroStep2(uint256 finalNodeNum) external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Step1, "WRONG_STEP");
-        RollupLib.ExecutionState memory afterExecutionState = RollupLib.decodeExecutionState(
-            bytes32Fields,
-            intFields,
-            proposedBlock,
-            messageCountWithHalt
-        );
-        bytes32 expectedStateHash = RollupLib.stateHash(afterExecutionState);
-
-        uint256 nodeNum = rollup.latestNodeCreated();
-        // the actual nodehash doesn't matter, only its after state of execution
-        bytes32 actualStateHash = rollup.getNode(nodeNum).stateHash();
-        require(expectedStateHash == actualStateHash, "WRONG_STATE_HASH");
-
-        rollup.forceConfirmNode(
-            nodeNum,
-            beforeSendAcc,
-            sendsData,
-            sendLengths,
-            afterSendCount,
-            afterLogAcc,
-            afterLogCount
-        );
-
-        // TODO: we can forceCreate the assertion and have the rollup paused in step 1
-        rollup.pause();
-        // we could disable the rollup user facet so only the admin can interact with the rollup
-        // would make the dispatch rollup revert when calling user facet. but easier to just pause it
-
-        // TODO: ensure everyone is unstaked?
-        // need to wait until last assertion beforeforce confirm assertion
-        uint256 stakerCount = rollup.stakerCount();
-        address[] memory stakers = new address[](stakerCount);
-        for (uint64 i = 0; i < stakerCount; ++i) {
-            stakers[i] = rollup.getStakerAddress(i);
-        }
-        // they now have withdrawable stake to claim
-        // rollup doesn't need to be unpaused for this.
-        rollup.forceRefundStaker(stakers);
-
-        // TODO: forceResolveChallenge if any
-        // TODO: double check that challenges can't be created and new stakes cant be added
-        bridge.setInbox(address(rollupEventBridge), false);
-
+        rollup.shutdownForNitro(finalNodeNum);
         latestCompleteStep = NitroMigrationSteps.Step2;
     }
 
     function nitroStep3() external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Step2, "WRONG_STEP");
+        require(
+            rollup.latestConfirmed() == rollup.latestNodeCreated(),
+            "ROLLUP_SHUTDOWN_NOT_COMPLETE"
+        );
+        bridge.setInbox(address(rollupEventBridge), false);
+
         // enable new Bridge with funds (ie set old outboxes)
         // TODO: enable new elements of nitro chain (ie bridge, inbox, outbox, rollup, etc)
         // TODO: trigger inbox upgrade to new logic
+
         latestCompleteStep = NitroMigrationSteps.Step3;
     }
 }

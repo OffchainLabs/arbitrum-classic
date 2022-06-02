@@ -231,7 +231,12 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
      * and move it to the desired node.
      * @param stakerAddress Address of the staker whose stake is refunded
      */
-    function returnOldDeposit(address stakerAddress) external override onlyValidator whenNotPaused {
+    function returnOldDeposit(address stakerAddress)
+        external
+        override
+        onlyValidator
+        whenInShutdownModeOrNotPaused
+    {
         require(latestStakedNode(stakerAddress) <= latestConfirmed(), "TOO_RECENT");
         requireUnchallengedStaker(stakerAddress);
         withdrawStaker(stakerAddress);
