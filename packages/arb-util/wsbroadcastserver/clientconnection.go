@@ -43,7 +43,6 @@ type ClientConnection struct {
 	lastHeardUnix int64
 	cancelFunc    context.CancelFunc
 	out           chan []byte
-	maxSendQueue  int
 }
 
 func NewClientConnection(conn net.Conn, desc *netpoll.Desc, clientManager *ClientManager) *ClientConnection {
@@ -53,7 +52,7 @@ func NewClientConnection(conn net.Conn, desc *netpoll.Desc, clientManager *Clien
 		Name:          conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10)),
 		clientManager: clientManager,
 		lastHeardUnix: time.Now().Unix(),
-		out:           make(chan []byte, clientManager.maxSendQueue),
+		out:           make(chan []byte, clientManager.settings.MaxSendQueue),
 	}
 }
 
