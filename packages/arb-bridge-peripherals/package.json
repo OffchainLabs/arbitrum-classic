@@ -41,7 +41,7 @@
     "chai": "^4.2.0",
     "dotenv": "^10.0.0",
     "ethereum-waffle": "^3.2.0",
-    "ethers": "^5.4.5",
+    "ethers": "^5.6.8",
     "hardhat-deploy": "^0.9.1",
     "hardhat-gas-reporter": "^1.0.4",
     "sol2uml": "^1.1.29",
