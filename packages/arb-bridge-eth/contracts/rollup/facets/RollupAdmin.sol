@@ -10,6 +10,7 @@ import "../../bridge/interfaces/ISequencerInbox.sol";
 import "../../libraries/Whitelist.sol";
 
 import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract RollupAdminFacet is RollupBase, IRollupAdmin {
     /**
@@ -372,6 +373,12 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         shutdownForNitroMode = true;
         _pause();
         emit OwnerFunctionCalled(25);
+    }
+
+    /// @dev allows the admin to transfer the ownership of a contract controlled by the rollup
+    function transferOwnership(Ownable target, address newOwner) external {
+        target.transferOwnership(newOwner);
+        emit OwnerFunctionCalled(26);
     }
 
     function isNitroReady() external pure returns (uint8) {
