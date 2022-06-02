@@ -36,6 +36,7 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
     uint8 internal constant L2_MSG = 3;
     uint8 internal constant L1MessageType_L2FundedByL1 = 7;
     uint8 internal constant L1MessageType_submitRetryableTx = 9;
+    uint8 internal constant L1MessageType_endOfBlock = 6;
     uint8 internal constant L1MessageType_shutdownForNitro = 128;
 
     uint8 internal constant L2MessageType_unsignedEOATx = 0;
@@ -56,9 +57,13 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
         return true;
     }
 
-    function shutdownForNitro() external returns (uint256) {
+    function shutdownForNitro() external returns (uint256 msgNum) {
         require(msg.sender == Bridge(address(bridge)).owner(), "ONLY_BRIDGE_OWNER");
-        return _deliverMessage(L1MessageType_shutdownForNitro, msg.sender, abi.encodePacked(""));
+        // we deliver an end of block message followed by the shutdown message
+        msgNum = _deliverMessage(L1MessageType_endOfBlock, msg.sender, abi.encodePacked(""));
+        msgNum = _deliverMessage(L1MessageType_shutdownForNitro, msg.sender, abi.encodePacked(""));
+        // only the last inbox message number is returned
+        return msgNum;
     }
 
     /**

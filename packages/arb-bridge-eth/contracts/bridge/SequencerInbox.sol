@@ -142,7 +142,14 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
     ) external {
         // no delay on force inclusion, triggered only by rollup's owner
         require(Rollup(payable(rollup)).owner() == msg.sender, "ONLY_ROLLUP_OWNER");
-        forceInclusionImpl(_totalDelayedMessagesRead, delayedAcc);
+
+        // if _totalDelayedMessagesRead == totalDelayedMessagesRead, we don't need to force include
+        // if _totalDelayedMessagesRead < totalDelayedMessagesRead we are trying to read backwards and will revert in forceInclusionImpl
+        // if _totalDelayedMessagesRead > totalDelayedMessagesRead we will force include the new delayed messages into the seqInbox
+        if (_totalDelayedMessagesRead != totalDelayedMessagesRead) {
+            forceInclusionImpl(_totalDelayedMessagesRead, delayedAcc);
+        }
+
         // the delayed inbox has all inboxes disabled, so state won't progress there.
         // if there are no delayed inboxes and no sequencer addresses, the state can't progress anymore.
         for (uint64 i = 0; i < seqAddresses.length; ++i) {
@@ -153,6 +160,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
 
     /// @dev allows anyone to disable sequencer addresses from the inbox in case the addresses provided in `shutdownForNitro` weren't exhaustive
     function disableSequencer(address seqAddress) external {
+        require(deprecatedSequencer == address(0), "ONLY_AFTER_NITRO_SHUTDOWN");
         isSequencer[seqAddress] = false;
     }
 
