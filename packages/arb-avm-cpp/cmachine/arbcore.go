@@ -582,9 +582,6 @@ func (ac *ArbCore) LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []core.Val
 	defer runtime.KeepAlive(ac)
 	cursorIndexData := math.U256Bytes(cursorIndex)
 	result := C.arbCoreLogsCursorGetLogs(ac.c, unsafeDataPointer(cursorIndexData))
-	if result.first_index == nil {
-		return nil, nil, nil, errors.New("get logs failed")
-	}
 	if result.found == 0 {
 		if err := ac.CheckError(); err != nil {
 			return nil, nil, nil, err
