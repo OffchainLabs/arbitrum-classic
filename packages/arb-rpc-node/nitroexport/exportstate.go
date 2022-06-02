@@ -1,12 +1,15 @@
-package main
+package nitroexport
 
 import (
 	"os"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 )
 
-func dumpArbState(arbcore core.ArbCore, height uint64, dirname string) error {
+var logger = arblog.Logger.With().Str("component", "nitroexport").Logger()
+
+func ExportState(arbcore core.ArbCore, height uint64, dirname string) error {
 	cursor, err := arbcore.GetExecutionCursorAtEndOfBlock(height, true)
 	if err != nil {
 		return err

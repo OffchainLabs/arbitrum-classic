@@ -14,7 +14,7 @@
 * limitations under the License.
  */
 
-package main
+package nitroexport
 
 import (
 	"context"
@@ -38,7 +38,7 @@ type CrossDB struct {
 	ethDB ethdb.Database
 }
 
-func New(
+func NewCrossDB(
 	txdb *txdb.TxDB,
 	ethDBPath string,
 ) (*CrossDB, error) {

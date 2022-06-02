@@ -20,16 +20,9 @@ import (
 	"flag"
 	"fmt"
 	golog "log"
-	"net/http"
-	_ "net/http/pprof"
 	"os"
 	"path"
 	"path/filepath"
-	"time"
-
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/pkg/errors"
@@ -39,24 +32,13 @@ import (
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/nitroexport"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 var logger zerolog.Logger
-
-var pprofMux *http.ServeMux
-
-const largeChannelBuffer = 200
-
-const (
-	failLimit            = 6
-	checkFrequency       = time.Second * 30
-	blockCheckCountDelay = 5
-)
-
-func init() {
-	pprofMux = http.DefaultServeMux
-	http.DefaultServeMux = http.NewServeMux()
-}
 
 func main() {
 	// Enable line numbers in logging
@@ -68,7 +50,7 @@ func main() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
 	// Print line number that log was created on
-	logger = arblog.Logger.With().Str("component", "arb-node").Logger()
+	logger = arblog.Logger.With().Str("component", "arb-export").Logger()
 
 	if err := startup(); err != nil {
 		logger.Error().Err(err).Msg("Error running node")
@@ -129,7 +111,7 @@ func startup() error {
 	}
 	defer txDB.Close()
 
-	crossDB, err := New(txDB, path.Join(*chainDir, "ethdb"))
+	crossDB, err := nitroexport.NewCrossDB(txDB, path.Join(*chainDir, "ethdb"))
 	if err != nil {
 		return err
 	}
@@ -156,7 +138,7 @@ func startup() error {
 	}
 
 	if !*skipState {
-		err = dumpArbState(mon.Core, *blockNum, path.Join(*chainDir, fmt.Sprint("state_", *blockNum)))
+		err = nitroexport.ExportState(mon.Core, *blockNum, path.Join(*chainDir, fmt.Sprint("state_", *blockNum)))
 		if err != nil {
 			return err
 		}
