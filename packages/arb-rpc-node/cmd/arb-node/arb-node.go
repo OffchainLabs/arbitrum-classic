@@ -20,20 +20,23 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 	"io/ioutil"
 	golog "log"
 	"math/big"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"path"
+	"path/filepath"
 	"strings"
 	"time"
+
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -50,6 +53,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/nitroexport"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
@@ -439,6 +443,22 @@ func startup() error {
 		web3InboxReaderRef = inboxReader
 	}
 
+	plugins := make(map[string]interface{})
+	if config.Node.RPC.NitroExport.Enable {
+		basedir := config.Node.RPC.NitroExport.BaseDir
+		if basedir == "" {
+			basedir = "nitroexport"
+		}
+		if !filepath.IsAbs(basedir) {
+			basedir = path.Join(config.Persistent.Chain, basedir)
+		}
+		exportServer, err := nitroexport.NewExportRpcServer(db, mon.Core, basedir)
+		if err != nil {
+			return err
+		}
+		plugins["arb"] = exportServer
+	}
+
 	srv := aggregator.NewServer(batch, l2ChainId, db)
 	serverConfig := web3.ServerConfig{
 		Mode:          rpcMode,
@@ -446,7 +466,7 @@ func startup() error {
 		Tracing:       config.Node.RPC.Tracing,
 		DevopsStubs:   config.Node.RPC.EnableDevopsStubs,
 	}
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, serverConfig, mon.CoreConfig, nil, web3InboxReaderRef)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, serverConfig, mon.CoreConfig, plugins, web3InboxReaderRef)
 	if err != nil {
 		return err
 	}
