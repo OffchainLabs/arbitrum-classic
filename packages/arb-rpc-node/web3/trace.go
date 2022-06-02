@@ -436,6 +436,7 @@ func (t *Trace) block(ctx context.Context, blockNum rpc.BlockNumberOrHash, trace
 	for i := uint64(0); i < blockLog.BlockStats.TxCount.Uint64(); i++ {
 		txRes := txResults[i]
 		txTrace, err := t.traceTransaction(ctx, cursor, txRes, logIndex, traceDestroyed)
+		logIndex.Add(logIndex, big.NewInt(1))
 		if err != nil {
 			logger.
 				Warn().
@@ -446,7 +447,6 @@ func (t *Trace) block(ctx context.Context, blockNum rpc.BlockNumberOrHash, trace
 			continue
 		}
 		res = append(res, txTrace)
-		logIndex.Add(logIndex, big.NewInt(1))
 	}
 	return res, blockInfo, cursor, nil
 }
