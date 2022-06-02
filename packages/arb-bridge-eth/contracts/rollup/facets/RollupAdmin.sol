@@ -3,6 +3,7 @@
 pragma solidity ^0.6.11;
 
 import "../Rollup.sol";
+import "../INode.sol";
 import "./IRollupFacets.sol";
 import "../../bridge/interfaces/IOutbox.sol";
 import "../../bridge/interfaces/ISequencerInbox.sol";
@@ -321,5 +322,39 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
             rollupEventBridge
         );
         emit OwnerFunctionCalled(24);
+    }
+
+    /// @dev this function is intended to be called as part of the shutdown process of the classic contracts in favour of nitro
+    /// It is expected that the rollup is not paused during the start of shutdown step, the shutdown procedure will pause the rollup.
+    /// A final rollup node number is specified, then the rollup will only allow that node and its direct predecessors to be confirmed.
+    /// All nodes that aren't directly previous to this are deleted, but in practice none are expected to be present (as this would mean an eventual challenge).
+    /// Even though the rollup is paused, we use the `shutdownForNitroMode` var to allow validators to go through the sequence of final nodes confirming them so their send values are added to the outbox
+    /// The deadline for the nodes marked as final are ignored to a lower value to allow for these faster confirmations, which will make L2 to L1 txs available for execution sooner
+    function shutdownForNitro(uint256 finalNodeNum) external whenNotPaused {
+        uint256 latestConfirmedNodeNum = latestConfirmed();
+        {
+            // first we destroy all nodes that aren't in the correct chain
+            uint256 curr = finalNodeNum;
+            uint256 expectedPrev = finalNodeNum;
+            // if finalNodeNum == latestConfirmed we don't need to delete any siblings
+            while (curr != latestConfirmedNodeNum) {
+                if (curr == expectedPrev) {
+                    INode currNode = getNode(curr);
+                    expectedPrev = currNode.prev();
+                } else {
+                    destroyNode(curr);
+                }
+                curr -= 1;
+            }
+        }
+
+        // TODO: should this remove stakers?
+
+        shutdownForNitroMode = true;
+        _pause();
+    }
+
+    function isNitroReady() external pure returns (uint8) {
+        return uint8(0xa4b2);
     }
 }

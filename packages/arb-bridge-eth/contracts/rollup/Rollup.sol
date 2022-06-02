@@ -66,6 +66,17 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
 
     mapping(address => bool) isValidator;
 
+    /// @dev indicates if the rollup is in shutdown for nitro mode. can only be toggled by `shutdownForNitro` in admin facet
+    bool public shutdownForNitroMode;
+
+    /// @dev allows a function to be executed either if contract is either in `shutdownForNitroMode` or not paused
+    modifier whenInShutdownModeOrNotPaused() {
+        if (!shutdownForNitroMode) {
+            require(!paused(), "Pausable: paused");
+        }
+        _;
+    }
+
     /// @notice DEPRECATED -- this method is deprecated but still mantained for backward compatibility
     /// @dev this actually returns the avmGasSpeedLimitPerBlock
     /// @return this actually returns the avmGasSpeedLimitPerBlock

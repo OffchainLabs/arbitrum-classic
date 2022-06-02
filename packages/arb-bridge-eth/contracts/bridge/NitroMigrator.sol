@@ -92,9 +92,11 @@ contract NitroMigrator is Ownable {
             NitroReadyQuery queryContract = new NitroReadyQuery();
             require(
                 queryContract.isNitroReady(address(_rollup)) == uint8(0xa4b1),
-                "ROLLUP_NOT_NITRO_READY"
+                "USER_ROLLUP_NOT_NITRO_READY"
             );
         }
+        // this returns a different magic value so we can differentiate the user and admin facets
+        require(_rollup.isNitroReady() == uint8(0xa4b2), "ADMIN_ROLLUP_NOT_NITRO_READY");
 
         require(_inbox.isNitroReady() == uint8(0xa4b1), "INBOX_NOT_UPGRADED");
         require(_sequencerInbox.isNitroReady() == uint8(0xa4b1), "SEQINBOX_NOT_UPGRADED");

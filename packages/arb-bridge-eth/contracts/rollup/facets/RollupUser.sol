@@ -77,7 +77,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         uint256 afterSendCount,
         bytes32 afterLogAcc,
         uint256 afterLogCount
-    ) external onlyValidator whenNotPaused {
+    ) external onlyValidator whenInShutdownModeOrNotPaused {
         requireUnresolvedExists();
 
         // There is at least one non-zombie staker
@@ -85,13 +85,14 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
 
         INode node = getNode(firstUnresolvedNode());
 
-        // Verify the block's deadline has passed
-        node.requirePastDeadline();
+        if (!shutdownForNitroMode) {
+            // Verify the block's deadline has passed
+            node.requirePastDeadline();
+            getNode(latestConfirmed()).requirePastChildConfirmDeadline();
+        }
 
         // Check that prev is latest confirmed
         require(node.prev() == latestConfirmed(), "INVALID_PREV");
-
-        getNode(latestConfirmed()).requirePastChildConfirmDeadline();
 
         removeOldZombies(0);
 
@@ -591,6 +592,7 @@ contract RollupUserFacet is AbsRollupUserFacet {
         external
         override
         onlyValidator
+        whenInShutdownModeOrNotPaused
         returns (uint256)
     {
         uint256 amount = withdrawFunds(msg.sender);
@@ -650,7 +652,7 @@ contract ERC20RollupUserFacet is AbsRollupUserFacet {
         external
         override
         onlyValidator
-        whenNotPaused
+        whenInShutdownModeOrNotPaused
         returns (uint256)
     {
         uint256 amount = withdrawFunds(msg.sender);
