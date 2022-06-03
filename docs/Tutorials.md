@@ -23,6 +23,8 @@ Our partners [Alchemy](https://alchemy.com/?a=arbitrum-docs) and [Web3 Universit
 
 - ✅ [How to Get the Latest Block on Ethereum](https://docs.alchemy.com/alchemy/introduction/getting-started/simple-web3-script)
 
+- ✅ [How to Send Transactions on Ethereum](https://docs.alchemy.com/alchemy/introduction/getting-started/sending-txs)
+
 - ✅ [Create Your First Smart Contract](https://www.web3.university/tracks/create-a-smart-contract)
 
 - ✅ [How to Build Your First NFT](https://www.web3.university/tracks/build-your-first-nft)
