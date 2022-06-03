@@ -185,4 +185,32 @@ contract NitroMigrator is Ownable {
 
         latestCompleteStep = NitroMigrationSteps.Step3;
     }
+
+    /// @dev allows the owner to do arbitrary calls. This is useful in case an unexpected event
+    /// happens and we need to react to it using the migrator.
+    /// This should be enough to recover from any unexpected state since no external contracts rely
+    /// on this contract's state (ie `latestCompleteStep`).
+    /// If other contracts relied on this, we'd need to use a delegate call instead.
+    function executeTransactions(
+        bytes[] calldata data,
+        address[] calldata destination,
+        uint256[] calldata amount
+    ) external payable onlyOwner {
+        uint256 numTxes = data.length;
+        require(numTxes == destination.length, "WRONG_LENGTH");
+        require(numTxes == amount.length, "WRONG_LENGTH");
+
+        for (uint256 i = 0; i < numTxes; i++) {
+            if (data[i].length > 0) require(destination[i].isContract(), "NO_CODE_AT_ADDR");
+            (bool success, ) = address(destination[i]).call{ value: amount[i] }(data[i]);
+            if (!success) {
+                assembly {
+                    let ptr := mload(0x40)
+                    let size := returndatasize()
+                    returndatacopy(ptr, 0, size)
+                    revert(ptr, size)
+                }
+            }
+        }
+    }
 }
