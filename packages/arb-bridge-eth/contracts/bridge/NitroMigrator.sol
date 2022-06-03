@@ -191,25 +191,19 @@ contract NitroMigrator is Ownable {
     /// This should be enough to recover from any unexpected state since no external contracts rely
     /// on this contract's state (ie `latestCompleteStep`).
     /// If other contracts relied on this, we'd need to use a delegate call instead.
-    function executeTransactions(
-        bytes[] calldata data,
-        address[] calldata destination,
-        uint256[] calldata amount
+    function executeTransaction(
+        bytes calldata data,
+        address destination,
+        uint256 amount
     ) external payable onlyOwner {
-        uint256 numTxes = data.length;
-        require(numTxes == destination.length, "WRONG_LENGTH");
-        require(numTxes == amount.length, "WRONG_LENGTH");
-
-        for (uint256 i = 0; i < numTxes; i++) {
-            if (data[i].length > 0) require(destination[i].isContract(), "NO_CODE_AT_ADDR");
-            (bool success, ) = address(destination[i]).call{ value: amount[i] }(data[i]);
-            if (!success) {
-                assembly {
-                    let ptr := mload(0x40)
-                    let size := returndatasize()
-                    returndatacopy(ptr, 0, size)
-                    revert(ptr, size)
-                }
+        if (data.length > 0) require(Address.isContract(destination), "NO_CODE_AT_ADDR");
+        (bool success, ) = destination.call{ value: amount }(data);
+        if (!success) {
+            assembly {
+                let ptr := mload(0x40)
+                let size := returndatasize()
+                returndatacopy(ptr, 0, size)
+                revert(ptr, size)
             }
         }
     }
