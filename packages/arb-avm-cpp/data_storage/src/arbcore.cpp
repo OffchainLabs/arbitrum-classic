@@ -121,16 +121,15 @@ ArbCore::message_status_enum ArbCore::messagesStatus() {
     return current_status;
 }
 
-std::string ArbCore::messagesClearError() {
-    if (message_data_status != ArbCore::MESSAGES_ERROR) {
+std::string ArbCore::messagesGetError() {
+    auto status = message_data_status.load();
+    if (status != ArbCore::MESSAGES_ERROR) {
+        std::cerr << "messagesGetError called but different status: " << status
+                  << std::endl;
         return "";
     }
 
-    auto str = message_data_error_string;
-    message_data_error_string.clear();
-    message_data_status = MESSAGES_EMPTY;
-
-    return str;
+    return message_data_error_string;
 }
 
 bool ArbCore::checkError() {
@@ -182,7 +181,10 @@ bool ArbCore::deliverMessages(
     std::vector<std::vector<unsigned char>> sequencer_batch_items,
     std::vector<std::vector<unsigned char>> delayed_messages,
     const std::optional<uint256_t>& reorg_batch_items) {
-    if (message_data_status != MESSAGES_EMPTY) {
+    auto status = message_data_status.load();
+    if (status != MESSAGES_EMPTY) {
+        std::cerr << "unable to deliver messages, status: " << status
+                  << std::endl;
         return false;
     }
 
@@ -1516,7 +1518,7 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
     if (!success) {
         return false;
     }
-    if (message_data_status == MESSAGES_READY) {
+    if (message_data_status.load() == MESSAGES_READY) {
         std::chrono::time_point<std::chrono::steady_clock>
             begin_messages_ready_timepoint;
         if (coreConfig.debug_timing) {
@@ -1529,11 +1531,11 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
             auto add_status = addMessages(message_data, thread_data.cache);
             if (!add_status.status.ok()) {
                 thread_data.add_messages_failure_count++;
-                message_data_error_string = add_status.status.ToString();
-                message_data_status = MESSAGES_ERROR;
                 if (coreConfig.add_messages_max_failure_count > 0 &&
                     thread_data.add_messages_failure_count >=
                         coreConfig.add_messages_max_failure_count) {
+                    message_data_error_string = add_status.status.ToString();
+                    message_data_status = MESSAGES_ERROR;
                     std::cerr << "Exiting after arbCore addMessages failed "
                               << thread_data.add_messages_failure_count
                               << " times: " << message_data_error_string
@@ -1542,7 +1544,7 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
                     return false;
                 }
 
-                std::cerr << "ArbCore addMessages non-fatal error "
+                std::cerr << "ArbCore addMessages non-fatal error number "
                           << thread_data.add_messages_failure_count << ": "
                           << message_data_error_string << "\n";
             } else {
@@ -1825,7 +1827,7 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
         }
     }
 
-    if (machine_idle && message_data_status != MESSAGES_READY) {
+    if (machine_idle && message_data_status.load() != MESSAGES_READY) {
         // Machine blocked and no new messages, so sleep for a bit
         std::this_thread::sleep_for(
             std::chrono::milliseconds(coreConfig.idle_sleep_milliseconds));
@@ -3211,12 +3213,19 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
             while (seq_batch_it->Valid()) {
                 auto status = tx.sequencerBatchItemDelete(seq_batch_it->key());
                 if (!status.ok()) {
+                    std::cerr << "addMessages: issue deleting batch item "
+                                 "during reorg: "
+                              << seq_batch_it->key().ToString()
+                              << ", error: " << status.ToString() << std::endl;
                     return {status, std::nullopt};
                 }
                 deleted_any = true;
                 seq_batch_it->Next();
             }
             if (!seq_batch_it->status().ok()) {
+                std::cerr
+                    << "addMessages: error with batch iterator during reorg: "
+                    << seq_batch_it->status().ToString() << std::endl;
                 return {seq_batch_it->status(), std::nullopt};
             }
             if (deleted_any) {
@@ -3273,6 +3282,10 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
             for (auto& item_and_bytes : seq_batch_items) {
                 if (!seq_batch_it->Valid()) {
                     if (!seq_batch_it->status().ok()) {
+                        std::cerr << "addMessages: error with invalid batch "
+                                     "iterator: "
+                                  << seq_batch_it->status().ToString()
+                                  << std::endl;
                         return {seq_batch_it->status(), std::nullopt};
                     }
                     break;
@@ -3316,12 +3329,17 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
                         auto status =
                             tx.sequencerBatchItemDelete(seq_batch_it->key());
                         if (!status.ok()) {
+                            std::cerr << "addMessages: unable to delete batch: "
+                                      << status.ToString() << std::endl;
                             return {status, std::nullopt};
                         }
                         seq_batch_it->Next();
-                        if (!seq_batch_it->status().ok()) {
-                            return {seq_batch_it->status(), std::nullopt};
-                        }
+                    }
+                    if (!seq_batch_it->status().ok()) {
+                        std::cerr
+                            << "addMessages: error with delete batch iterator: "
+                            << seq_batch_it->status().ToString() << std::endl;
+                        return {seq_batch_it->status(), std::nullopt};
                     }
                     break;
                 }
@@ -3334,6 +3352,9 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
         if (!delayed_messages.empty()) {
             auto delayed_msg_seq_res = totalDelayedMessagesSequencedImpl(tx);
             if (!delayed_msg_seq_res.status.ok()) {
+                std::cerr
+                    << "addMessages: error getting delayed message iterator: "
+                    << delayed_msg_seq_res.status.ToString() << std::endl;
                 return {delayed_msg_seq_res.status, std::nullopt};
             }
             uint256_t start = delayed_messages[0].first.delayed_sequence_number;
@@ -3356,6 +3377,10 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
 
                 if (!inserting && !delayed_it->Valid()) {
                     if (!delayed_it->status().ok()) {
+                        std::cerr << "addMessages: error with delayed message "
+                                     "iterator: "
+                                  << delayed_it->status().ToString()
+                                  << std::endl;
                         return {delayed_it->status(), std::nullopt};
                     }
                     if (checking_prev) {
@@ -3383,6 +3408,10 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
                                 deserializeDelayedMessageAccumulator(value_ptr);
                         } else {
                             if (!delayed_it->status().ok()) {
+                                std::cerr << "addMessages: error getting next "
+                                             "delayed message: "
+                                          << delayed_it->status().ToString()
+                                          << std::endl;
                                 return {delayed_it->status(), std::nullopt};
                             }
                             inserting = true;
@@ -3405,10 +3434,17 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
                             auto status =
                                 tx.delayedMessageDelete(delayed_it->key());
                             if (!status.ok()) {
+                                std::cerr << "addMessages: error deleting "
+                                             "delayed message: "
+                                          << status.ToString() << std::endl;
                                 return {status, std::nullopt};
                             }
                             delayed_it->Next();
                             if (!delayed_it->status().ok()) {
+                                std::cerr << "addMessages: error with iterator "
+                                             "while deleting delayed message: "
+                                          << delayed_it->status().ToString()
+                                          << std::endl;
                                 return {delayed_it->status(), std::nullopt};
                             }
                         }
@@ -3429,6 +3465,9 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
                     auto key_slice = vecToSlice(key_vec);
                     auto status = tx.delayedMessagePut(key_slice, value_slice);
                     if (!status.ok()) {
+                        std::cerr
+                            << "addMessages: error inserting delayed message: "
+                            << status.ToString() << std::endl;
                         return {status, std::nullopt};
                     }
                 }
@@ -3492,11 +3531,15 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
             auto status = tx.sequencerBatchItemPut(vecToSlice(key_vec),
                                                    item_and_slice.second);
             if (!status.ok()) {
+                std::cerr << "addMessages: error inserting batch item: "
+                          << status.ToString() << std::endl;
                 return {status, std::nullopt};
             }
         }
         auto status = tx.commit();
         if (!status.ok()) {
+            std::cerr << "addMessages: error committing database changes: "
+                      << status.ToString() << std::endl;
             return {status, std::nullopt};
         }
     }
