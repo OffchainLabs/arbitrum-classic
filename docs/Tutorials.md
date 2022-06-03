@@ -18,3 +18,11 @@ It includes:
 - ✅ [L2 to L1 messaging](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/outbox-execute)
 
 And more!
+
+Our partners [Alchemy](https://alchemy.com/?a=arbitrum-docs) and [Web3 University](https://web3.university) provide a number of useful tutorials on building smart contracts and client applications in the Ethereum ecosystem.
+
+- ✅ [How to Get the Latest Block on Ethereum](https://docs.alchemy.com/alchemy/introduction/getting-started/simple-web3-script)
+
+- ✅ [Create Your First Smart Contract](https://www.web3.university/tracks/create-a-smart-contract)
+
+- ✅ [How to Build Your First NFT](https://www.web3.university/tracks/build-your-first-nft)
