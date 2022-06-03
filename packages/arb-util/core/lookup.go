@@ -56,6 +56,7 @@ type ExecutionCursor interface {
 	TotalSteps() *big.Int
 	TotalSendCount() *big.Int
 	TotalLogCount() *big.Int
+	L2BlockNumber() *big.Int
 }
 
 type ArbCoreLookup interface {
@@ -75,6 +76,7 @@ type ArbCoreLookup interface {
 	GetLastMachine() (machine.Machine, error)
 
 	GetLastMachineTotalGas() (*big.Int, error)
+	GetLastMachineL2BlockNumber() (*big.Int, error)
 
 	// GetExecutionCursor returns a cursor containing the machine after executing totalGasUsed
 	// from the original machine

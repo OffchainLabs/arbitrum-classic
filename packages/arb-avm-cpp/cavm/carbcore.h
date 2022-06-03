@@ -113,6 +113,7 @@ ByteSliceCountResult arbCoreAdvanceExecutionCursorWithTracing(
     const void* log_number_end_ptr);
 CMachine* arbCoreGetLastMachine(CArbCore* arbcore_ptr);
 Uint256Result arbCoreGetLastMachineTotalGas(CArbCore* arbcore_ptr);
+Uint256Result arbCoreGetLastMachineL2BlockNumber(CArbCore* arbcore_ptr);
 CMachine* arbCoreTakeMachine(CArbCore* arbcore_ptr,
                              CExecutionCursor* execution_cursor_ptr);
 CExecutionCursorResult arbCoreGetExecutionCursorAtEndOfBlock(
