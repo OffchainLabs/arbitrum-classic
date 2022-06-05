@@ -165,9 +165,13 @@ contract NitroMigrator is Ownable {
     }
 
     /// @dev this assumes step 1 has executed succesfully and that a validator has made the final assertion that includes the inbox shutdownForNitro
-    function nitroStep2(uint256 finalNodeNum) external onlyOwner {
+    function nitroStep2(
+        uint256 finalNodeNum,
+        bool destroyAlternatives,
+        bool destroyChallenges
+    ) external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Step1, "WRONG_STEP");
-        rollup.shutdownForNitro(finalNodeNum);
+        rollup.shutdownForNitro(finalNodeNum, destroyAlternatives, destroyChallenges);
         latestCompleteStep = NitroMigrationSteps.Step2;
     }
 

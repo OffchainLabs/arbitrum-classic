@@ -331,20 +331,17 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
     /// All nodes that aren't directly previous to this are deleted, but in practice none are expected to be present (as this would mean an eventual challenge).
     /// Even though the rollup is paused, we use the `shutdownForNitroMode` var to allow validators to go through the sequence of final nodes confirming them so their send values are added to the outbox
     /// The deadline for the nodes marked as final are ignored to a lower value to allow for these faster confirmations, which will make L2 to L1 txs available for execution sooner
-    function shutdownForNitro(uint256 finalNodeNum) external whenNotPaused {
+    function shutdownForNitro(
+        uint256 finalNodeNum,
+        bool destroyAlternatives,
+        bool destroyChallenges
+    ) external whenNotPaused {
+        require(!shutdownForNitroMode(), "ALREADY_SHUTDOWN_MODE");
         // TODO: prove that final node num includes the last send by arbos
 
-        uint256 latestCreated = latestNodeCreated();
-        // delete all nodes created after the final one (which should be none)
-        while (latestCreated > finalNodeNum) {
-            destroyNode(latestCreated);
-            latestCreated--;
-        }
-
-        uint256 latestConfirmedNodeNum = latestConfirmed();
-
         // first we destroy all nodes that aren't in the correct chain
-        uint256 curr = finalNodeNum;
+        uint256 latestConfirmedNodeNum = latestConfirmed();
+        uint256 curr = latestNodeCreated();
         uint256 expectedPrev = finalNodeNum;
         // if finalNodeNum == latestConfirmed we don't need to delete any siblings
         while (curr != latestConfirmedNodeNum) {
@@ -352,6 +349,7 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
                 INode currNode = getNode(curr);
                 expectedPrev = currNode.prev();
             } else {
+                require(destroyAlternatives, "ALTERNATIVES_NOT_EXPECTED");
                 destroyNode(curr);
             }
             curr--;
@@ -360,25 +358,43 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         uint256 stakerCount = stakerCount();
         for (uint64 i = 0; i < stakerCount; ++i) {
             address stakerAddr = getStakerAddress(i);
+            address chall = currentChallenge(stakerAddr);
+
+            if (chall != address(0)) {
+                require(destroyChallenges, "CHALLENGE_NOT_EXPECTED");
+                address asserter = IChallenge(chall).asserter();
+                address challenger = IChallenge(chall).challenger();
+
+                clearChallenge(asserter);
+                clearChallenge(challenger);
+
+                IChallenge(chall).clearChallenge();
+            }
+
             if (getNode(latestStakedNode(stakerAddr)) == INode(0)) {
                 // this node got destroyed, so we force refund the staker
-                reduceStakeTo(stakerAddr, 0);
-                turnIntoZombie(stakerAddr);
+                withdrawStaker(stakerAddr);
             }
             // else the staker can unstake and withdraw regularly using `returnOldDeposit`
         }
 
-        // TODO: do we force resolve challenges? shouldn't be needed
-
-        shutdownForNitroMode = true;
+        shutdownForNitroBlock = block.number;
         _pause();
         emit OwnerFunctionCalled(25);
+    }
+
+    /// @dev stops the rollup from shutdownForNitro mode in case something goes wrong during the migration process
+    function undoShutdownForNitro() external whenPaused {
+        require(shutdownForNitroMode(), "NOT_SHUTDOWN_MODE");
+        shutdownForNitroBlock = type(uint256).max;
+        _unpause();
+        emit OwnerFunctionCalled(26);
     }
 
     /// @dev allows the admin to transfer the ownership of a contract controlled by the rollup
     function transferOwnership(Ownable target, address newOwner) external {
         target.transferOwnership(newOwner);
-        emit OwnerFunctionCalled(26);
+        emit OwnerFunctionCalled(27);
     }
 
     function isNitroReady() external pure returns (uint8) {
