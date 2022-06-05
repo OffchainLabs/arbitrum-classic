@@ -160,6 +160,9 @@ contract NitroMigrator is Ownable {
             seqAddresses
         );
 
+        // this speeds up the process allowing validators to post assertions more frequently
+        rollup.setMinimumAssertionPeriod(4);
+
         // TODO: remove permissions from gas refunder to current sequencer inbox
         latestCompleteStep = NitroMigrationSteps.Step1;
     }

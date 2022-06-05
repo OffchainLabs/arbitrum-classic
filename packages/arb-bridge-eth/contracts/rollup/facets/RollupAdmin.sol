@@ -13,6 +13,10 @@ import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract RollupAdminFacet is RollupBase, IRollupAdmin {
+    event NodeDestroyedInMigration(uint256 nodeNum);
+    event ChallengeDestroyedInMigration(address challenge);
+    event StakerWithdrawnInMigration(address staker);
+
     /**
      * Functions are only to reach this facet if the caller is the owner
      * so there is no need for a redundant onlyOwner check
@@ -351,6 +355,7 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
             } else {
                 require(destroyAlternatives, "ALTERNATIVES_NOT_EXPECTED");
                 destroyNode(curr);
+                emit NodeDestroyedInMigration(curr);
             }
             curr--;
         }
@@ -369,11 +374,13 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
                 clearChallenge(challenger);
 
                 IChallenge(chall).clearChallenge();
+                emit ChallengeDestroyedInMigration(chall);
             }
 
             if (getNode(latestStakedNode(stakerAddr)) == INode(0)) {
                 // this node got destroyed, so we force refund the staker
                 withdrawStaker(stakerAddr);
+                emit StakerWithdrawnInMigration(stakerAddr);
             }
             // else the staker can unstake and withdraw regularly using `returnOldDeposit`
         }
