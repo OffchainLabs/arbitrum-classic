@@ -291,8 +291,9 @@ func startup() error {
 
 	// InboxReader may fail to start if sequencer isn't up yet, so keep retrying
 	var inboxReader *monitor.InboxReader
+	var inboxReaderDone chan bool
 	for {
-		inboxReader, err = mon.StartInboxReader(
+		inboxReader, inboxReaderDone, err = mon.StartInboxReader(
 			ctx,
 			l1Client,
 			common.HexToAddress(config.Rollup.Address),
@@ -527,6 +528,8 @@ func startup() error {
 	case err := <-errChan:
 		return err
 	case <-stakerDone:
+		return nil
+	case <-inboxReaderDone:
 		return nil
 	case <-cancelChan:
 		return nil

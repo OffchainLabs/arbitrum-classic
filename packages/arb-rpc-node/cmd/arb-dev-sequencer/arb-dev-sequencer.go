@@ -247,8 +247,9 @@ func startup() error {
 
 	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 	var inboxReader *monitor.InboxReader
+	var inboxReaderDone chan bool
 	for {
-		inboxReader, err = mon.StartInboxReader(
+		inboxReader, inboxReaderDone, err = mon.StartInboxReader(
 			ctx,
 			ethclint,
 			rollupAddress,
@@ -396,6 +397,8 @@ func startup() error {
 		return err
 	case err := <-errChan:
 		return err
+	case <-inboxReaderDone:
+		return nil
 	case <-cancelChan:
 		return nil
 	}

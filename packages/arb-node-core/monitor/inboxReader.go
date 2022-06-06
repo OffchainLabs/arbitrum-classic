@@ -61,9 +61,7 @@ type InboxReader struct {
 	sequencerAddresses map[ethcommon.Address]time.Time
 
 	// Only in main thread
-	running    bool
 	cancelFunc context.CancelFunc
-	completed  chan bool
 
 	// Thread safe
 	delayedBridge        *ethbridge.DelayedBridgeWatcher
@@ -99,7 +97,6 @@ func NewInboxReader(
 		db:                 db,
 		firstMessageBlock:  big.NewInt(firstMessageBlock),
 		recentFeedItems:    make(map[common.Hash]time.Time),
-		completed:          make(chan bool, 1),
 		caughtUpChan:       make(chan bool, 1),
 		healthChan:         healthChan,
 		BroadcastFeed:      broadcastFeed,
@@ -108,11 +105,12 @@ func NewInboxReader(
 	}, nil
 }
 
-func (ir *InboxReader) Start(parentCtx context.Context, inboxReaderDelayBlocks int64) {
+func (ir *InboxReader) Start(parentCtx context.Context, inboxReaderDelayBlocks int64) chan bool {
 	ctx, cancelFunc := context.WithCancel(parentCtx)
+	done := make(chan bool)
 	go func() {
 		defer func() {
-			ir.completed <- true
+			done <- true
 		}()
 		justErrored := false
 		for {
@@ -135,17 +133,12 @@ func (ir *InboxReader) Start(parentCtx context.Context, inboxReaderDelayBlocks i
 		}
 	}()
 	ir.cancelFunc = cancelFunc
-	ir.running = true
+
+	return done
 }
 
 func (ir *InboxReader) Stop() {
 	ir.cancelFunc()
-	<-ir.completed
-	ir.running = false
-}
-
-func (ir *InboxReader) IsRunning() bool {
-	return ir.running
 }
 
 // WaitToCatchUp may only be called once
