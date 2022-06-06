@@ -99,6 +99,12 @@ int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
             previous_message_count, previous_inbox_acc,
             std::move(sequencer_batch_items), std::move(delayed_messages),
             reorg_message_count);
+        if (!status) {
+            std::cerr << "error while delivering messages, previous count: "
+                      << previous_message_count
+                      << ", item count: " << item_count
+                      << ", delayed count: " << delayed_count << std::endl;
+        }
         return status;
     } catch (const std::exception& e) {
         std::cerr << "exception while delivering messages, previous count: "

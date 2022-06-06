@@ -1531,10 +1531,11 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
             auto add_status = addMessages(message_data, thread_data.cache);
             if (!add_status.status.ok()) {
                 thread_data.add_messages_failure_count++;
+                auto error_string = add_status.status.ToString();
                 if (coreConfig.add_messages_max_failure_count > 0 &&
                     thread_data.add_messages_failure_count >=
                         coreConfig.add_messages_max_failure_count) {
-                    message_data_error_string = add_status.status.ToString();
+                    message_data_error_string = error_string;
                     message_data_status = MESSAGES_ERROR;
                     std::cerr << "Exiting after arbCore addMessages failed "
                               << thread_data.add_messages_failure_count
@@ -1546,7 +1547,7 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
 
                 std::cerr << "ArbCore addMessages non-fatal error number "
                           << thread_data.add_messages_failure_count << ": "
-                          << message_data_error_string << "\n";
+                          << error_string << "\n";
             } else {
                 thread_data.add_messages_failure_count = 0;
                 machine_idle = false;
