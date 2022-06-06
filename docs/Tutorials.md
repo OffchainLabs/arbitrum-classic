@@ -19,7 +19,7 @@ It includes:
 
 And more!
 
-Our partners [Alchemy](https://alchemy.com/?a=arbitrum-docs) and [Web3 University](https://web3.university) provide a number of useful tutorials on building smart contracts and client applications in the Ethereum ecosystem. All of the following projects will work equivalently with the Arbitrum ecosystem simply by swapping out the deploying networks!
+Our partners [Alchemy](https://alchemy.com/?a=arbitrum-docs) and [Web3 University](https://web3.university) provide a number of useful tutorials on building smart contracts and client applications in the Ethereum ecosystem. All of the following projects will work equivalently with the Arbitrum ecosystem simply by swapping out the deploying network to be arb-mainnet or arb-rinkeby.
 
 - ✅ [How to Get the Latest Block on Ethereum](https://docs.alchemy.com/alchemy/introduction/getting-started/simple-web3-script)
 
