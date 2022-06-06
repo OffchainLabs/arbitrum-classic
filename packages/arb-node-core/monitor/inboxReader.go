@@ -19,7 +19,6 @@ package monitor
 import (
 	"context"
 	"math/big"
-	"strings"
 	"sync"
 	"time"
 
@@ -119,12 +118,12 @@ func (ir *InboxReader) Start(parentCtx context.Context, inboxReaderDelayBlocks i
 			if err == nil {
 				break
 			}
-			if strings.Contains(err.Error(), "arbcore thread aborted") {
+			if common.IsFatalError(err) {
 				logger.Error().Err(err).Msg("aborting inbox reader thread")
 				break
 			}
 			justErrored = true
-			logger.Warn().Stack().Err(err).Msg("Failed to read inbox messages")
+			logger.Warn().Stack().Err(err).Msg("failed to read inbox messages")
 
 			select {
 			case <-ctx.Done():

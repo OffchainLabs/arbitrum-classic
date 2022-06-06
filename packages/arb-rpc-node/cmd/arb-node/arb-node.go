@@ -422,7 +422,7 @@ func startup() error {
 			go batch.Start(ctx)
 			break
 		}
-		if strings.Contains(err.Error(), "arbcore thread aborted") {
+		if common.IsFatalError(err) {
 			logger.Error().Err(err).Msg("aborting inbox reader start")
 			break
 		}
