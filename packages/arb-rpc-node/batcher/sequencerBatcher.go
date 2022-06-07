@@ -1197,7 +1197,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 			if blockNum.Cmp(targetSequenceDelayed) >= 0 || creatingBatch {
 				sequencedDelayed, err = b.deliverDelayedMessages(ctx, chainTime, false)
 				if err != nil {
-					if strings.Contains(err.Error(), "arbcore thread aborted") {
+					if common.IsFatalError(err) {
 						logger.Error().Err(err).Msg("aborting sequencer batcher")
 						break
 					}
@@ -1242,7 +1242,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 			// Updates both prevMsgCount and nonce on success
 			complete, err := b.publishBatch(ctx, dontPublishBlockNum, prevMsgCount, nonce)
 			if err != nil {
-				if strings.Contains(err.Error(), "arbcore thread aborted") {
+				if common.IsFatalError(err) {
 					logger.Error().Err(err).Msg("aborting sequencer batch thread")
 					break
 				}
