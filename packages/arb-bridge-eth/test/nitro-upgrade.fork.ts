@@ -2,7 +2,7 @@ import { ethers, network } from 'hardhat'
 import { expect, assert } from 'chai'
 import { CurrentDeployments } from 'arb-upgrades/types'
 import { readFileSync, readdirSync } from 'fs'
-import { Bridge, NitroMigrator__factory, ProxyAdmin } from '../build/types'
+import { Bridge, NitroMigrator__factory, ProxyAdmin, RollupAdminFacet__factory } from '../build/types'
 import { BigNumber, constants, Signer } from 'ethers'
 import { Provider } from '@ethersproject/providers'
 import { Inbox__factory as NitroInbox__factory } from '../build/types/nitro/factories/Inbox__factory'
@@ -268,20 +268,24 @@ describe('Nitro upgrade', () => {
 
     //////// CHRIS /////// PUT BACK IN
     // // CHRIS: TODO: remove this when we remove teh setInbox(true) above
-    // await (
-    //   await nitroRollupAdminFacet.setInbox(
-    //     deployments.contracts.Bridge.proxyAddress,
-    //     false
-    //   )
-    // ).wait()
+    const nitroRollupAdminFac = new NitroRollupAdminLogic__factory(proxyAdminSigner)
+    const nitroRollupAdminFacet = nitroRollupAdminFac.attach(nitroContracts.rollup)
+    await (
+      await nitroRollupAdminFacet.setInbox(
+        deployments.contracts.Bridge.proxyAddress,
+        false
+      )
+    ).wait()
 
     // // step 2
     // // this would normally be the latest created node
     // // but we need to confirm all the nodes to ensure that
     // // CHRIS: TODO: use the admin to force confirm the nodes between
     // // latest created and latest confirmed
+    const classicRollupAdminFac = new RollupAdminFacet__factory(proxyAdminSigner)
+    const rollupAdmin = classicRollupAdminFac.attach(prevRollup.address);
     // const latestCreated = await rollupAdmin.latestNodeCreated()
-    // const latestConfirmed = await rollupAdmin.latestConfirmed()
+    const latestConfirmed = await rollupAdmin.latestConfirmed()
     // console.log(
     //   'confirmed count',
     //   latestConfirmed.toNumber(),
@@ -310,9 +314,9 @@ describe('Nitro upgrade', () => {
     // ).wait()
     // console.log("after exec")
 
-    // const res = await (
-    //   await rollupAdmin.shutdownForNitro(latestConfirmed)
-    // ).wait()
+    const res = await (
+      await rollupAdmin.shutdownForNitro(latestConfirmed)
+    ).wait()
 
     // const res = await (await nitroMigrator.nitroStep2(latestConfirmed, { gasLimit: 3000000})).wait()
     // console.log(res.gasUsed.toString())
