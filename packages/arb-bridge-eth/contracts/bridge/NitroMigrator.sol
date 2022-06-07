@@ -52,7 +52,6 @@ contract NitroMigrator is Ownable {
     /// > Step0 is setup with contract deployments and integrity checks
     ///
     /// This is the setup for the upgrade, where all contracts are deployed but the upgrade migration hasn't started yet.
-    /// Before Step1 the ownership of the Inbox / Rollup / Outbox / Bridge / SequencerInbox must all be transferred to this contract
     /// The sequencer should stop receiving messages over RPC and post its final batch before Step1 is called.
     ///
     /// > Step1 is settling the current state of inputs to the system (bridge, delayed and sequencer inbox) in a consistent way
@@ -93,18 +92,7 @@ contract NitroMigrator is Ownable {
         outboxV1 = _outboxV1;
         outboxV2 = _outboxV2;
 
-        {
-            // this contract is the rollup admin, and we want to check if the user facet is upgraded
-            // so we deploy a new contract to ensure the query is dispatched to the user facet, not the admin
-            NitroReadyQuery queryContract = new NitroReadyQuery();
-            require(
-                queryContract.isNitroReady(address(_rollup)) == uint8(0xa4b1),
-                "USER_ROLLUP_NOT_NITRO_READY"
-            );
-        }
-        // this returns a different magic value so we can differentiate the user and admin facets
-        require(_rollup.isNitroReady() == uint8(0xa4b2), "ADMIN_ROLLUP_NOT_NITRO_READY");
-
+        require(_rollup.isNitroReady() == uint8(0xa4b1), "USER_ROLLUP_NOT_NITRO_READY");
         require(_inbox.isNitroReady() == uint8(0xa4b1), "INBOX_NOT_UPGRADED");
         require(_sequencerInbox.isNitroReady() == uint8(0xa4b1), "SEQINBOX_NOT_UPGRADED");
 
@@ -125,8 +113,19 @@ contract NitroMigrator is Ownable {
     /// @dev this assumes this contract owns the rollup/inboxes/bridge before this function is called (else it will revert)
     /// this will create the final input in the inbox, but there won't be the final assertion available yet.
     /// it is assumed that at this point the sequencer has stopped receiving txs and has posted its final batch on-chain
-    function nitroStep1(address[] calldata seqAddresses) external onlyOwner {
+    /// Before this step the ownership of the Rollup and Bridge  must have been transferred to this contract
+    // CHRIS: TODO: remove bridge data
+    function nitroStep1(address[] calldata seqAddresses, bytes calldata bridgeData) external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Step0, "WRONG_STEP");
+        
+        // check that ownership of the bridge and rollup has been transferred
+        require(rollup.owner() == address(this), "ROLLUP_OWNER_NOT_SET");
+        require(bridge.owner() == address(this), "BRIDGE_OWNER_NOT_SET");
+        // we can only check whether the admin contract is ready when we are the owner of it,
+        // which is why we do it here rather than in the constructor like the other checks.
+        // this returns a different magic value so we can differentiate the user and admin facets
+        require(rollup.isNitroReady() == uint8(0xa4b2), "ADMIN_ROLLUP_NOT_NITRO_READY");
+
         uint256 delayedMessageCount = inbox.shutdownForNitro();
 
         // the `bridge` won't have any enabled inboxes after nitroStep2, so force inclusion after this shouldn't be possible
@@ -144,7 +143,7 @@ contract NitroMigrator is Ownable {
 
         {
             uint256 bal = address(bridge).balance;
-            (bool success, ) = bridge.executeCall(nitroBridge, bal, "");
+            (bool success, ) = bridge.executeCall(nitroBridge, bal, bridgeData);
             require(success, "ESCROW_TRANSFER_FAIL");
         }
 
@@ -173,6 +172,7 @@ contract NitroMigrator is Ownable {
 
     function nitroStep3() external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Step2, "WRONG_STEP");
+        // CHRIS: TODO: destroying the node in the previous steps does not reset latestConfirmed/latestNodeCreated
         require(
             rollup.latestConfirmed() == rollup.latestNodeCreated(),
             "ROLLUP_SHUTDOWN_NOT_COMPLETE"

@@ -153,6 +153,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         // the delayed inbox has all inboxes disabled, so state won't progress there.
         // if there are no delayed inboxes and no sequencer addresses, the state can't progress anymore.
         for (uint64 i = 0; i < seqAddresses.length; ++i) {
+            require(isSequencer[seqAddresses[i]], "UNKNOWN_SEQUENCER");
             isSequencer[seqAddresses[i]] = false;
         }
         deprecatedSequencer = address(0);
