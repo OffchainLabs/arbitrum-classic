@@ -452,7 +452,7 @@ func startup() error {
 		if !filepath.IsAbs(basedir) {
 			basedir = path.Join(config.Persistent.Chain, basedir)
 		}
-		exportServer, err := nitroexport.NewExportRpcServer(db, mon.Core, basedir)
+		exportServer, err := nitroexport.NewExportRpcServer(ctx, db, mon.Core, basedir)
 		if err != nil {
 			return err
 		}
