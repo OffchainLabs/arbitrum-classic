@@ -85,11 +85,9 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
 
         INode node = getNode(firstUnresolvedNode());
 
-        if (!shutdownForNitroMode) {
-            // Verify the block's deadline has passed
-            node.requirePastDeadline();
-            getNode(latestConfirmed()).requirePastChildConfirmDeadline();
-        }
+        // Verify the block's deadline has passed
+        node.requirePastDeadline();
+        getNode(latestConfirmed()).requirePastChildConfirmDeadline();
 
         // Check that prev is latest confirmed
         require(node.prev() == latestConfirmed(), "INVALID_PREV");

@@ -66,12 +66,17 @@ abstract contract RollupBase is Cloneable, RollupCore, Pausable {
 
     mapping(address => bool) isValidator;
 
-    /// @dev indicates if the rollup is in shutdown for nitro mode. can only be toggled by `shutdownForNitro` in admin facet
-    bool public shutdownForNitroMode;
+    /// @dev indicates the block which the rollup starts the shutdown for nitro mode
+    uint256 public shutdownForNitroBlock;
+
+    /// @dev indicates if rollup is in shutdown for nitro mode
+    function shutdownForNitroMode() public view returns (bool) {
+        return block.number >= shutdownForNitroBlock;
+    }
 
     /// @dev allows a function to be executed either if contract is either in `shutdownForNitroMode` or not paused
     modifier whenInShutdownModeOrNotPaused() {
-        if (!shutdownForNitroMode) {
+        if (!shutdownForNitroMode()) {
             require(!paused(), "Pausable: paused");
         }
         _;
@@ -154,6 +159,8 @@ contract Rollup is Proxy, RollupBase {
         // facets[0] == admin, facets[1] == user
         facets = _facets;
 
+        shutdownForNitroBlock = type(uint256).max;
+
         emit RollupCreated(_machineHash);
         require(isInit(), "INITIALIZE_NOT_INIT");
     }
@@ -164,12 +171,7 @@ contract Rollup is Proxy, RollupBase {
         address proxyAdmin = ProxyUtil.getProxyAdmin();
         require(msg.sender == proxyAdmin, "NOT_FROM_ADMIN");
 
-        // this upgrade moves the delay blocks and seconds tracking to the sequencer inbox
-        // because of that we need to update the admin facet logic to allow the owner to set
-        // these values in the sequencer inbox
-
-        STORAGE_GAP_1 = 0;
-        STORAGE_GAP_2 = 0;
+        shutdownForNitroBlock = type(uint256).max;
     }
 
     function createInitialNode(bytes32 _machineHash) private returns (INode) {
