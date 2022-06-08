@@ -331,9 +331,7 @@ describe('Nitro upgrade', () => {
     // ).wait()
     // console.log("after exec")
 
-    const res = await (
-      await rollupAdmin.shutdownForNitro(latestConfirmed)
-    ).wait()
+    await migrationManager.step2(latestConfirmed)
 
     // const res = await (await nitroMigrator.nitroStep2(latestConfirmed, { gasLimit: 3000000})).wait()
     // console.log(res.gasUsed.toString())

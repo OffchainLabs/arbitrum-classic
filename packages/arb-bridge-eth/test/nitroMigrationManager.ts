@@ -346,13 +346,13 @@ export class NitroMigrationManager {
     if (!this.nitroMigrator)
       throw new Error('Step 2 called before migrator deployed.')
 
-    await this.nitroMigrator.nitroStep2(finalNodeNum)
+    await (await this.nitroMigrator.nitroStep2(finalNodeNum)).wait()
   }
 
   public async step3() {
     if (!this.nitroMigrator)
       throw new Error('Step 3 called before migrator deployed.')
 
-    await this.nitroMigrator.nitroStep3()
+    await (await this.nitroMigrator.nitroStep3()).wait()
   }
 }
