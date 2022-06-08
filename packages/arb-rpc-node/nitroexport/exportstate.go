@@ -3,6 +3,8 @@ package nitroexport
 import (
 	"os"
 
+	"github.com/pkg/errors"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 )
@@ -18,6 +20,10 @@ func ExportState(arbcore core.ArbCore, height uint64, dirname string) error {
 	machine, err := arbcore.TakeMachine(cursor)
 	if err != nil {
 		return err
+	}
+	_, statsErr := os.Stat(dirname)
+	if !os.IsNotExist(statsErr) {
+		return errors.Errorf("%v already exists", dirname)
 	}
 	err = os.MkdirAll(dirname, os.ModePerm)
 	if err != nil {
