@@ -123,7 +123,7 @@ func startup() error {
 	}
 
 	if *blockNum > maxBlocks {
-		return errors.Errorf("requested {} blocks but only {} exist", *blockNum, maxBlocks)
+		return errors.Errorf("requested %v blocks but only %v exist", *blockNum, maxBlocks)
 	}
 
 	if *blockNum == 0 {

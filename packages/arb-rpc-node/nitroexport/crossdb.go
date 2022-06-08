@@ -111,7 +111,7 @@ func (c *CrossDB) importBlock(ctx context.Context, blockNumber uint64) error {
 		for i, tx := range outputTxs {
 			errStr += fmt.Sprint(i, ": ", tx.Hash(), "\n")
 		}
-		return errors.Errorf("bad block ", blockNumber, "\n", machineBlockInfo.Header.Hash(), machineBlockInfo.Header, "\n", block.Header().Hash(), block.Header(), "\n", errStr)
+		return errors.Errorf("bad block %v", blockNumber)
 	}
 	_, err = rawdb.WriteAncientBlocks(c.ethDB, []*types.Block{block}, []types.Receipts{outputReceipts}, big.NewInt(0))
 	return err
