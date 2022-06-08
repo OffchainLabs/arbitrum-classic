@@ -361,8 +361,16 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         }
 
         uint256 stakerCount = stakerCount();
+        address[] memory stakerAddresses = new address[](stakerCount);
+
+        // we separate the loop that gets staker addresses to be different from the loop that withdraw stakers
+        // since withdrawing stakers has side-effects on the array that is queried in `getStakerAddress`.
         for (uint64 i = 0; i < stakerCount; ++i) {
-            address stakerAddr = getStakerAddress(i);
+            stakerAddresses[i] = getStakerAddress(i);
+        }
+
+        for (uint64 i = 0; i < stakerCount; ++i) {
+            address stakerAddr = stakerAddresses[i];
             address chall = currentChallenge(stakerAddr);
 
             if (chall != address(0)) {
