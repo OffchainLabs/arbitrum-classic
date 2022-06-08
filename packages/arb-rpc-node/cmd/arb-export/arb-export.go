@@ -23,6 +23,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"time"
 
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/pkg/errors"
@@ -131,17 +132,41 @@ func startup() error {
 	}
 
 	if !*skipBlocks {
-		err = crossDB.FillerUp(ctx, *blockNum+1)
-		if err != nil {
-			return err
-		}
+		crossDB.Start(ctx)
+		crossDB.UpdateTarget(*blockNum + 1)
+		logger.Info().Msg("starting history export")
 	}
 
 	if !*skipState {
+		logger.Info().Msg("starting state export")
 		err = nitroexport.ExportState(mon.Core, *blockNum, path.Join(*chainDir, fmt.Sprint("state_", *blockNum)))
 		if err != nil {
 			return err
 		}
+		logger.Info().Msg("state export done")
+	}
+
+	if !*skipBlocks {
+		for {
+			blocksDone, err := crossDB.BlocksExported()
+			if err != nil {
+				return err
+			}
+			if blocksDone > *blockNum {
+				break
+			}
+			logger.Info().Uint64("imported", blocksDone).Uint64("out of", *blockNum+1).Msg(".. importing blocks")
+			err = crossDB.CurrentError()
+			if err != nil {
+				return err
+			}
+			select {
+			case <-ctx.Done():
+				break
+			case <-time.After(time.Minute):
+			}
+		}
+		logger.Info().Msg("history export done")
 	}
 
 	return nil
