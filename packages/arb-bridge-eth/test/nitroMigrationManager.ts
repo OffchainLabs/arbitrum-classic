@@ -57,10 +57,10 @@ export class NitroMigrationManager {
     const nitroContracts = await this.deployNitroContracts(nitroConfig)
     await this.upgradeClassicContracts()
     await this.deployMigrator({
-        bridgeAddr: nitroContracts.bridge,
-        inboxTemplateAddr: nitroContracts.inboxTemplate,
-        outboxAddr: nitroContracts.outbox,
-        sequencerInboxAddr: nitroContracts.sequencerInbox,
+      bridgeAddr: nitroContracts.bridge,
+      inboxTemplateAddr: nitroContracts.inboxTemplate,
+      outboxAddr: nitroContracts.outbox,
+      sequencerInboxAddr: nitroContracts.sequencerInbox,
     })
     await this.transferClassicOwnership()
     await this.step1(classicSequencers, {
@@ -68,14 +68,30 @@ export class NitroMigrationManager {
       bridgeAddr: nitroContracts.bridge,
     })
 
-    const nodeNum = await this.waitForNodeConfirmation()
+    const nodeNum = await this.step1point5()
 
     await this.step2(nodeNum, destroyAlternatives, destroyChallenges)
+
+    await this.step2point5()
 
     await this.step3()
   }
 
-  private async waitForNodeConfirmation(): Promise<BigNumber> {
+  private async step2point5() {
+    // Step 2.5: check for lingering stuff
+
+    // - Do we have any unexecuted exits?
+    //     - Probably. They should be easy to handle
+    //     - Jason (data science) joining can analyse the number of L2 to L1 txs not executed
+    // - Check no ongoing challenges
+    throw new Error('Not implemented.')
+  }
+
+  private async step1point5(): Promise<BigNumber> {
+    // Step 1.5: check for lingering stuff
+
+    // - Do we have any unredeemed retryables?
+    //     - Probably. They will get copied over
     throw new Error('Not implemented.')
   }
 
@@ -300,7 +316,7 @@ export class NitroMigrationManager {
       nitroConfig.inboxTemplateAddr
     )
 
-    return this.nitroMigrator;
+    return this.nitroMigrator
   }
 
   public async transferClassicOwnership() {
@@ -350,12 +366,22 @@ export class NitroMigrationManager {
     ).wait()
   }
 
-  public async step2(finalNodeNum: BigNumber, destroyAlternatives: boolean, destroyChallenges: boolean) {
+  public async step2(
+    finalNodeNum: BigNumber,
+    destroyAlternatives: boolean,
+    destroyChallenges: boolean
+  ) {
     if (!this.nitroMigrator)
       throw new Error('Step 2 called before migrator deployed.')
 
-      // CHRIS: TODO: pass these args through
-    await (await this.nitroMigrator.nitroStep2(finalNodeNum, destroyAlternatives, destroyChallenges)).wait()
+    // CHRIS: TODO: pass these args through
+    await (
+      await this.nitroMigrator.nitroStep2(
+        finalNodeNum,
+        destroyAlternatives,
+        destroyChallenges
+      )
+    ).wait()
   }
 
   public async step3() {

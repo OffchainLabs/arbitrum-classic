@@ -236,11 +236,9 @@ describe('Nitro upgrade', () => {
         futureSeconds: 60 * 60,
       },
     })
-    console.log(nitroContracts)
-
     await migrationManager.upgradeClassicContracts()
 
-    const nitroMigrator = await migrationManager.deployMigrator({
+    await migrationManager.deployMigrator({
       // CHRIS: TODO: we could do more in terms of checks
       // CHRIS: TODO: we could do a check that all the contracts we care about have been correctly deployed with the correct admins
       // CHRIS: TODO: we could also check that the contracts below have expected functions on them?
@@ -253,24 +251,14 @@ describe('Nitro upgrade', () => {
     await migrationManager.transferClassicOwnership()
 
     // CHRIS: TODO: remove this!!!! we only do this whilst we wait for a receive function to be added to the
-    const nitroRollupAdminLogicFac = new NitroRollupAdminLogic__factory(
-      proxyAdminSigner
-    )
-    const nitroRollupAdminFacet = await nitroRollupAdminLogicFac.attach(
-      nitroContracts.rollup
-    )
-    // nitro bridge
-    console.log(deployments.contracts.Bridge.proxyAddress)
-    
+    // set the classic bridge as a inbox on the nitro bridge
     await (
-      await nitroRollupAdminFacet.setInbox(
-        deployments.contracts.Bridge.proxyAddress,
-        true
-      )
+      await new NitroRollupAdminLogic__factory(proxyAdminSigner)
+        .attach(nitroContracts.rollup)
+        .setInbox(deployments.contracts.Bridge.proxyAddress, true)
     ).wait()
 
-
-      // CHRIS: TODO: get the correct address here, dont hard code?
+    // CHRIS: TODO: get the correct address here, dont hard code?
     const mainnetSequencer = '0xa4b10ac61E79Ea1e150DF70B8dda53391928fD14'
     await migrationManager.step1([mainnetSequencer], {
       rollupAddr: nitroContracts.rollup,
@@ -278,12 +266,12 @@ describe('Nitro upgrade', () => {
     })
 
     //////// CHRIS /////// PUT BACK IN
+    // rest the bridge
     // // CHRIS: TODO: remove this when we remove teh setInbox(true) above
     await (
-      await nitroRollupAdminFacet.setInbox(
-        deployments.contracts.Bridge.proxyAddress,
-        false
-      )
+      await await new NitroRollupAdminLogic__factory(proxyAdminSigner)
+        .attach(nitroContracts.rollup)
+        .setInbox(deployments.contracts.Bridge.proxyAddress, false)
     ).wait()
 
     // // step 2
@@ -315,7 +303,7 @@ describe('Nitro upgrade', () => {
     // console.log('step 2 complete')
 
     // // step 3
-    // await (await nitroMigrator.nitroStep3()).wait()
+    await migrationManager.step3()
 
     // console.log('step 3 complete')
 
