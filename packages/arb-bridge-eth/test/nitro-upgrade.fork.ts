@@ -2,7 +2,12 @@ import { ethers, network } from 'hardhat'
 import { expect, assert } from 'chai'
 import { CurrentDeployments } from 'arb-upgrades/types'
 import { readFileSync, readdirSync } from 'fs'
-import { Bridge, NitroMigrator__factory, ProxyAdmin, RollupAdminFacet__factory } from '../build/types'
+import {
+  Bridge,
+  NitroMigrator__factory,
+  ProxyAdmin,
+  RollupAdminFacet__factory,
+} from '../build/types'
 import { BigNumber, constants, Signer } from 'ethers'
 import { Provider } from '@ethersproject/providers'
 import { Inbox__factory as NitroInbox__factory } from '../build/types/nitro/factories/Inbox__factory'
@@ -200,7 +205,17 @@ describe('Nitro upgrade', () => {
     // CHRIS: TODO: don't we need to create a new 'deployments' file?
     // CHRIS: TODO: shouldnt the bridge be upgraded? no, we're doing a fresh one
 
-    const migrationManager = new NitroMigrationManager(proxyAdminSigner)
+    const migrationManager = new NitroMigrationManager(proxyAdminSigner, {
+      proxyAdminAddr: deployments.proxyAdminAddress,
+      inboxAddr: deployments.contracts.Inbox.proxyAddress,
+      rollupAddr: deployments.contracts.Rollup.proxyAddress,
+      sequencerInboxAddr: deployments.contracts.SequencerInbox.proxyAddress,
+      bridgeAddr: deployments.contracts.Bridge.proxyAddress,
+      outboxV1: (deployments.contracts as any)['OldOutbox'].proxyAddress,
+      outboxV2: (deployments.contracts as any)['OldOutbox'].proxyAddress, // CHRIS: TODO: v2 here?,
+      rollupEventBridgeAddr:
+        deployments.contracts.RollupEventBridge.proxyAddress,
+    })
 
     const rollupFac = await ethers.getContractFactory('Rollup')
     // lookup params from previous rollup?
@@ -212,7 +227,7 @@ describe('Nitro upgrade', () => {
       '0x9900000000000000000000000000000000000000000000000000000000000010'
     const loserStakeEscrow = constants.AddressZero
 
-    const nitroContracts = await migrationManager.deployNitro({
+    const nitroContracts = await migrationManager.deployNitroContracts({
       confirmPeriodBlocks: await prevRollup.confirmPeriodBlocks(),
       extraChallengeTimeBlocks: await prevRollup.extraChallengeTimeBlocks(),
       stakeToken: await prevRollup.stakeToken(),
@@ -233,43 +248,43 @@ describe('Nitro upgrade', () => {
       },
     })
 
-    await migrationManager.upgradeClassicContracts({
-      proxyAdminAddr: deployments.proxyAdminAddress,
-      confirmPeriodBlocks: await prevRollup.confirmPeriodBlocks(),
-      inboxAddr: deployments.contracts.Inbox.proxyAddress,
-      rollupAddr: prevRollup.address,
-      sequencerInboxAddr: deployments.contracts.SequencerInbox.proxyAddress,
-    })
+    await migrationManager.upgradeClassicContracts
+    // CHRIS: TODO: remove this!!!! we only do this whilst we wait for a receive function to be added to the
+    const nitroRollupAdminLogicFac = new NitroRollupAdminLogic__factory(
+      proxyAdminSigner
+    )
+    const nitroRollupAdminFacet = await nitroRollupAdminLogicFac.attach(
+      nitroContracts.rollup
+    )
+    // nitro bridge
+    await (
+      await nitroRollupAdminFacet.setInbox(
+        deployments.contracts.Bridge.implAddress,
+        true
+      )
+    ).wait()
 
-    await migrationManager.deployMigrator([
-      deployments.contracts.Inbox.proxyAddress,
-      deployments.contracts.SequencerInbox.proxyAddress,
-      deployments.contracts.Bridge.proxyAddress,
-      deployments.contracts.RollupEventBridge.proxyAddress,
-      (deployments.contracts as any)['OldOutbox'].proxyAddress,
-      (deployments.contracts as any)['OldOutbox'].proxyAddress, // CHRIS: TODO: v2 here?
-      deployments.contracts.Rollup.proxyAddress,
+    await migrationManager.upgradeClassicContracts()
+
+    await migrationManager.deployMigrator({
       // CHRIS: TODO: we could do more in terms of checks
       // CHRIS: TODO: we could do a check that all the contracts we care about have been correctly deployed with the correct admins
       // CHRIS: TODO: we could also check that the contracts below have expected functions on them?
-      nitroContracts.bridge,
-      nitroContracts.inboxTemplate,
-      nitroContracts.outbox,
-      nitroContracts.sequencerInbox,
-    ])
+      bridgeAddr: nitroContracts.bridge,
+      inboxTemplateAddr: nitroContracts.inboxTemplate,
+      outboxAddr: nitroContracts.outbox,
+      sequencerInboxAddr: nitroContracts.sequencerInbox,
+    })
 
-    await migrationManager.step1(
-      {
-        rollupAddr: deployments.contracts.Rollup.proxyAddress,
-        bridgeAddr: deployments.contracts.Bridge.proxyAddress,
-      },
-      { rollupAddr: nitroContracts.rollup, bridgeAddr: nitroContracts.bridge }
-    )
+    // CHRIS: TODO: get the correct address here, dont hard code?
+    const mainnetSequencer = '0xa4b10ac61E79Ea1e150DF70B8dda53391928fD14'
+    await migrationManager.step1([mainnetSequencer], {
+      rollupAddr: nitroContracts.rollup,
+      bridgeAddr: nitroContracts.bridge,
+    })
 
     //////// CHRIS /////// PUT BACK IN
     // // CHRIS: TODO: remove this when we remove teh setInbox(true) above
-    const nitroRollupAdminFac = new NitroRollupAdminLogic__factory(proxyAdminSigner)
-    const nitroRollupAdminFacet = nitroRollupAdminFac.attach(nitroContracts.rollup)
     await (
       await nitroRollupAdminFacet.setInbox(
         deployments.contracts.Bridge.proxyAddress,
@@ -282,8 +297,10 @@ describe('Nitro upgrade', () => {
     // // but we need to confirm all the nodes to ensure that
     // // CHRIS: TODO: use the admin to force confirm the nodes between
     // // latest created and latest confirmed
-    const classicRollupAdminFac = new RollupAdminFacet__factory(proxyAdminSigner)
-    const rollupAdmin = classicRollupAdminFac.attach(prevRollup.address);
+    const classicRollupAdminFac = new RollupAdminFacet__factory(
+      proxyAdminSigner
+    )
+    const rollupAdmin = classicRollupAdminFac.attach(prevRollup.address)
     // const latestCreated = await rollupAdmin.latestNodeCreated()
     const latestConfirmed = await rollupAdmin.latestConfirmed()
     // console.log(

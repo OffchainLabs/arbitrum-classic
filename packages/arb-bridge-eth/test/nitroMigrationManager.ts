@@ -29,11 +29,56 @@ import {
 export class NitroMigrationManager {
   private readonly provider: Provider
 
-  public constructor(public readonly proxyAdminOwner: Signer) {
+  public constructor(
+    public readonly proxyAdminOwner: Signer,
+    public readonly classicConfig: {
+      rollupAddr: string
+      proxyAdminAddr: string
+      inboxAddr: string
+      sequencerInboxAddr: string
+      bridgeAddr: string
+      rollupEventBridgeAddr: string
+      outboxV1: string
+      outboxV2: string // CHRIS: TODO: v2 here?
+    }
+  ) {
     if (!proxyAdminOwner.provider) {
       throw new Error('No provider attached to deployer signer.')
     }
     this.provider = proxyAdminOwner.provider
+  }
+
+  public async run(
+    classicSequencers: string[],
+    nitroConfig: Parameters<NitroRollupCreator['createRollup']>[0]
+  ) {
+    const nitroContracts = await this.deployNitroContracts(nitroConfig)
+    await this.upgradeClassicContracts()
+    await this.transferClassicOwnership()
+    await this.deployMigrator({
+      bridgeAddr: nitroContracts.bridge,
+      inboxTemplateAddr: nitroContracts.inboxTemplate,
+      outboxAddr: nitroContracts.outbox,
+      sequencerInboxAddr: nitroContracts.sequencerInbox,
+    })
+    await this.step1(classicSequencers, {
+      rollupAddr: nitroContracts.rollup,
+      bridgeAddr: nitroContracts.bridge,
+    })
+
+
+
+    const nodeNum = await this.waitForNodeConfirmation()
+
+    await this.step2(nodeNum)
+
+    await this.step3()
+
+    
+  }
+
+  private async waitForNodeConfirmation(): Promise<BigNumber> {
+      throw new Error("Not implemented.");
   }
 
   private async deployNitroChallengeContracts(signer: Signer) {
@@ -76,27 +121,7 @@ export class NitroMigrationManager {
     }
   }
 
-  //   confirmPeriodBlocks: await prevRollup.confirmPeriodBlocks(),
-  //   extraChallengeTimeBlocks: await prevRollup.extraChallengeTimeBlocks(),
-  //   stakeToken: await prevRollup.stakeToken(),
-  //   baseStake: await prevRollup.baseStake(),
-  //   wasmModuleRoot: wasmModuleRoot,
-  //   // CHRIS: TODO: decide who the owner should be
-  //   // CHRIS: TODO: shouldnt it be someone different to the proxy admin?
-  //   owner: await prevRollup.owner(),
-  //   chainId: (await this.provider.getNetwork()).chainId,
-  //   loserStakeEscrow: loserStakeEscrow,
-  //   sequencerInboxMaxTimeVariation: {
-  //     // CHRIS: TODO: should we change this to the exact POS seconds? probably not yet, we can update it later i guess
-  //     // CHRIS: TODO: make sure these are all the values we want
-  //     delayBlocks: (60 * 60 * 24) / 15,
-  //     futureBlocks: 12,
-  //     delaySeconds: 60 * 60 * 24,
-  //     futureSeconds: 60 * 60,
-  //   },
-  // },
-
-  public async deployNitro(
+  public async deployNitroContracts(
     config: Parameters<NitroRollupCreator['createRollup']>[0]
   ) {
     const nitroBridgeCreatorFac = new NitroBridgeCreator__factory(
@@ -144,44 +169,14 @@ export class NitroMigrationManager {
       nonce: nonce + 2,
     })
 
-    // lookup params from previous rollup?
-    // CHRIS: TODO: why do we have a param in the constructor? how is this rollup logic supposed to be deployed?
-
-    // const prevRollup = await rollupFac.attach(
-    //     deployments.contracts.Rollup.proxyAddress
-    //   )
-    //   const wasmModuleRoot =
-    //     '0x9900000000000000000000000000000000000000000000000000000000000010'
-    //   const loserStakeEscrow = constants.AddressZero
-    // {
-    //     confirmPeriodBlocks: await config.confirmPeriodBlocks,
-    //     extraChallengeTimeBlocks: await prevRollup.extraChallengeTimeBlocks(),
-    //     stakeToken: await prevRollup.stakeToken(),
-    //     baseStake: await prevRollup.baseStake(),
-    //     wasmModuleRoot: wasmModuleRoot,
-    //     // CHRIS: TODO: decide who the owner should be
-    //     // CHRIS: TODO: shouldnt it be someone different to the proxy admin?
-    //     owner: await prevRollup.owner(),
-    //     chainId: (await this.provider.getNetwork()).chainId,
-    //     loserStakeEscrow: loserStakeEscrow,
-    //     sequencerInboxMaxTimeVariation: {
-    //       // CHRIS: TODO: should we change this to the exact POS seconds? probably not yet, we can update it later i guess
-    //       // CHRIS: TODO: make sure these are all the values we want
-    //       delayBlocks: (60 * 60 * 24) / 15,
-    //       futureBlocks: 12,
-    //       delaySeconds: 60 * 60 * 24,
-    //       futureSeconds: 60 * 60,
-    //     },
-    //   }
-
     const createRollupTx = await nitroRollupCreator.createRollup(
       config,
       expectedRollupAddress
     )
 
     // CHRIS: TODO: quite a cool idea would be to figure out at compile
-    // time what possible events could be emitted? is that even possible,
-    // I guess not. So how could we do it? we can
+    // time what possible events could be emitted from a given tx? is that even possible,
+    // I guess not. So how could we do it? we cant
 
     // CHRIS: we're deploying a new proxy admin in createRollup
     // CHRIS: this will mean we actually have 2 proxy admins in the system post nitro
@@ -215,16 +210,10 @@ export class NitroMigrationManager {
     }
   }
 
-  public async upgradeClassicContracts(classicConfig: {
-    proxyAdminAddr: string
-    inboxAddr: string
-    sequencerInboxAddr: string
-    rollupAddr: string
-    confirmPeriodBlocks: BigNumber
-  }) {
+  public async upgradeClassicContracts() {
     const proxyAdminContractFac = new ProxyAdmin__factory(this.proxyAdminOwner)
     const proxyAdmin = proxyAdminContractFac.attach(
-      classicConfig.proxyAdminAddr
+      this.classicConfig.proxyAdminAddr
     )
 
     const inboxFac = new Inbox__factory(this.proxyAdminOwner)
@@ -232,7 +221,7 @@ export class NitroMigrationManager {
     await newInboxImp.deployed()
     await proxyAdmin
       // CHRIS: TODO: this should be upgradeAndCall
-      .upgrade(classicConfig.inboxAddr, newInboxImp.address)
+      .upgrade(this.classicConfig.inboxAddr, newInboxImp.address)
 
     // -- sequencer inbox
     const sequencerInboxFac = new SequencerInbox__factory(this.proxyAdminOwner)
@@ -241,22 +230,21 @@ export class NitroMigrationManager {
     const sequencerInboxPostUpdgrade =
       newSequencerInboxImp.interface.encodeFunctionData('postUpgradeInit')
     await proxyAdmin.upgradeAndCall(
-      classicConfig.sequencerInboxAddr,
+      this.classicConfig.sequencerInboxAddr,
       newSequencerInboxImp.address,
       sequencerInboxPostUpdgrade
     )
 
     // -- rollup
-
     const rollupFac = new Rollup__factory(this.proxyAdminOwner)
-    const newRollupImp = await rollupFac.deploy(
-      classicConfig.confirmPeriodBlocks
-    )
+    const prevRollup = rollupFac.attach(this.classicConfig.rollupAddr)
+    const confirmPeriodBlocks = await prevRollup.confirmPeriodBlocks()
+    const newRollupImp = await rollupFac.deploy(confirmPeriodBlocks)
     await newRollupImp.deployed()
     const rollupPostUpgrade =
       newRollupImp.interface.encodeFunctionData('postUpgradeInit')
     await proxyAdmin.upgradeAndCall(
-      classicConfig.rollupAddr,
+      this.classicConfig.rollupAddr,
       newRollupImp.address,
       rollupPostUpgrade
     )
@@ -272,7 +260,7 @@ export class NitroMigrationManager {
     await newRollupAdminImp.deployed()
 
     const rollupAdmin = rollupAdminFac
-      .attach(classicConfig.rollupAddr)
+      .attach(this.classicConfig.rollupAddr)
       .connect(this.proxyAdminOwner)
     await (
       await rollupAdmin.setFacets(
@@ -285,52 +273,58 @@ export class NitroMigrationManager {
   // CHRIS: TODO: check for the presence of this everywhere
   private nitroMigrator?: NitroMigrator
 
-  public async deployMigrator(
-    config: Parameters<NitroMigrator__factory['deploy']>
-  ) {
+  public async deployMigrator(nitroConfig: {
+    bridgeAddr: string
+    outboxAddr: string
+    sequencerInboxAddr: string
+    inboxTemplateAddr: string
+  }) {
     const nitroMigratorFac = new NitroMigrator__factory(this.proxyAdminOwner)
-    this.nitroMigrator = await nitroMigratorFac.deploy(...config)
+    this.nitroMigrator = await nitroMigratorFac.deploy(
+      this.classicConfig.inboxAddr,
+      this.classicConfig.sequencerInboxAddr,
+      this.classicConfig.bridgeAddr,
+      this.classicConfig.rollupEventBridgeAddr,
+      this.classicConfig.outboxV1,
+      this.classicConfig.outboxV2,
+      this.classicConfig.rollupAddr,
+      nitroConfig.bridgeAddr,
+      nitroConfig.outboxAddr,
+      nitroConfig.sequencerInboxAddr,
+      nitroConfig.inboxTemplateAddr
+    )
+  }
+
+  public async transferClassicOwnership() {
+    if (!this.nitroMigrator)
+      throw new Error('Transfer ownership called before migrator deployed.')
+
+    const rollupAdminFac = new RollupAdminFacet__factory(this.proxyAdminOwner)
+    const rollupAdmin = rollupAdminFac
+      .attach(this.classicConfig.rollupAddr)
+      .connect(this.proxyAdminOwner)
+
+    await (
+      await rollupAdmin.transferOwnership(
+        this.classicConfig.bridgeAddr,
+        this.nitroMigrator.address
+      )
+    ).wait()
+    await (await rollupAdmin.setOwner(this.nitroMigrator.address)).wait()
   }
 
   // CHRIS: TODO: ensure these functions are called in the correct order?
 
   // CHRIS: TODO: put this classic config in the constructor
   public async step1(
-    classicConfig: { rollupAddr: string; bridgeAddr: string },
+    classicSequencers: string[],
     nitroConfig: { rollupAddr: string; bridgeAddr: string }
   ) {
     if (!this.nitroMigrator)
       throw new Error('Step 1 called before migrator deployed.')
 
-    const rollupAdminFac = new RollupAdminFacet__factory(this.proxyAdminOwner)
-    const rollupAdmin = rollupAdminFac
-      .attach(classicConfig.rollupAddr)
-      .connect(this.proxyAdminOwner)
-
-    await (
-      await rollupAdmin.transferOwnership(
-        classicConfig.bridgeAddr,
-        this.nitroMigrator.address
-      )
-    ).wait()
-    await (await rollupAdmin.setOwner(this.nitroMigrator.address)).wait()
-
     // CHRIS: TODO: should nitro contracts be added to dev or prod dependencies?
-
-    // CHRIS: TODO: get the correct address here, dont hard code?
-    const mainnetSequencer = '0xa4b10ac61E79Ea1e150DF70B8dda53391928fD14'
-    // CHRIS: TODO: remove this!!!! we only do this whilst we wait for a receive function to be added to the
-    const nitroRollupAdminLogicFac = new NitroRollupAdminLogic__factory(
-      this.proxyAdminOwner
-    )
-    const nitroRollupAdminFacet = await nitroRollupAdminLogicFac.attach(
-      nitroConfig.rollupAddr
-    )
-    // nitro bridge
-    await (
-      await nitroRollupAdminFacet.setInbox(classicConfig.bridgeAddr, true)
-    ).wait()
-
+    
     const nitroBridgeFac = new NitroBridge__factory(this.proxyAdminOwner)
     const nitroBridge = nitroBridgeFac.attach(nitroConfig.bridgeAddr)
     const enqueueDelayedMessage =
@@ -342,9 +336,23 @@ export class NitroMigrationManager {
 
     await (
       await this.nitroMigrator.functions.nitroStep1(
-        [mainnetSequencer],
+        classicSequencers,
         enqueueDelayedMessage
       )
     ).wait()
+  }
+
+  public async step2(finalNodeNum: BigNumber) {
+    if (!this.nitroMigrator)
+      throw new Error('Step 2 called before migrator deployed.')
+
+    await this.nitroMigrator.nitroStep2(finalNodeNum)
+  }
+
+  public async step3() {
+    if (!this.nitroMigrator)
+      throw new Error('Step 3 called before migrator deployed.')
+
+    await this.nitroMigrator.nitroStep3()
   }
 }
