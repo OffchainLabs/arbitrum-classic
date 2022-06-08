@@ -23,8 +23,9 @@ import { OneStepProofEntry__factory as NitroOneStepProofEntry__factory } from '.
 import { ChallengeManager__factory as NitroChallengeManager__factory } from '../build/types/nitro/factories/ChallengeManager__factory'
 import { RollupAdminLogic__factory as NitroRollupAdminLogic__factory } from '../build/types/nitro/factories/RollupAdminLogic__factory'
 import { RollupUserLogic__factory as NitroRollupUserLogic__factory } from '../build/types/nitro/factories/RollupUserLogic__factory'
-import { Interface } from '@ethersproject/abi'
+import { defaultAbiCoder, Interface } from '@ethersproject/abi'
 import { NitroMigrationManager } from './nitroMigrationManager'
+import { arrayify } from '@ethersproject/bytes'
 
 describe('Nitro upgrade', () => {
   const getDeployments = async (provider: Provider) => {
@@ -35,171 +36,159 @@ describe('Nitro upgrade', () => {
     return JSON.parse(deploymentData.toString()) as CurrentDeployments
   }
 
-  it('fails to construct if contracts havent been upgraded', async () => {
-    try {
-      const deployments = await getDeployments(ethers.provider)
-      const nitroMigratorFac = await ethers.getContractFactory('NitroMigrator')
-      await nitroMigratorFac.deploy(
-        deployments.contracts.Inbox.proxyAddress,
-        deployments.contracts.SequencerInbox.proxyAddress,
-        deployments.contracts.Bridge.proxyAddress,
-        deployments.contracts.RollupEventBridge.proxyAddress,
-        (deployments.contracts as any)['OldOutbox'].proxyAddress,
-        (deployments.contracts as any)['OldOutbox'].proxyAddress, // CHRIS: TODO: v2 here?
-        deployments.contracts.Rollup.proxyAddress,
-        constants.AddressZero,
-        constants.AddressZero,
-        constants.AddressZero,
-        constants.AddressZero
-      )
-
-      assert.fail('Expected constructor to fail')
-    } catch {}
-
-    // const delayedInboxAddress = deployments.contracts.Inbox.proxyAddress
-
-    // const delayedInbox = await ethers.getContractAt(
-    //   'Inbox',
-    //   delayedInboxAddress
-    // )
-
-    // const bridge = await ethers.getContractAt(
-    //   'Bridge',
-    //   await delayedInbox.bridge()
-    // )
-
-    // const rollupProxyAddress = await bridge.owner()
-    // const rollupDispatch = await ethers.getContractAt(
-    //   'Rollup',
-    //   rollupProxyAddress
-    // )
-
-    // const sequencerInboxAddress = await rollupDispatch.sequencerBridge()
-    // const sequencerInbox = await ethers.getContractAt(
-    //   'SequencerInbox',
-    //   sequencerInboxAddress
-    // )
-
-    // // deploy new logic contracts
-    // const NewRollupLogic = await ethers.getContractFactory('Rollup')
-    // const newRollupLogic = await NewRollupLogic.deploy(1)
-    // await newRollupLogic.deployed()
-
-    // const NewAdminFacet = await ethers.getContractFactory('RollupAdminFacet')
-    // const newAdminFacet = await NewAdminFacet.deploy()
-    // await newAdminFacet.deployed()
-
-    // const NewSequencerInbox = await ethers.getContractFactory('SequencerInbox')
-    // const newSequencerInbox = await NewSequencerInbox.deploy()
-    // await newSequencerInbox.deployed()
-
-    // // valid previous rollup state
-    // const iface = new ethers.utils.Interface([
-    //   `function sequencerInboxMaxDelayBlocks() view returns (uint256)`,
-    //   `function sequencerInboxMaxDelaySeconds() view returns (uint256)`,
-    // ])
-    // const oldRollupInterface = new ethers.Contract(rollupProxyAddress, iface)
-    // const prevMaxDelayBlocks = await oldRollupInterface
-    //   .connect(ethers.provider.getSigner())
-    //   .sequencerInboxMaxDelayBlocks()
-    // const prevMaxDelaySeconds = await oldRollupInterface
-    //   .connect(ethers.provider.getSigner())
-    //   .sequencerInboxMaxDelaySeconds()
-
-    // // setup for fork test
-    // const adminStorageSlot =
-    //   '0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103'
-    // const l1ProxyAdmin =
-    //   '0x' +
-    //   (
-    //     await ethers.provider.getStorageAt(
-    //       sequencerInbox.address,
-    //       adminStorageSlot
-    //     )
-    //   ).substr(26)
-    // const proxyAdmin = await ethers.getContractAt('ProxyAdmin', l1ProxyAdmin)
-    // const owner = await proxyAdmin.owner()
-
-    // // airdrop
-    // await network.provider.send('hardhat_setBalance', [
-    //   owner,
-    //   '0x16189AD417E380000',
-    // ])
-
-    // // use owner
-    // await network.provider.request({
-    //   method: 'hardhat_impersonateAccount',
-    //   params: [owner],
-    // })
-
-    // const ownerSigner = await ethers.provider.getSigner(owner)
-
-    // // upgrade contracts
-
-    // await proxyAdmin
-    //   .connect(ownerSigner)
-    //   .upgrade(sequencerInbox.address, newSequencerInbox.address)
-
-    // const externalCall =
-    //   rollupDispatch.interface.encodeFunctionData('postUpgradeInit')
-
-    // await proxyAdmin
-    //   .connect(ownerSigner)
-    //   .upgradeAndCall(rollupProxyAddress, newRollupLogic.address, externalCall)
-
-    // await network.provider.request({
-    //   method: 'hardhat_stopImpersonatingAccount',
-    //   params: [owner],
-    // })
-
-    // // verify storage was assigned correctly
-
-    // const postMaxDelayBlocks = await sequencerInbox.maxDelayBlocks()
-    // const postMaxDelaySeconds = await sequencerInbox.maxDelaySeconds()
-
-    // const rollupMaxDelayBlocks = await rollupDispatch.STORAGE_GAP_1()
-    // const rollupMaxDelaySeconds = await rollupDispatch.STORAGE_GAP_2()
-
-    // expect(prevMaxDelayBlocks).to.equal(postMaxDelayBlocks)
-    // expect(prevMaxDelaySeconds).to.equal(postMaxDelaySeconds)
-
-    // expect(rollupMaxDelayBlocks).to.equal(0)
-    // expect(rollupMaxDelaySeconds).to.equal(0)
-
-    // // should not be able to call postUpgradeInit
-
-    // const newerAdminFacet = await NewAdminFacet.deploy()
-    // await newerAdminFacet.deployed()
-
-    // await expect(rollupDispatch.postUpgradeInit()).to.be.revertedWith(
-    //   'NOT_FROM_ADMIN'
-    // )
-  })
-
-  it.only('upgrade and construct', async () => {
-    const provider = ethers.provider
-    const deployments = await getDeployments(provider)
-
-    let proxyAdmin = await ethers.getContractAt(
-      'ProxyAdmin',
-      deployments.proxyAdminAddress
-    )
-    const proxyAdminOwner = await proxyAdmin.owner()
-
+  const getProxyAdminSigner = async (proxyAdminAddr: string) => {
+    const proxyAdmin = await ethers.getContractAt('ProxyAdmin', proxyAdminAddr)
+    const owner = await proxyAdmin.owner()
     // airdrop
     await network.provider.send('hardhat_setBalance', [
-      proxyAdminOwner,
+      owner,
       '0x16189AD417E380000',
     ])
 
     // use owner
     await network.provider.request({
       method: 'hardhat_impersonateAccount',
-      params: [proxyAdminOwner],
+      params: [owner],
     })
 
-    const proxyAdminSigner = await provider.getSigner(proxyAdminOwner)
-    proxyAdmin = proxyAdmin.connect(proxyAdminSigner)
+    return await ethers.provider.getSigner(owner)
+  }
+
+  it('deploy fails if classic contracts havent been upgraded', async () => {
+    try {
+      const deployments = await getDeployments(ethers.provider)
+      const proxyAdminSigner = await getProxyAdminSigner(
+        deployments.proxyAdminAddress
+      )
+
+      const migrationManager = new NitroMigrationManager(proxyAdminSigner, {
+        proxyAdminAddr: deployments.proxyAdminAddress,
+        inboxAddr: deployments.contracts.Inbox.proxyAddress,
+        rollupAddr: deployments.contracts.Rollup.proxyAddress,
+        sequencerInboxAddr: deployments.contracts.SequencerInbox.proxyAddress,
+        bridgeAddr: deployments.contracts.Bridge.proxyAddress,
+        outboxV1: (deployments.contracts as any)['OldOutbox'].proxyAddress,
+        outboxV2: (deployments.contracts as any)['OldOutbox'].proxyAddress, // CHRIS: TODO: v2 here?,
+        rollupEventBridgeAddr:
+          deployments.contracts.RollupEventBridge.proxyAddress,
+      })
+
+      await migrationManager.deployMigrator({
+        bridgeAddr: constants.AddressZero,
+        inboxTemplateAddr: constants.AddressZero,
+        outboxAddr: constants.AddressZero,
+        sequencerInboxAddr: constants.AddressZero,
+      })
+
+      assert.fail('Expected constructor to fail')
+    } catch {}
+  })
+
+  it('deploy fails if nitro contracts havent been deployed', async () => {
+    try {
+      const provider = ethers.provider
+      const deployments = await getDeployments(provider)
+      const proxyAdminSigner = await getProxyAdminSigner(
+        deployments.proxyAdminAddress
+      )
+
+      const migrationManager = new NitroMigrationManager(proxyAdminSigner, {
+        proxyAdminAddr: deployments.proxyAdminAddress,
+        inboxAddr: deployments.contracts.Inbox.proxyAddress,
+        rollupAddr: deployments.contracts.Rollup.proxyAddress,
+        sequencerInboxAddr: deployments.contracts.SequencerInbox.proxyAddress,
+        bridgeAddr: deployments.contracts.Bridge.proxyAddress,
+        outboxV1: (deployments.contracts as any)['OldOutbox'].proxyAddress,
+        outboxV2: (deployments.contracts as any)['OldOutbox'].proxyAddress, // CHRIS: TODO: v2 here?,
+        rollupEventBridgeAddr:
+          deployments.contracts.RollupEventBridge.proxyAddress,
+      })
+
+      await migrationManager.upgradeClassicContracts()
+      await migrationManager.deployMigrator({
+        bridgeAddr: constants.AddressZero,
+        inboxTemplateAddr: constants.AddressZero,
+        outboxAddr: constants.AddressZero,
+        sequencerInboxAddr: constants.AddressZero,
+      })
+      assert.fail('Expected deploy to fail')
+    } catch {}
+  })
+
+  it('step 1 fails if ownership not transferred', async () => {
+    try {
+      const provider = ethers.provider
+      const deployments = await getDeployments(provider)
+      const proxyAdminSigner = await getProxyAdminSigner(
+        deployments.proxyAdminAddress
+      )
+
+      const migrationManager = new NitroMigrationManager(proxyAdminSigner, {
+        proxyAdminAddr: deployments.proxyAdminAddress,
+        inboxAddr: deployments.contracts.Inbox.proxyAddress,
+        rollupAddr: deployments.contracts.Rollup.proxyAddress,
+        sequencerInboxAddr: deployments.contracts.SequencerInbox.proxyAddress,
+        bridgeAddr: deployments.contracts.Bridge.proxyAddress,
+        outboxV1: (deployments.contracts as any)['OldOutbox'].proxyAddress,
+        outboxV2: (deployments.contracts as any)['OldOutbox'].proxyAddress, // CHRIS: TODO: v2 here?,
+        rollupEventBridgeAddr:
+          deployments.contracts.RollupEventBridge.proxyAddress,
+      })
+
+      await migrationManager.upgradeClassicContracts()
+
+      const rollupFac = await ethers.getContractFactory('Rollup')
+      const prevRollup = await rollupFac.attach(
+        deployments.contracts.Rollup.proxyAddress
+      )
+      const wasmModuleRoot =
+        '0x9900000000000000000000000000000000000000000000000000000000000010'
+      const loserStakeEscrow = constants.AddressZero
+      const nitroContracts = await migrationManager.deployNitroContracts({
+        confirmPeriodBlocks: await prevRollup.confirmPeriodBlocks(),
+        extraChallengeTimeBlocks: await prevRollup.extraChallengeTimeBlocks(),
+        stakeToken: await prevRollup.stakeToken(),
+        baseStake: await prevRollup.baseStake(),
+        wasmModuleRoot: wasmModuleRoot,
+        // CHRIS: TODO: decide who the owner should be
+        // CHRIS: TODO: shouldnt it be someone different to the proxy admin?
+        owner: await prevRollup.owner(),
+        chainId: (await provider.getNetwork()).chainId,
+        loserStakeEscrow: loserStakeEscrow,
+        sequencerInboxMaxTimeVariation: {
+          // CHRIS: TODO: should we change this to the exact POS seconds? probably not yet, we can update it later i guess
+          // CHRIS: TODO: make sure these are all the values we want
+          delayBlocks: (60 * 60 * 24) / 15,
+          futureBlocks: 12,
+          delaySeconds: 60 * 60 * 24,
+          futureSeconds: 60 * 60,
+        },
+      })
+
+      await migrationManager.deployMigrator({
+        bridgeAddr: nitroContracts.bridge,
+        inboxTemplateAddr: nitroContracts.inboxTemplate,
+        outboxAddr: nitroContracts.outbox,
+        sequencerInboxAddr: nitroContracts.sequencerInbox,
+      })
+
+      const mainnetSequencer = '0xa4b10ac61E79Ea1e150DF70B8dda53391928fD14'
+      await migrationManager.step1([mainnetSequencer], {
+        bridgeAddr: nitroContracts.bridge,
+        rollupAddr: nitroContracts.rollup,
+      })
+
+      assert.fail('Expected step 1 to fail')
+    } catch {}
+  })
+
+  it.only('upgrade and construct', async () => {
+    const provider = ethers.provider
+    const deployments = await getDeployments(provider)
+    const proxyAdminSigner = await getProxyAdminSigner(
+      deployments.proxyAdminAddress
+    )
+
     // CHRIS: TODO: should it be possible to reverse each of the steps? or is that going too far?
 
     // CHRIS: TODO: don't we need to create a new 'deployments' file?
@@ -247,26 +236,11 @@ describe('Nitro upgrade', () => {
         futureSeconds: 60 * 60,
       },
     })
-
-    await migrationManager.upgradeClassicContracts
-    // CHRIS: TODO: remove this!!!! we only do this whilst we wait for a receive function to be added to the
-    const nitroRollupAdminLogicFac = new NitroRollupAdminLogic__factory(
-      proxyAdminSigner
-    )
-    const nitroRollupAdminFacet = await nitroRollupAdminLogicFac.attach(
-      nitroContracts.rollup
-    )
-    // nitro bridge
-    await (
-      await nitroRollupAdminFacet.setInbox(
-        deployments.contracts.Bridge.implAddress,
-        true
-      )
-    ).wait()
+    console.log(nitroContracts)
 
     await migrationManager.upgradeClassicContracts()
 
-    await migrationManager.deployMigrator({
+    const nitroMigrator = await migrationManager.deployMigrator({
       // CHRIS: TODO: we could do more in terms of checks
       // CHRIS: TODO: we could do a check that all the contracts we care about have been correctly deployed with the correct admins
       // CHRIS: TODO: we could also check that the contracts below have expected functions on them?
@@ -276,7 +250,27 @@ describe('Nitro upgrade', () => {
       sequencerInboxAddr: nitroContracts.sequencerInbox,
     })
 
-    // CHRIS: TODO: get the correct address here, dont hard code?
+    await migrationManager.transferClassicOwnership()
+
+    // CHRIS: TODO: remove this!!!! we only do this whilst we wait for a receive function to be added to the
+    const nitroRollupAdminLogicFac = new NitroRollupAdminLogic__factory(
+      proxyAdminSigner
+    )
+    const nitroRollupAdminFacet = await nitroRollupAdminLogicFac.attach(
+      nitroContracts.rollup
+    )
+    // nitro bridge
+    console.log(deployments.contracts.Bridge.proxyAddress)
+    
+    await (
+      await nitroRollupAdminFacet.setInbox(
+        deployments.contracts.Bridge.proxyAddress,
+        true
+      )
+    ).wait()
+
+
+      // CHRIS: TODO: get the correct address here, dont hard code?
     const mainnetSequencer = '0xa4b10ac61E79Ea1e150DF70B8dda53391928fD14'
     await migrationManager.step1([mainnetSequencer], {
       rollupAddr: nitroContracts.rollup,
@@ -311,27 +305,7 @@ describe('Nitro upgrade', () => {
     // const stakerCount = await rollupAdmin.stakerCount()
     // console.log('staker count', stakerCount.toNumber())
 
-    // const beforeB = Date.now()
-
-    // const iFace = new Interface(['event Face(uint length)'])
-    // console.log('Face topic', iFace.getEventTopic('Face'))
-
-    // const setOwnerData = await rollupAdmin.interface.encodeFunctionData(
-    //   'setOwner',
-    //   [await proxyAdminSigner.getAddress()]
-    // )
-    // console.log("before exec")
-
-    // await (
-    //   await nitroMigrator.executeTransaction(
-    //     setOwnerData,
-    //     rollupAdmin.address,
-    //     BigNumber.from(0)
-    //   )
-    // ).wait()
-    // console.log("after exec")
-
-    await migrationManager.step2(latestConfirmed)
+    await migrationManager.step2(latestConfirmed, true, true)
 
     // const res = await (await nitroMigrator.nitroStep2(latestConfirmed, { gasLimit: 3000000})).wait()
     // console.log(res.gasUsed.toString())

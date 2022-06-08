@@ -50,35 +50,33 @@ export class NitroMigrationManager {
 
   public async run(
     classicSequencers: string[],
-    nitroConfig: Parameters<NitroRollupCreator['createRollup']>[0]
+    nitroConfig: Parameters<NitroRollupCreator['createRollup']>[0],
+    destroyAlternatives: boolean,
+    destroyChallenges: boolean
   ) {
     const nitroContracts = await this.deployNitroContracts(nitroConfig)
     await this.upgradeClassicContracts()
-    await this.transferClassicOwnership()
     await this.deployMigrator({
-      bridgeAddr: nitroContracts.bridge,
-      inboxTemplateAddr: nitroContracts.inboxTemplate,
-      outboxAddr: nitroContracts.outbox,
-      sequencerInboxAddr: nitroContracts.sequencerInbox,
+        bridgeAddr: nitroContracts.bridge,
+        inboxTemplateAddr: nitroContracts.inboxTemplate,
+        outboxAddr: nitroContracts.outbox,
+        sequencerInboxAddr: nitroContracts.sequencerInbox,
     })
+    await this.transferClassicOwnership()
     await this.step1(classicSequencers, {
       rollupAddr: nitroContracts.rollup,
       bridgeAddr: nitroContracts.bridge,
     })
 
-
-
     const nodeNum = await this.waitForNodeConfirmation()
 
-    await this.step2(nodeNum)
+    await this.step2(nodeNum, destroyAlternatives, destroyChallenges)
 
     await this.step3()
-
-    
   }
 
   private async waitForNodeConfirmation(): Promise<BigNumber> {
-      throw new Error("Not implemented.");
+    throw new Error('Not implemented.')
   }
 
   private async deployNitroChallengeContracts(signer: Signer) {
@@ -268,6 +266,14 @@ export class NitroMigrationManager {
         newRollupUserImp.address
       )
     ).wait()
+
+    return {
+      inbox: inboxFac.attach(this.classicConfig.inboxAddr),
+      sequencerInbox: sequencerInboxFac.attach(
+        this.classicConfig.sequencerInboxAddr
+      ),
+      rollupAdmin: rollupAdminFac.attach(this.classicConfig.rollupAddr),
+    }
   }
 
   // CHRIS: TODO: check for the presence of this everywhere
@@ -293,6 +299,8 @@ export class NitroMigrationManager {
       nitroConfig.sequencerInboxAddr,
       nitroConfig.inboxTemplateAddr
     )
+
+    return this.nitroMigrator;
   }
 
   public async transferClassicOwnership() {
@@ -324,7 +332,7 @@ export class NitroMigrationManager {
       throw new Error('Step 1 called before migrator deployed.')
 
     // CHRIS: TODO: should nitro contracts be added to dev or prod dependencies?
-    
+
     const nitroBridgeFac = new NitroBridge__factory(this.proxyAdminOwner)
     const nitroBridge = nitroBridgeFac.attach(nitroConfig.bridgeAddr)
     const enqueueDelayedMessage =
@@ -342,11 +350,12 @@ export class NitroMigrationManager {
     ).wait()
   }
 
-  public async step2(finalNodeNum: BigNumber) {
+  public async step2(finalNodeNum: BigNumber, destroyAlternatives: boolean, destroyChallenges: boolean) {
     if (!this.nitroMigrator)
       throw new Error('Step 2 called before migrator deployed.')
 
-    await (await this.nitroMigrator.nitroStep2(finalNodeNum)).wait()
+      // CHRIS: TODO: pass these args through
+    await (await this.nitroMigrator.nitroStep2(finalNodeNum, destroyAlternatives, destroyChallenges)).wait()
   }
 
   public async step3() {
