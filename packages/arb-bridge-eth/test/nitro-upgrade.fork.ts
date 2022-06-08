@@ -182,7 +182,7 @@ describe('Nitro upgrade', () => {
     } catch {}
   })
 
-  it.only('upgrade and construct', async () => {
+  it('upgrade and construct', async () => {
     const provider = ethers.provider
     const deployments = await getDeployments(provider)
     const proxyAdminSigner = await getProxyAdminSigner(
@@ -248,15 +248,8 @@ describe('Nitro upgrade', () => {
       sequencerInboxAddr: nitroContracts.sequencerInbox,
     })
 
-    await migrationManager.transferClassicOwnership()
+    await migrationManager.step0point5()
 
-    // CHRIS: TODO: remove this!!!! we only do this whilst we wait for a receive function to be added to the
-    // set the classic bridge as a inbox on the nitro bridge
-    await (
-      await new NitroRollupAdminLogic__factory(proxyAdminSigner)
-        .attach(nitroContracts.rollup)
-        .setInbox(deployments.contracts.Bridge.proxyAddress, true)
-    ).wait()
 
     // CHRIS: TODO: get the correct address here, dont hard code?
     const mainnetSequencer = '0xa4b10ac61E79Ea1e150DF70B8dda53391928fD14'
@@ -265,14 +258,6 @@ describe('Nitro upgrade', () => {
       bridgeAddr: nitroContracts.bridge,
     })
 
-    //////// CHRIS /////// PUT BACK IN
-    // rest the bridge
-    // // CHRIS: TODO: remove this when we remove teh setInbox(true) above
-    await (
-      await await new NitroRollupAdminLogic__factory(proxyAdminSigner)
-        .attach(nitroContracts.rollup)
-        .setInbox(deployments.contracts.Bridge.proxyAddress, false)
-    ).wait()
 
     // // step 2
     // // this would normally be the latest created node
@@ -308,5 +293,60 @@ describe('Nitro upgrade', () => {
     // console.log('step 3 complete')
 
     //////// CHRIS /////// PUT BACK IN
+  })
+
+  it.only('run succeeds', async () => {
+    const provider = ethers.provider
+    const deployments = await getDeployments(provider)
+    const proxyAdminSigner = await getProxyAdminSigner(
+      deployments.proxyAdminAddress
+    )
+    const migrationManager = new NitroMigrationManager(proxyAdminSigner, {
+      proxyAdminAddr: deployments.proxyAdminAddress,
+      inboxAddr: deployments.contracts.Inbox.proxyAddress,
+      rollupAddr: deployments.contracts.Rollup.proxyAddress,
+      sequencerInboxAddr: deployments.contracts.SequencerInbox.proxyAddress,
+      bridgeAddr: deployments.contracts.Bridge.proxyAddress,
+      outboxV1: (deployments.contracts as any)['OldOutbox'].proxyAddress,
+      outboxV2: (deployments.contracts as any)['OldOutbox'].proxyAddress, // CHRIS: TODO: v2 here?,
+      rollupEventBridgeAddr:
+        deployments.contracts.RollupEventBridge.proxyAddress,
+    })
+
+    const rollupFac = await ethers.getContractFactory('Rollup')
+    // lookup params from previous rollup?
+    // CHRIS: TODO: why do we have a param in the constructor? how is this rollup logic supposed to be deployed?
+    const prevRollup = await rollupFac.attach(
+      deployments.contracts.Rollup.proxyAddress
+    )
+    const wasmModuleRoot =
+      '0x9900000000000000000000000000000000000000000000000000000000000010'
+    const loserStakeEscrow = constants.AddressZero
+    const mainnetSequencer = '0xa4b10ac61E79Ea1e150DF70B8dda53391928fD14'
+    await migrationManager.run(
+      [mainnetSequencer],
+      {
+        confirmPeriodBlocks: await prevRollup.confirmPeriodBlocks(),
+        extraChallengeTimeBlocks: await prevRollup.extraChallengeTimeBlocks(),
+        stakeToken: await prevRollup.stakeToken(),
+        baseStake: await prevRollup.baseStake(),
+        wasmModuleRoot: wasmModuleRoot,
+        // CHRIS: TODO: decide who the owner should be
+        // CHRIS: TODO: shouldnt it be someone different to the proxy admin?
+        owner: await prevRollup.owner(),
+        chainId: (await provider.getNetwork()).chainId,
+        loserStakeEscrow: loserStakeEscrow,
+        sequencerInboxMaxTimeVariation: {
+          // CHRIS: TODO: should we change this to the exact POS seconds? probably not yet, we can update it later i guess
+          // CHRIS: TODO: make sure these are all the values we want
+          delayBlocks: (60 * 60 * 24) / 15,
+          futureBlocks: 12,
+          delaySeconds: 60 * 60 * 24,
+          futureSeconds: 60 * 60,
+        },
+      },
+      true,
+      true
+    )
   })
 })

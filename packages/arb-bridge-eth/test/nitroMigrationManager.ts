@@ -62,37 +62,18 @@ export class NitroMigrationManager {
       outboxAddr: nitroContracts.outbox,
       sequencerInboxAddr: nitroContracts.sequencerInbox,
     })
-    await this.transferClassicOwnership()
+    await this.step0point5()
+
     await this.step1(classicSequencers, {
       rollupAddr: nitroContracts.rollup,
       bridgeAddr: nitroContracts.bridge,
     })
-
     const nodeNum = await this.step1point5()
 
     await this.step2(nodeNum, destroyAlternatives, destroyChallenges)
-
     await this.step2point5()
 
     await this.step3()
-  }
-
-  private async step2point5() {
-    // Step 2.5: check for lingering stuff
-
-    // - Do we have any unexecuted exits?
-    //     - Probably. They should be easy to handle
-    //     - Jason (data science) joining can analyse the number of L2 to L1 txs not executed
-    // - Check no ongoing challenges
-    throw new Error('Not implemented.')
-  }
-
-  private async step1point5(): Promise<BigNumber> {
-    // Step 1.5: check for lingering stuff
-
-    // - Do we have any unredeemed retryables?
-    //     - Probably. They will get copied over
-    throw new Error('Not implemented.')
   }
 
   private async deployNitroChallengeContracts(signer: Signer) {
@@ -319,7 +300,7 @@ export class NitroMigrationManager {
     return this.nitroMigrator
   }
 
-  public async transferClassicOwnership() {
+  public async step0point5() {
     if (!this.nitroMigrator)
       throw new Error('Transfer ownership called before migrator deployed.')
 
@@ -358,12 +339,35 @@ export class NitroMigrationManager {
         constants.HashZero,
       ])
 
+    // CHRIS: TODO: remove this!!!! we only do this whilst we wait for a receive function to be added to the
+    // set the classic bridge as a inbox on the nitro bridge
+    const nitroRollupAdmin = new NitroRollupAdminLogic__factory(
+      this.proxyAdminOwner
+    ).attach(nitroConfig.rollupAddr)
+    await (
+      await nitroRollupAdmin.setInbox(this.classicConfig.bridgeAddr, true)
+    ).wait()
+
     await (
       await this.nitroMigrator.functions.nitroStep1(
         classicSequencers,
         enqueueDelayedMessage
       )
     ).wait()
+
+    // reset the bridge
+    // // CHRIS: TODO: remove this when we remove teh setInbox(true) above
+    await (
+      await nitroRollupAdmin.setInbox(this.classicConfig.bridgeAddr, false)
+    ).wait()
+  }
+
+  public async step1point5(): Promise<BigNumber> {
+    // Step 1.5: check for lingering stuff
+
+    // - Do we have any unredeemed retryables?
+    //     - Probably. They will get copied over
+    throw new Error('Not implemented.')
   }
 
   public async step2(
@@ -382,6 +386,16 @@ export class NitroMigrationManager {
         destroyChallenges
       )
     ).wait()
+  }
+
+  public async step2point5() {
+    // Step 2.5: check for lingering stuff
+
+    // - Do we have any unexecuted exits?
+    //     - Probably. They should be easy to handle
+    //     - Jason (data science) joining can analyse the number of L2 to L1 txs not executed
+    // - Check no ongoing challenges
+    throw new Error('Not implemented.')
   }
 
   public async step3() {
