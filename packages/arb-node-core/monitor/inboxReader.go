@@ -246,11 +246,9 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 			}
 		}
 
-		if !reorgingDelayed && !reorgingSequencer && inboxReaderDelayBlocks > 0 {
-			currentHeight = new(big.Int).Sub(currentHeight, big.NewInt(inboxReaderDelayBlocks))
-			if currentHeight.Sign() <= 0 {
-				currentHeight = currentHeight.SetInt64(1)
-			}
+		currentHeight = new(big.Int).Sub(currentHeight, big.NewInt(inboxReaderDelayBlocks))
+		if currentHeight.Sign() <= 0 {
+			currentHeight = currentHeight.SetInt64(1)
 		}
 
 		EthHeightGauge.Update(currentHeight.Int64())
