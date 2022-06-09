@@ -433,24 +433,23 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 				}
 				ir.sequencerFeedQueue = append(ir.sequencerFeedQueue, broadcastItem.FeedItem)
 				if len(ir.BroadcastFeed) == 0 {
-					missingDelayed, err := ir.deliverQueueItems(ctx)
+					missingFeedDelayedReference, err = ir.deliverQueueItems(ctx)
 					if err != nil {
 						return err
 					}
-					if missingDelayed {
-						missingFeedDelayedReference = true
+					if missingFeedDelayedReference {
+						break FeedReadLoop
 					}
 				}
 			case <-sleepChan:
 				break FeedReadLoop
 			}
 		}
-		missingDelayed, err := ir.deliverQueueItems(ctx)
-		if err != nil {
-			return err
-		}
-		if missingDelayed {
-			missingFeedDelayedReference = true
+		if !missingFeedDelayedReference {
+			missingFeedDelayedReference, err = ir.deliverQueueItems(ctx)
+			if err != nil {
+				return err
+			}
 		}
 
 		// Clear expired items from ir.recentFeedItems
