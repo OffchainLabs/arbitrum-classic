@@ -253,7 +253,7 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 			}
 		}
 
-		EthHeightGauge.Inc(currentHeight.Int64())
+		EthHeightGauge.Update(currentHeight.Int64())
 		if ir.healthChan != nil && currentHeight != nil {
 			ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "currentHeight", ValBigInt: new(big.Int).Set(currentHeight)}
 		}
