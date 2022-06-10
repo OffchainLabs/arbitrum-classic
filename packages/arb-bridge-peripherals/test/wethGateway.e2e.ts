@@ -133,11 +133,6 @@ describe('Bridge peripherals end-to-end weth gateway', () => {
       '0x0000000000000000000000000000000000000064',
       await network.provider.send('eth_getCode', [arbsysmock.address]),
     ])
-
-    network.provider.request({
-      method: 'hardhat_setBalance',
-      params: [l2TestBridge.address, '0xffffffffffffffffffff'],
-    })
   })
 
   it('should deposit tokens', async function () {
