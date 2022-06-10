@@ -1,10 +1,10 @@
 ---
 id: Useful_Addresses
-title: Contract Addresses Of Note
+title: Useful Contract Addresses
 sidebar_label: Useful Addresses
 ---
 
-Here's some contract addreses that may be useful and/or of interest to those exploring the Arbitrum protcol:
+Use these contract addresses to explore the Arbitrum protocol:
 
 ### Protocol (L1)
 
@@ -22,9 +22,9 @@ Here's some contract addreses that may be useful and/or of interest to those exp
 
 ### Token Bridge
 
-**IMPORTANT**: _Do **not** simply transfer tokens or Ether to any of the addresses below; it will result in loss of funds._
+**IMPORTANT**: _Do **not** transfer tokens or Ether to any of the following addresses. Transferring tokens to these addresses can result in a loss of funds._
 
-_Users should only interact with the token bridge via dapp interfaces like https://bridge.arbitrum.io_.
+_Interact with the token bridge only by using Dapp interfaces like https://bridge.arbitrum.io_.
 
 |                       | Mainnet                                                                                                               | Rinkeby                                                                                                                               |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
@@ -39,9 +39,9 @@ _Users should only interact with the token bridge via dapp interfaces like https
 | L1 Weth               | [0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2](https://etherscan.io/address/0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2) | [0xc778417E063141139Fce010982780140Aa0cD5Ab](https://rinkeby.etherscan.io/address/0xc778417E063141139Fce010982780140Aa0cD5Ab)         |
 | L2 Weth               | [0x82aF49447D8a07e3bd95BD0d56f35241523fBab1](https://arbiscan.io/address/0x82aF49447D8a07e3bd95BD0d56f35241523fBab1)  | [0xB47e6A5f8b33b3F17603C83a0535A9dcD7E32681](https://arbiscan.io/address/0xB47e6A5f8b33b3F17603C83a0535A9dcD7E32681)                  |
 
-#### Third party gateways
+#### Third-Party Gateways
 
-These are the addresses of some other gateways that have been deployed and integrated with the token bridge
+Other gateways that have been deployed and integrated with the token bridge.
 
 |                     | Mainnet                                                                                                               | Rinkeby                                                                                                                       |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
@@ -65,7 +65,7 @@ These are the addresses of some other gateways that have been deployed and integ
 | ArbAggregator    | [0x000000000000000000000000000000000000006D](https://arbiscan.io/address/0x000000000000000000000000000000000000006D) |
 | ArbFunctionTable | [0x0000000000000000000000000000000000000068](https://arbiscan.io/address/0x0000000000000000000000000000000000000068) |
 
-### Misc
+### Miscellaneous
 
 |              | Mainnet                                                                                                              | Rinkeby                                                                                                                               |
 | ------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
