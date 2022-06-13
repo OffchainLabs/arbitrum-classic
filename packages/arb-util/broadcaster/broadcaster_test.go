@@ -27,7 +27,6 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
@@ -39,7 +38,7 @@ func TestBroadcasterSendsConfirmedAccumulatorMessages(t *testing.T) {
 
 	b := NewBroadcaster(broadcasterSettings)
 
-	err := b.Start(ctx)
+	_, err := b.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +152,7 @@ func TestBroadcasterRespondsToPing(t *testing.T) {
 
 	b := NewBroadcaster(broadcasterSettings)
 
-	err := b.Start(ctx)
+	_, err := b.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,7 +195,7 @@ func TestBroadcasterRespondsToPing(t *testing.T) {
 }
 
 func TestBroadcasterReorganizesCacheBasedOnAccumulator(t *testing.T) {
-	ctx, cancelFunc, _ := cmdhelp.CreateLaunchContext()
+	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
 	broadcasterSettings := configuration.DefaultFeedOutput()
@@ -204,7 +203,7 @@ func TestBroadcasterReorganizesCacheBasedOnAccumulator(t *testing.T) {
 
 	b := NewBroadcaster(broadcasterSettings)
 
-	err := b.Start(ctx)
+	_, err := b.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -26,7 +26,6 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -248,8 +247,9 @@ func startup() error {
 
 	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 	var inboxReader *monitor.InboxReader
+	var inboxReaderDone chan bool
 	for {
-		inboxReader, err = mon.StartInboxReader(
+		inboxReader, inboxReaderDone, err = mon.StartInboxReader(
 			ctx,
 			ethclint,
 			rollupAddress,
@@ -262,7 +262,7 @@ func startup() error {
 		if err == nil {
 			break
 		}
-		if strings.Contains(err.Error(), "arbcore thread aborted") {
+		if common.IsFatalError(err) {
 			logger.Error().Err(err).Msg("aborting inbox reader start")
 			break
 		}
@@ -325,7 +325,7 @@ func startup() error {
 		return crypto.Sign(hash, seqPrivKey)
 	}
 
-	batch, err := rpc.SetupBatcher(
+	batch, broadcasterErrChan, err := rpc.SetupBatcher(
 		ctx,
 		ethclint,
 		rollupAddress,
@@ -393,8 +393,12 @@ func startup() error {
 	select {
 	case err := <-txDBErrChan:
 		return err
+	case err := <-broadcasterErrChan:
+		return err
 	case err := <-errChan:
 		return err
+	case <-inboxReaderDone:
+		return nil
 	case <-cancelChan:
 		return nil
 	}

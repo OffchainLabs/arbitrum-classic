@@ -38,7 +38,7 @@ func TestRelayRebroadcasts(t *testing.T) {
 
 	bc := broadcaster.NewBroadcaster(broadcasterSettings)
 
-	err := bc.Start(ctx)
+	_, err := bc.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

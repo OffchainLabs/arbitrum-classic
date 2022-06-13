@@ -53,7 +53,7 @@ void machineDestroy(CMachine* m) {
 
 void machineAbort(CMachine* m) {
     assert(m);
-    auto machine = static_cast<ExecutionCursor*>(m);
+    auto machine = static_cast<Machine*>(m);
     machine->abort();
 }
 

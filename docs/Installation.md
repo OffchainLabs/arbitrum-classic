@@ -75,7 +75,6 @@ git clone -b master https://github.com/offchainlabs/arbitrum.git
 cd arbitrum
 git submodule update --init --recursive
 yarn
-yarn build
 ```
 
 # Native setup instructions
