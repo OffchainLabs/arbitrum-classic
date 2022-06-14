@@ -337,7 +337,7 @@ class ArbCore {
         std::vector<std::vector<unsigned char>> delayed_messages,
         const std::optional<uint256_t>& reorg_batch_items);
     message_status_enum messagesStatus();
-    std::string messagesClearError();
+    std::string messagesGetError();
     bool checkError();
     std::string getErrorString();
 
