@@ -18,31 +18,6 @@ When withdrawing Ether or an ERC20 token, one can take advantage of the asset's 
 
 To carry out a tradable exit, a user first initializes a withdrawal; a third party — the liquidity provider — can immediately verify that the withdrawal is valid (i.e., that it will finalize _eventually_) by validating the Arbitrum chain. The liquidity provider then offers to buy the exit by paying the user on L1.
 
-Our [token bridge](Bridging_Assets.md) includes an implementation of this:
-
-```sol /**
-     * @notice Allows a user to redirect their right to claim a withdrawal to a liquidityProvider, in exchange for a fee.
-     * @dev This method expects the liquidityProvider to verify the liquidityProof, but it ensures the withdrawer's balance
-     * is appropriately updated. It is otherwise agnostic to the details of IExitLiquidityProvider.requestLiquidity.
-     * @param liquidityProvider address of an IExitLiquidityProvider
-     * @param liquidityProof encoded data required by the liquidityProvider in order to validate a fast withdrawal.
-     * @param initialDestination address the L2 withdrawal call initially set as the destination.
-     * @param erc20 L1 token address
-     * @param amount token amount (should match amount in previously-initiated withdrawal)
-     * @param exitNum Sequentially increasing exit counter determined by the L2 bridge
-     * @param maxFee max mount of erc20 token user will pay for fast exit
-     */
-    function fastWithdrawalFromL2(
-        address liquidityProvider,
-        bytes memory liquidityProof,
-        address initialDestination,
-        address erc20,
-        uint256 amount,
-        uint256 exitNum,
-        uint256 maxFee
-    ) external override
-```
-
 #### Atomic Swaps / HTLCs
 
 To carry out fast withdrawal via an atomic swap, an Arbitrum user who wants to "withdraw" onto L1 pays a liquidity provider directly on L2, who in turn transfers funds to the user's address on L1. [Hashed time locked contracts (HTLCs)](https://www.investopedia.com/terms/h/hashed-timelock-contract.asp) are used to ensure that these two operations are ultimately atomic; i.e., either both take place or neither of them do, preserving trustlessness.
