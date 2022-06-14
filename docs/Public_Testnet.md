@@ -10,7 +10,7 @@ For a general introduction to the Arbitrum Testnet, see our [announcement](https
 
 ## Connecting to the chain
 
-If you're using Metamask, add a custom RPC network to connect to the Arbitrum testnet:
+Connect your wallet to the testnet; if [your wallet](https://portal.arbitrum.one/#wallets) requires it, add the Arbitrum Rinkeby testnet as a custom RPC:
 
 - Network Name: Arbitrum Testnet
 - RPC URL: https://rinkeby.arbitrum.io/rpc
@@ -32,7 +32,7 @@ In order to start using the chain, you'll have deposit Eth from Rinkeby so that 
 
 ## Interacting with the chain
 
-Once you've added the Arbitrum Rinkeby Testnet network to Metamask, you should be able to interact with the Arbitrum chain just like you would with Ethereum.
+Once your wallet is connect to the Arbitrum Rinkeby testnet, you should be able to interact with the chain just like you would with Ethereum.
 
 The are a couple things to note on the Arbitrum chain.
 
