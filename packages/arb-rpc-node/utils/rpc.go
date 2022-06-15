@@ -18,13 +18,17 @@ package utils
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"net/http"
+
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 )
 
 var logger = arblog.Logger.With().Str("component", "rpc").Logger()
@@ -97,7 +101,8 @@ func launchServer(ctx context.Context, handler http.Handler, addr string, port s
 	h := handlers.CORS(headersOk, originsOk, methodsOk)(handler)
 
 	logger.Info().Str("port", port).Msgf("Launching %s server over http", serverType)
-	server := &http.Server{Addr: addr + ":" + port, Handler: h}
+	http2Server := &http2.Server{}
+	server := &http.Server{Addr: addr + ":" + port, Handler: h2c.NewHandler(h, http2Server)}
 
 	errChan := make(chan error, 1)
 	defer close(errChan)

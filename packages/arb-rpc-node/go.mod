@@ -18,6 +18,7 @@ require (
 	github.com/offchainlabs/arbitrum/packages/arb-util v0.8.0
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.26.1
+	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2
 )
 
 replace github.com/offchainlabs/arbitrum/packages/arb-util => ../arb-util
