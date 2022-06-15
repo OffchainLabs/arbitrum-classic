@@ -10,7 +10,7 @@ To interact with Arbitrum One and the RinkArby testnet, you can rely on the same
 
 Alchemy provides endpoints for both Arbitrum One (Mainnet) and Rinkeby testnet. To use these RPC endpoints, you need to create a free account and set up an ***Alchemy API key***  to authenticate your requests. For detailed steps of how to create one, see the [Alchemy's documentation](https://docs.alchemy.com/alchemy/introduction/getting-started#1.create-an-alchemy-key). 
 
-Next, depending one which network you want to interact with, you can choose between the two RPC endpoints provided by Alchemy and interact with them directly in the command line or point your MetaMask RPC endpoints to them. For more information on Arbitrum JSON-RPC API methods supported by Alchemy, check out the [official documentation](https://docs.alchemy.com/alchemy/apis/arbitrum).
+Next, depending one which network you want to interact with, you can choose between the two RPC endpoints provided by Alchemy and interact with them directly in the command line or point your [wallet's](https://portal.arbitrum.one/#wallets) RPC endpoints to them. For more information on Arbitrum JSON-RPC API methods supported by Alchemy, check out the [official documentation](https://docs.alchemy.com/alchemy/apis/arbitrum).
 
 Alchemy provides 300M compute units per month for free, or the equivalent of 30M getLatestBlock requests. Additional usage requires upgrading to a Growth Tier ($49 / month).
 
@@ -28,7 +28,7 @@ Quicknode provides 300k Arbitrum requests per month at a rate of $9 / month.
 
 ## Moralis
 
-Moralis allows Arbitrum users and developers to connect to both Arbitrum One (Mainnet) and Rinkeby testnet. To do so, you need to create an account and choose the node you wish to connect to. You will then be presented with a pair of URLs (Arbitrum Mainnet and Testnet) with which you can interact with directly in the command line or point your MetaMask RPC endpoints to them. For full guide and more explanation, see the [Moralis's documentation](https://moralis.io/full-guide-how-to-connect-to-arbitrum-nodes/).
+Moralis allows Arbitrum users and developers to connect to both Arbitrum One (Mainnet) and Rinkeby testnet. To do so, you need to create an account and choose the node you wish to connect to. You will then be presented with a pair of URLs (Arbitrum Mainnet and Testnet) with which you can interact with directly in the command line or point your [wallet's](https://portal.arbitrum.one/#wallets) RPC endpoints to them. For full guide and more explanation, see the [Moralis's documentation](https://moralis.io/full-guide-how-to-connect-to-arbitrum-nodes/).
 
 ## Ankr
 
