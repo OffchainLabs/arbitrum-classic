@@ -12,7 +12,7 @@ As we approach mainnet launch and incorporate feedback, we will likely reset the
 
 ## Connecting to the chain
 
-Connect your wallet to the testnet; if [your wallet](https://portal.arbitrum.one/#wallets) requires it, add the Arbitrum Nitro Devnet as a custom RPC:
+Connect your wallet to the devnet; if [your wallet](https://portal.arbitrum.one/#wallets) requires it, add the Arbitrum Nitro Devnet as a custom RPC:
 
 - Network Name: Arbitrum Nitro Devnet
 - RPC URL: https://nitro-devnet.arbitrum.io/rpc
