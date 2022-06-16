@@ -119,7 +119,7 @@ func (c *CrossDB) importBlock(ctx context.Context, blockNumber uint64) error {
 	receiptsRead := rawdb.ReadReceipts(c.ethDB, blockHash, blockNumber, params.ArbitrumRinkebyDevTestChainConfig())
 	for i, _ := range receiptsRead {
 		if !reflect.DeepEqual(receiptsRead[i], outputReceipts[i]) {
-			return errors.New(fmt.Sprintf("original %v != stored %v", receiptsRead[i], outputReceipts[i]))
+			return errors.New(fmt.Sprintf("stored %v != original %v", receiptsRead[i], outputReceipts[i]))
 		}
 	}
 	return err
