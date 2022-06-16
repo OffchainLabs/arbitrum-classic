@@ -136,7 +136,7 @@ In the normal, happy case, a retryable ticket is automatically redeemed and exec
 
 To redeem the retryable, any account can call `ArbRetryableTx.redeem(redemption-txn-id)`. To cancel, the beneficiary address can call `ArbRetryableTx.cancel(redemption-txn-id)`.
 
-See the [ArbRetryableTx](./sol_contract_docs/md_docs/arb-os/arbos/builtin/ArbRetryableTx.md) interface for other related methods, and [@arbitrum/sdk](https://github.com/OffchainLabs/arbitrum-sdk) for convenience methods around using retryables.
+See the [ArbRetryableTx](./sol_contract_docs/md_docs/arb-os/arbos/builtin/ArbRetryableTx.md) interface for other related methods, and [Arbitrum SDK](https://github.com/OffchainLabs/arbitrum-sdk) for convenience methods around using retryables.
 
 ### Demo
 
