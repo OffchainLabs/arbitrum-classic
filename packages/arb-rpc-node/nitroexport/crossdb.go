@@ -21,11 +21,13 @@ import (
 	"fmt"
 	"math/big"
 	"path/filepath"
+	"reflect"
 	"sync/atomic"
 
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/trie"
 	"github.com/pkg/errors"
 
@@ -114,6 +116,12 @@ func (c *CrossDB) importBlock(ctx context.Context, blockNumber uint64) error {
 		return errors.Errorf("bad block %v", blockNumber)
 	}
 	_, err = rawdb.WriteAncientBlocks(c.ethDB, []*types.Block{block}, []types.Receipts{outputReceipts}, big.NewInt(0))
+	receiptsRead := rawdb.ReadReceipts(c.ethDB, blockHash, blockNumber, params.ArbitrumRinkebyDevTestChainConfig())
+	for i, _ := range receiptsRead {
+		if !reflect.DeepEqual(receiptsRead[i], outputReceipts[i]) {
+			return errors.New(fmt.Sprintf("original %v != stored %v", receiptsRead[i], outputReceipts[i]))
+		}
+	}
 	return err
 }
 

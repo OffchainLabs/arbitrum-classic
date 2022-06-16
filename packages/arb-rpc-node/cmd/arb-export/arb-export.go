@@ -152,10 +152,10 @@ func startup() error {
 			if err != nil {
 				return err
 			}
+			logger.Info().Uint64("imported", blocksDone).Uint64("out of", *blockNum+1).Msg(".. importing blocks")
 			if blocksDone > *blockNum {
 				break
 			}
-			logger.Info().Uint64("imported", blocksDone).Uint64("out of", *blockNum+1).Msg(".. importing blocks")
 			err = crossDB.CurrentError()
 			if err != nil {
 				return err
@@ -163,7 +163,7 @@ func startup() error {
 			select {
 			case <-ctx.Done():
 				break
-			case <-time.After(time.Minute):
+			case <-time.After(time.Second * 10):
 			}
 		}
 		logger.Info().Msg("history export done")
