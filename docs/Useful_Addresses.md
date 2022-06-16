@@ -69,4 +69,4 @@ These are the addresses of some other gateways that have been deployed and integ
 
 |              | Mainnet                                                                                                              | Rinkeby                                                                                                                               |
 | ------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| L2 Multicall | [0x842eC2c7D803033Edf55E478F461FC547Bc54EB2](https://arbiscan.io/address/0x842eC2c7D803033Edf55E478F461FC547Bc54EB2) | [0x5D6e06d3E154C5DBEC91317f0d04AE03AB49A273](https://testnet.arbiscan.io/address/0x5D6e06d3E154C5DBEC91317f0d04AE03AB49A273)          |
+| L2 Multicall | [0x7ecfbaa8742fdf5756dac92fbc8b90a19b8815bf](https://arbiscan.io/address/0x7ecfbaa8742fdf5756dac92fbc8b90a19b8815bf) | [0x7ecfbaa8742fdf5756dac92fbc8b90a19b8815bf](https://testnet.arbiscan.io/address/0x7ecfbaa8742fdf5756dac92fbc8b90a19b8815bf)          |

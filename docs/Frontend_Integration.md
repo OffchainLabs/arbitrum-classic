@@ -20,7 +20,7 @@ See our [Tutorials](https://github.com/OffchainLabs/arbitrum-tutorials) repo for
 
 [`ethers`](https://www.npmjs.com/package/ethers) can be used to interact with an Arbitrum chain exactly as one would use it to interact with Ethereum ([see docs](https://docs.ethers.io/v5/)); simply instantiate a provider connected to an Arbitrum node.
 
-I.e., with MetaMask already connected to an Arbitrum node via a custom RPC url:
+I.e., with your wallet already connected to an Arbitrum node via a custom RPC url:
 
 ```ts
 import * as ethers from 'ethers'

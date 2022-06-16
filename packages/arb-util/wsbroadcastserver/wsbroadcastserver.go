@@ -162,8 +162,8 @@ func (s *WSBroadcastServer) Start(ctx context.Context) (chan error, error) {
 	}
 	s.acceptDesc = acceptDesc
 
-	broadcasterErrChan := make(chan error, 1)
-	acceptErrChan := make(chan error, 1)
+	broadcasterErrChan := make(chan error, 10)
+	acceptErrChan := make(chan error, 10)
 
 	// Subscribe to events about listener.
 	err = s.poller.Start(acceptDesc, func(e netpoll.Event) {

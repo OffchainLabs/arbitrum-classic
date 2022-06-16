@@ -13,7 +13,7 @@ function sendL2Message(address chain, bytes calldata messageData) external;
 
 ```
 
-Generally calls will come in batches from an aggregator as described in [Transaction Lifecycle](Tx_Lifecycle.md).
+Generally calls will come in batches from the sequencer as described in [Transaction Lifecycle](Tx_Lifecycle.md).
 
 However, the Arbitrum protocol also offers ways of passing messages between the layer 1 and layer 2 chains.
 

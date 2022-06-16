@@ -213,6 +213,7 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 		ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "getNextBlockToRead", ValBigInt: new(big.Int).Set(from)}
 	}
 	blocksToFetch := uint64(100)
+	missingFeedDelayedReference := false
 	for {
 		select {
 		case <-ctx.Done():
@@ -225,7 +226,7 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 			return err
 		}
 
-		reorgingDelayed := ir.inboxReaderConfig.Paranoid || temporarilyParanoid
+		reorgingDelayed := ir.inboxReaderConfig.Paranoid || temporarilyParanoid || missingFeedDelayedReference
 		reorgingSequencer := ir.inboxReaderConfig.Paranoid || temporarilyParanoid
 		if ir.caughtUp {
 			latestDelayed, latestSeq, err := ir.bridgeUtils.GetCountsAndAccumulators(ctx)
@@ -246,14 +247,12 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 			}
 		}
 
-		if !reorgingDelayed && !reorgingSequencer && inboxReaderDelayBlocks > 0 {
-			currentHeight = new(big.Int).Sub(currentHeight, big.NewInt(inboxReaderDelayBlocks))
-			if currentHeight.Sign() <= 0 {
-				currentHeight = currentHeight.SetInt64(1)
-			}
+		currentHeight = new(big.Int).Sub(currentHeight, big.NewInt(inboxReaderDelayBlocks))
+		if currentHeight.Sign() <= 0 {
+			currentHeight = currentHeight.SetInt64(1)
 		}
 
-		EthHeightGauge.Inc(currentHeight.Int64())
+		EthHeightGauge.Update(currentHeight.Int64())
 		if ir.healthChan != nil && currentHeight != nil {
 			ir.healthChan <- nodehealth.Log{Comp: "InboxReader", Var: "currentHeight", ValBigInt: new(big.Int).Set(currentHeight)}
 		}
@@ -400,6 +399,7 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 			DelayedCounter.Inc(int64(len(delayedMessages)))
 			BatchesCounter.Inc(int64(len(sequencerBatches)))
 		}
+		missingFeedDelayedReference = false
 		sleepChan := time.After(time.Second * 5)
 	FeedReadLoop:
 		for {
@@ -433,20 +433,24 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 				}
 				ir.sequencerFeedQueue = append(ir.sequencerFeedQueue, broadcastItem.FeedItem)
 				if len(ir.BroadcastFeed) == 0 {
-					err := ir.deliverQueueItems(ctx)
+					missingFeedDelayedReference, err = ir.deliverQueueItems(ctx)
 					if err != nil {
 						return err
+					}
+					if missingFeedDelayedReference {
+						break FeedReadLoop
 					}
 				}
 			case <-sleepChan:
 				break FeedReadLoop
 			}
 		}
-		err = ir.deliverQueueItems(ctx)
-		if err != nil {
-			return err
+		if !missingFeedDelayedReference {
+			missingFeedDelayedReference, err = ir.deliverQueueItems(ctx)
+			if err != nil {
+				return err
+			}
 		}
-		temporarilyParanoid = err != nil
 
 		// Clear expired items from ir.recentFeedItems
 		recentFeedItemExpiry := time.Now().Add(-RECENT_FEED_ITEM_TTL)
@@ -458,25 +462,36 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 	}
 }
 
-func (ir *InboxReader) deliverQueueItems(ctx context.Context) error {
+func (ir *InboxReader) deliverQueueItems(ctx context.Context) (bool, error) {
 	if len(ir.sequencerFeedQueue) > 0 && ir.sequencerFeedQueue[0].PrevAcc == ir.lastAcc {
 		queueItems := make([]inbox.SequencerBatchItem, 0, len(ir.sequencerFeedQueue))
+		maxDelayedCount := big.NewInt(0)
 		for _, item := range ir.sequencerFeedQueue {
+			if item.BatchItem.TotalDelayedCount != nil {
+				maxDelayedCount = item.BatchItem.TotalDelayedCount
+			}
 			queueItems = append(queueItems, item.BatchItem)
+		}
+		dbDelayedCount, err := ir.db.GetDelayedMessageCount()
+		if err != nil {
+			return false, err
+		}
+		if dbDelayedCount.Cmp(maxDelayedCount) < 0 {
+			return true, nil
 		}
 		ir.MessageDeliveryMutex.Lock()
 		defer ir.MessageDeliveryMutex.Unlock()
 		prevAcc := ir.sequencerFeedQueue[0].PrevAcc
 		logger.Debug().Str("prevAcc", prevAcc.String()).Str("acc", queueItems[len(queueItems)-1].Accumulator.String()).Int("count", len(queueItems)).Msg("delivering broadcast feed items")
 		ir.sequencerFeedQueue = []broadcaster.SequencerFeedItem{}
-		err := core.DeliverMessagesAndWait(ctx, ir.db, ir.lastCount, prevAcc, queueItems, []inbox.DelayedMessage{}, nil)
+		err = core.DeliverMessagesAndWait(ctx, ir.db, ir.lastCount, prevAcc, queueItems, []inbox.DelayedMessage{}, nil)
 		if err != nil {
-			return err
+			return false, err
 		}
 		ir.lastCount = new(big.Int).Add(queueItems[len(queueItems)-1].LastSeqNum, big.NewInt(1))
 		ir.lastAcc = queueItems[len(queueItems)-1].Accumulator
 	}
-	return nil
+	return false, nil
 }
 
 func (ir *InboxReader) getNextBlockToRead() (*big.Int, error) {
