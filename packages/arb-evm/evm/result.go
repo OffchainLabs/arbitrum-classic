@@ -325,13 +325,14 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 			}
 		}
 	}
-	status := uint64(0)
+	status := types.ReceiptStatusFailed
 	if r.ResultCode == ReturnCode {
-		status = 1
+		status = types.ReceiptStatusSuccessful
 	}
 
 	evmLogs := r.EthLogs(blockHash)
 	return &types.Receipt{
+		Type:              types.ArbitrumLegacyTxType,
 		GasUsedForL1:      r.CalcGasUsedForL1().Uint64(),
 		PostState:         []byte{0},
 		Status:            status,
