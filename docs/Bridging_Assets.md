@@ -147,7 +147,7 @@ No matter the complexity of a particular token's bridging needs, a gateway can i
 
 ### Demos
 
-See [token-deposit](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token-deposit) and [token-withdraw](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token-withdraw) for demos of interacting with the bridge architecture via [@arbitrum/sdk](https://github.com/OffchainLabs/arbitrum-sdk).
+See [token-deposit](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token-deposit) and [token-withdraw](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token-withdraw) for demos of interacting with the bridge architecture via the [Arbitrum SDK](https://github.com/OffchainLabs/arbitrum-sdk).
 
 #### A Word of Caution on Bridges (aka, "I've Got a Bridge To Sell You")
 
