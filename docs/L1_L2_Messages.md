@@ -242,6 +242,6 @@ Anytime after the dispute window passes, any user can execute the L1 message by 
 
 ### Demo
 
-See [outbox-execute](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/outbox-execute) for client side interactions with the outbox using the [@arbitrum/sdk](https://github.com/OffchainLabs/arbitrum-sdk) library.
+See [outbox-execute](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/outbox-execute) for client side interactions with the outbox using the [Arbitrum SDK](https://github.com/OffchainLabs/arbitrum-sdk) library.
 
 See also [integration tests](https://github.com/OffchainLabs/arbitrum-sdk/tree/master/integration_test) and our [Token Bridge UI](https://github.com/OffchainLabs/arb-token-bridge).
