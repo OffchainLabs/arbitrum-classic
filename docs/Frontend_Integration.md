@@ -49,7 +49,7 @@ var arbWeb3Provider = new Web3('http://ArbNodeUrl.com')
 
 ## Arbitrum / Ethereum Bridge
 
-Accessing bridging methods can be done via our `@arbitrum/sdk` library, or by simply connecting to the relevant contracts directly.
+Accessing bridging methods can be done via the `Arbitrum SDK`, or by simply connecting to the relevant contracts directly.
 
 #### @arbitrum/sdk
 
