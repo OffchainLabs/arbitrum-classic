@@ -51,7 +51,7 @@ var arbWeb3Provider = new Web3('http://ArbNodeUrl.com')
 
 Accessing bridging methods can be done via the `Arbitrum SDK`, or by simply connecting to the relevant contracts directly.
 
-#### @arbitrum/sdk
+#### Arbitrum SDK
 
 **Installation**:
 
