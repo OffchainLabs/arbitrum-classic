@@ -127,11 +127,11 @@ func TestTransfer(t *testing.T) {
 	test.FailIfError(t, err)
 
 	if doUpgrade {
-		UpgradeTestDevNode(t, backend, srv, auth)
+		UpgradeTestDevNode(t, ctx, backend, srv, auth)
 	}
 
 	deposit := makeDepositMessage(common.NewAddressFromEth(senderAuth.From))
-	_, err = backend.AddInboxMessage(deposit, common.RandAddress())
+	_, err = backend.AddInboxMessage(ctx, deposit, common.RandAddress())
 	test.FailIfError(t, err)
 
 	client := web3.NewEthClient(srv, true)

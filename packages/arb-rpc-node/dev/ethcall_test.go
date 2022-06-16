@@ -63,7 +63,7 @@ func TestEthCall(t *testing.T) {
 	defer cancelDevNode()
 
 	if doUpgrade {
-		UpgradeTestDevNode(t, backend, srv, auth)
+		UpgradeTestDevNode(t, ctx, backend, srv, auth)
 		enableRewrites(t, backend, srv, auth)
 	}
 

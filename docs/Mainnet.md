@@ -22,7 +22,7 @@ Arbitrum One — the first permissionless Ethereum layer 2 with full Ethereum sm
 
 ### Connect Your Wallet
 
-A good place to start is to connect your favorite Ethereum wallet to the Arbitrum one chain.
+A good place to start is to connect your favorite Ethereum wallet to the Arbitrum one chain. (See all supported wallets [here](https://portal.arbitrum.one/#wallets))
 
 **Chain Info:**
 

@@ -30,19 +30,25 @@ int arbCoreStartThread(CArbCore* arbcore_ptr) {
     return 1;
 }
 
-void arbCoreAbortThread(CArbCore* arbcore_ptr) {
-    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
-    arb_core->abortThread();
-}
-
 int arbCoreMessagesStatus(CArbCore* arbcore_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     return arb_core->messagesStatus();
 }
 
-char* arbCoreMessagesClearError(CArbCore* arbcore_ptr) {
+char* arbCoreMessagesGetError(CArbCore* arbcore_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
-    auto str = arb_core->messagesClearError();
+    auto str = arb_core->messagesGetError();
+    return strdup(str.c_str());
+}
+
+int arbCoreCheckError(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    return arb_core->checkError();
+}
+
+char* arbCoreGetErrorString(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    auto str = arb_core->getErrorString();
     return strdup(str.c_str());
 }
 
@@ -86,13 +92,25 @@ int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
         reorg_message_count = receiveUint256(reorg_message_count_ptr);
     }
 
+    auto item_count = sequencer_batch_items.size();
+    auto delayed_count = delayed_messages.size();
     try {
         auto status = arb_core->deliverMessages(
             previous_message_count, previous_inbox_acc,
             std::move(sequencer_batch_items), std::move(delayed_messages),
             reorg_message_count);
+        if (!status) {
+            std::cerr << "error while delivering messages, previous count: "
+                      << previous_message_count
+                      << ", item count: " << item_count
+                      << ", delayed count: " << delayed_count << std::endl;
+        }
         return status;
     } catch (const std::exception& e) {
+        std::cerr << "exception while delivering messages, previous count: "
+                  << previous_message_count << ", item count: " << item_count
+                  << ", delayed count: " << delayed_count
+                  << ", error: " << e.what() << std::endl;
         return false;
     }
 }
@@ -468,42 +486,6 @@ int arbCoreLogsCursorConfirmReceived(CArbCore* arbcore_ptr,
     }
 }
 
-int arbCoreLogsCursorCheckError(CArbCore* arbcore_ptr, const void* index_ptr) {
-    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
-    auto cursor_index = receiveUint256(index_ptr);
-
-    try {
-        return arbcore->logsCursorCheckError(
-            intx::narrow_cast<size_t>(cursor_index));
-    } catch (const std::exception& e) {
-        std::cerr << "Exception while checking error for logscursor "
-                  << e.what() << std::endl;
-        return 0;
-    }
-}
-
-// Returned string must be freed
-char* arbCoreLogsCursorClearError(CArbCore* arbcore_ptr,
-                                  const void* index_ptr) {
-    auto arbcore = static_cast<ArbCore*>(arbcore_ptr);
-    auto cursor_index = receiveUint256(index_ptr);
-
-    try {
-        auto str = arbcore->logsCursorClearError(
-            intx::narrow_cast<size_t>(cursor_index));
-
-        if (str.empty()) {
-            return nullptr;
-        }
-
-        return strdup(str.c_str());
-    } catch (const std::exception& e) {
-        std::cerr << "Exception while clearing error for logscursor "
-                  << e.what() << std::endl;
-        return strdup("exception occurred in logsCursorClearError");
-    }
-}
-
 CExecutionCursor* arbCoreGetExecutionCursor(CArbCore* arbcore_ptr,
                                             const void* total_gas_used_ptr,
                                             int allow_slow_lookups) {
@@ -552,9 +534,6 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
         return false;
     }
 }
-
-uint256_t log_number_begin;
-uint256_t log_number_end;
 
 ByteSliceCountResult arbCoreAdvanceExecutionCursorWithTracing(
     CArbCore* arbcore_ptr,

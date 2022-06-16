@@ -35,6 +35,10 @@ CArbStorage* createArbStorage(const char* db_path,
         std::string(arb_core_config.database_save_path);
     ArbCoreConfig coreConfig{};
     coreConfig.message_process_count = arb_core_config.message_process_count;
+    coreConfig.add_messages_max_failure_count =
+        arb_core_config.add_messages_max_failure_count;
+    coreConfig.thread_max_failure_count =
+        arb_core_config.thread_max_failure_count;
     coreConfig.checkpoint_load_gas_cost =
         arb_core_config.checkpoint_load_gas_cost;
     coreConfig.checkpoint_load_gas_factor =
@@ -52,6 +56,8 @@ CArbStorage* createArbStorage(const char* db_path,
         arb_core_config.cache_expiration_seconds;
     coreConfig.idle_sleep_milliseconds =
         arb_core_config.idle_sleep_milliseconds;
+    coreConfig.yield_instruction_count =
+        arb_core_config.yield_instruction_count;
     coreConfig.seed_cache_on_startup = arb_core_config.seed_cache_on_startup;
     coreConfig.debug = arb_core_config.debug;
     coreConfig.debug_timing = arb_core_config.debug_timing;
@@ -62,8 +68,6 @@ CArbStorage* createArbStorage(const char* db_path,
         arb_core_config.lazy_load_archive_queries;
     coreConfig.checkpoint_prune_on_startup =
         arb_core_config.checkpoint_prune_on_startup;
-    coreConfig.checkpoint_pruning_age_seconds =
-        arb_core_config.checkpoint_pruning_age_seconds;
     coreConfig.checkpoint_pruning_mode =
         arb_core_config.checkpoint_pruning_mode;
     coreConfig.checkpoint_max_to_prune =

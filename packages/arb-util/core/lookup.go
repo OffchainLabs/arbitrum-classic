@@ -17,6 +17,8 @@
 package core
 
 import (
+	"context"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -38,6 +40,21 @@ const (
 	MessagesSuccess
 	MessagesError
 )
+
+func (ms MessageStatus) String() string {
+	switch ms {
+	case MessagesEmpty:
+		return "empty"
+	case MessagesReady:
+		return "ready"
+	case MessagesSuccess:
+		return "success"
+	case MessagesError:
+		return "error"
+	default:
+		return "unknown"
+	}
+}
 
 type MachineEmission struct {
 	Value    value.Value
@@ -104,32 +121,22 @@ type ArbCoreInbox interface {
 	PrintCoreThreadBacktrace()
 }
 
-func DeliverMessagesAndWait(db ArbCoreInbox, previousMessageCount *big.Int, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) error {
+func DeliverMessagesAndWait(ctx context.Context, db ArbCoreInbox, previousMessageCount *big.Int, previousSeqBatchAcc common.Hash, seqBatchItems []inbox.SequencerBatchItem, delayedMessages []inbox.DelayedMessage, reorgSeqBatchItemCount *big.Int) error {
 	if !db.DeliverMessages(previousMessageCount, previousSeqBatchAcc, seqBatchItems, delayedMessages, reorgSeqBatchItemCount) {
 		return errors.New("unable to deliver messages")
 	}
-	status, err := waitForMessages(db)
+	status, err := waitForMessages(ctx, db)
 	if err != nil {
 		return err
 	}
 	if status != MessagesSuccess {
-		return errors.New("Unexpected status")
+		return fmt.Errorf("unexpected waitForMessages status: %s", status.String())
 	}
 	return nil
 }
 
-func ReorgAndWait(db ArbCoreInbox, reorgMessageCount *big.Int) error {
-	if !db.DeliverMessages(big.NewInt(0), common.Hash{}, nil, nil, reorgMessageCount) {
-		return errors.New("unable to deliver messages")
-	}
-	status, err := waitForMessages(db)
-	if err != nil {
-		return err
-	}
-	if status == MessagesSuccess {
-		return nil
-	}
-	return errors.New("Unexpected status")
+func ReorgAndWait(ctx context.Context, db ArbCoreInbox, reorgMessageCount *big.Int) error {
+	return DeliverMessagesAndWait(ctx, db, big.NewInt(0), common.Hash{}, nil, nil, reorgMessageCount)
 }
 
 func WaitForMachineIdle(db ArbCore) {
@@ -142,7 +149,7 @@ func WaitForMachineIdle(db ArbCore) {
 	}
 }
 
-func waitForMessages(db ArbCoreInbox) (MessageStatus, error) {
+func waitForMessages(ctx context.Context, db ArbCoreInbox) (MessageStatus, error) {
 	start := time.Now()
 	nextLog := time.Second * 30
 	var status MessageStatus
@@ -165,7 +172,13 @@ func waitForMessages(db ArbCoreInbox) (MessageStatus, error) {
 			db.PrintCoreThreadBacktrace()
 			nextLog += time.Second * 30
 		}
-		<-time.After(time.Millisecond * 1)
+		timer := time.NewTimer(time.Millisecond * 1)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return 0, errors.New("context cancelled in waitForMessages")
+		case <-timer.C:
+		}
 	}
 	return status, nil
 }
@@ -175,7 +188,6 @@ type ArbCore interface {
 	ArbCoreInbox
 	LogsCursor
 	StartThread() bool
-	StopThread()
 	MachineIdle() bool
 }
 
@@ -286,9 +298,9 @@ type LogConsumer interface {
 }
 
 type LogsCursor interface {
+	CheckError() error
 	LogsCursorRequest(cursorIndex *big.Int, count *big.Int) error
 	LogsCursorGetLogs(cursorIndex *big.Int) (*big.Int, []ValueAndInbox, []ValueAndInbox, error)
-	LogsCursorCheckError(cursorIndex *big.Int) error
 	LogsCursorConfirmReceived(cursorIndex *big.Int) (bool, error)
 	LogsCursorPosition(cursorIndex *big.Int) (*big.Int, error)
 }

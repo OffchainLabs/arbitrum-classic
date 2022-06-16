@@ -20,6 +20,7 @@
 #include <avm_values/tuplestub.hpp>
 
 #include <array>
+#include <atomic>
 #include <deque>
 #include <memory>
 #include <vector>
@@ -29,7 +30,7 @@ class Value;
 struct RawTuple {
     HashPreImage cachedPreImage;
     std::vector<Value> data;
-    bool deferredHashing = true;
+    std::atomic<bool> deferredHashing = true;
 
     RawTuple() : cachedPreImage({}, 0), deferredHashing(true) {}
     RawTuple(const RawTuple&) = delete;

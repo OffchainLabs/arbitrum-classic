@@ -229,8 +229,15 @@ void Tuple::calculateHashPreImage() const {
                 }
             }
             if (!found_complex) {
-                tup.tpl->cachedPreImage = calcHashPreImage(tup);
-                tup.tpl->deferredHashing = false;
+                // It's fine if multiple threads write the cached preimage
+                // simultaneously, as they must be writing the same hash, and
+                // this uses atomic writes.
+                tup.tpl->cachedPreImage.writeAtomic(calcHashPreImage(tup));
+                // The "release" ordering here ensures any other thread
+                // with the default seqcst "acquire" ordering will see
+                // the updated hash pre image if it sees this write.
+                tup.tpl->deferredHashing.store(false,
+                                               std::memory_order_release);
                 tups.pop_back();
             }
         }

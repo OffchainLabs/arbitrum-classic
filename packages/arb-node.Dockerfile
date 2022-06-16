@@ -65,7 +65,6 @@ COPY --from=arb-avm-cpp /home/user/.hunter /home/user/.hunter
 
 # Build arb-node
 RUN cd arb-node-core && \
-    go install -v ./cmd/arb-validator && \
     go install -v ./cmd/arb-relay && \
     go install -v ./cmd/arb-db && \
     cd ../arb-rpc-node && \
