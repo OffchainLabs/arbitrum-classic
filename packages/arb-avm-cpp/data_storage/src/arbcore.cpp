@@ -29,6 +29,9 @@
 #include <data_storage/value/value.hpp>
 #include <data_storage/value/valuecache.hpp>
 
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+
 #include <sys/stat.h>
 #include <ethash/keccak.hpp>
 #include <filesystem>
@@ -118,16 +121,15 @@ ArbCore::message_status_enum ArbCore::messagesStatus() {
     return current_status;
 }
 
-std::string ArbCore::messagesClearError() {
-    if (message_data_status != ArbCore::MESSAGES_ERROR) {
+std::string ArbCore::messagesGetError() {
+    auto status = message_data_status.load();
+    if (status != ArbCore::MESSAGES_ERROR) {
+        std::cerr << "messagesGetError called but different status: " << status
+                  << std::endl;
         return "";
     }
 
-    auto str = message_data_error_string;
-    message_data_error_string.clear();
-    message_data_status = MESSAGES_EMPTY;
-
-    return str;
+    return message_data_error_string;
 }
 
 bool ArbCore::checkError() {
@@ -179,7 +181,10 @@ bool ArbCore::deliverMessages(
     std::vector<std::vector<unsigned char>> sequencer_batch_items,
     std::vector<std::vector<unsigned char>> delayed_messages,
     const std::optional<uint256_t>& reorg_batch_items) {
-    if (message_data_status != MESSAGES_EMPTY) {
+    auto status = message_data_status.load();
+    if (status != MESSAGES_EMPTY) {
+        std::cerr << "unable to deliver messages, status: " << status
+                  << std::endl;
         return false;
     }
 
@@ -369,8 +374,9 @@ InitializeResult ArbCore::applyConfig() {
     }
 
     if (coreConfig.database_save_on_startup) {
-        std::filesystem::path save_rocksdb_path(coreConfig.database_save_path);
-        std::filesystem::create_directories(save_rocksdb_path);
+        boost::filesystem::path save_rocksdb_path(
+            coreConfig.database_save_path);
+        boost::filesystem::create_directories(save_rocksdb_path);
         ReadTransaction tx(data_storage);
         saveRocksdbCheckpoint(save_rocksdb_path, tx);
     }
@@ -670,7 +676,7 @@ rocksdb::Status ArbCore::reorgToPenultimateCheckpoint(ValueCache& cache) {
 
     auto count = 0;
     return reorgCheckpoints(
-        [&](const MachineOutput& output) {
+        [&](const MachineOutput&) {
             count++;
             // Skip first entry
             return count > 1;
@@ -833,7 +839,7 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
         auto success = reorgIfInvalidMachine(thread_failure_count,
                                              next_checkpoint_gas, cache);
         if (!success) {
-            std::cerr << "runMachineWithMessages failed with invalid machine"
+            std::cerr << "advanceCoreToTarget failed with invalid machine"
                       << "\n";
             return rocksdb::Status::Aborted();
         }
@@ -852,10 +858,10 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
             num_messages = coreConfig.message_process_count;
         }
         success =
-            runMachineWithMessages(execConfig, size_t(num_messages), false);
+            runCoreMachineWithMessages(execConfig, size_t(num_messages), false);
         if (!success) {
-            std::cerr << "runMachineWithMessages failed: " << core_error_string
-                      << "\n";
+            std::cerr << "runCoreMachineWithMessages failed: "
+                      << core_error_string << "\n";
             return rocksdb::Status::Aborted();
         }
 
@@ -879,7 +885,8 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
 
             // Machine was stopped to save sideload,
             // start machine back up where it stopped
-            auto machine_success = core_machine->continueRunningMachine(false);
+            auto machine_success = core_machine->continueRunningMachine(
+                false, coreConfig.yield_instruction_count);
             if (!machine_success) {
                 setCoreError("Error continuing machine thread while reorging");
                 std::cerr << "Error catching up: " << core_error_string << "\n";
@@ -1242,7 +1249,14 @@ rocksdb::Status ArbCore::reorgCheckpoints(
     core_machine->machine_state.context.clearInboxMessages();
     // Call continueRunningMachine after clearing inbox messages to finish up
     // any processing
-    core_machine->continueRunningMachine(true);
+    auto success = core_machine->continueRunningMachine(
+        false, coreConfig.yield_instruction_count);
+    if (!success) {
+        std::cerr
+            << "Error running machine after reorg to finish any processing"
+            << std::endl;
+        return rocksdb::Status::Aborted();
+    }
 
     return rocksdb::Status::OK();
 }
@@ -1504,7 +1518,7 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
     if (!success) {
         return false;
     }
-    if (message_data_status == MESSAGES_READY) {
+    if (message_data_status.load() == MESSAGES_READY) {
         std::chrono::time_point<std::chrono::steady_clock>
             begin_messages_ready_timepoint;
         if (coreConfig.debug_timing) {
@@ -1517,11 +1531,12 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
             auto add_status = addMessages(message_data, thread_data.cache);
             if (!add_status.status.ok()) {
                 thread_data.add_messages_failure_count++;
-                message_data_error_string = add_status.status.ToString();
-                message_data_status = MESSAGES_ERROR;
+                auto error_string = add_status.status.ToString();
                 if (coreConfig.add_messages_max_failure_count > 0 &&
                     thread_data.add_messages_failure_count >=
                         coreConfig.add_messages_max_failure_count) {
+                    message_data_error_string = error_string;
+                    message_data_status = MESSAGES_ERROR;
                     std::cerr << "Exiting after arbCore addMessages failed "
                               << thread_data.add_messages_failure_count
                               << " times: " << message_data_error_string
@@ -1530,9 +1545,9 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
                     return false;
                 }
 
-                std::cerr << "ArbCore addMessages non-fatal error "
+                std::cerr << "ArbCore addMessages non-fatal error number "
                           << thread_data.add_messages_failure_count << ": "
-                          << message_data_error_string << "\n";
+                          << error_string << "\n";
             } else {
                 thread_data.add_messages_failure_count = 0;
                 machine_idle = false;
@@ -1679,7 +1694,8 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
             }
             // Machine was stopped to save sideload, update execConfig
             // and start machine back up where it stopped
-            auto machine_success = core_machine->continueRunningMachine(true);
+            auto machine_success = core_machine->continueRunningMachine(
+                true, coreConfig.yield_instruction_count);
             if (!machine_success) {
                 setCoreError("Error starting machine thread");
                 std::cerr << "ArbCore error: " << core_error_string << "\n";
@@ -1785,14 +1801,14 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
 
     if (core_machine->status() == MachineThread::MACHINE_NONE) {
         // Start execution of machine if new message available
-        auto success = runMachineWithMessages(
+        auto success = runCoreMachineWithMessages(
             thread_data.execConfig, coreConfig.message_process_count, true);
         if (!success) {
             return false;
         }
         if (coreConfig.debug_timing && machine_idle == false) {
             printElapsed(thread_data.last_run_machine_check_timepoint,
-                         "ArbCore runMachineWithMessages delay: ");
+                         "ArbCore runCoreMachineWithMessages delay: ");
         }
     }
     if (coreConfig.debug_timing) {
@@ -1812,7 +1828,7 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
         }
     }
 
-    if (machine_idle && message_data_status != MESSAGES_READY) {
+    if (machine_idle && message_data_status.load() != MESSAGES_READY) {
         // Machine blocked and no new messages, so sleep for a bit
         std::this_thread::sleep_for(
             std::chrono::milliseconds(coreConfig.idle_sleep_milliseconds));
@@ -1844,7 +1860,7 @@ void ArbCore::operator()() {
         thread_data.next_rocksdb_save_timepoint =
             std::chrono::steady_clock::now() +
             std::chrono::seconds(coreConfig.database_save_interval);
-        std::filesystem::create_directories(coreConfig.database_save_path);
+        boost::filesystem::create_directories(coreConfig.database_save_path);
     }
 
     try {
@@ -1872,7 +1888,7 @@ void ArbCore::operator()() {
 #endif
 }
 void ArbCore::saveRocksdbCheckpoint(
-    const std::filesystem::path& save_rocksdb_path,
+    const boost::filesystem::path& save_rocksdb_path,
     ReadTransaction& tx) {
     struct stat info;
     if ((stat(save_rocksdb_path.c_str(), &info) != 0) &&
@@ -1910,9 +1926,9 @@ void ArbCore::printElapsed(
     }
 }
 
-bool ArbCore::runMachineWithMessages(MachineExecutionConfig& execConfig,
-                                     size_t max_message_batch_size,
-                                     bool asynchronous) {
+bool ArbCore::runCoreMachineWithMessages(MachineExecutionConfig& execConfig,
+                                         size_t max_message_batch_size,
+                                         bool asynchronous) {
     ReadSnapshotTransaction tx(data_storage);
     auto messages_result = readNextMessages(
         tx, core_machine->machine_state.output.fully_processed_inbox,
@@ -1928,7 +1944,8 @@ bool ArbCore::runMachineWithMessages(MachineExecutionConfig& execConfig,
             core_machine->isBlocked(!messages_result.data.empty()))) {
         execConfig.inbox_messages = messages_result.data;
 
-        auto success = core_machine->runMachine(execConfig, asynchronous);
+        auto success = core_machine->runMachine(
+            execConfig, asynchronous, coreConfig.yield_instruction_count);
         if (!success) {
             setCoreError("Error starting machine thread");
             std::cerr << "ArbCore error: " << core_error_string << "\n";
@@ -2637,7 +2654,8 @@ uint256_t ArbCore::machineMessagesRead() {
 
 ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
     uint256_t total_gas_used,
-    bool allow_slow_lookup) {
+    bool allow_slow_lookup,
+    uint32_t yield_instruction_count) {
     std::unique_ptr<ExecutionCursor> execution_cursor;
     {
         ReadSnapshotTransaction tx(data_storage);
@@ -2656,7 +2674,8 @@ ValueResult<std::unique_ptr<ExecutionCursor>> ArbCore::getExecutionCursor(
 
     auto result = advanceExecutionCursorImpl(
         *execution_cursor, total_gas_used, false,
-        coreConfig.message_process_count, allow_slow_lookup, std::nullopt);
+        coreConfig.message_process_count, allow_slow_lookup, std::nullopt,
+        yield_instruction_count);
     if (!result.status.ok()) {
         std::cerr << "Couldn't advance execution machine: "
                   << result.status.ToString() << std::endl;
@@ -2671,7 +2690,11 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
     ExecutionCursor& execution_cursor,
     uint256_t max_gas,
     bool go_over_gas,
-    bool allow_slow_lookup) {
+    bool allow_slow_lookup,
+    uint32_t yield_instruction_count) {
+    if (execution_cursor.isAborted()) {
+        return rocksdb::Status::Aborted();
+    }
     auto current_gas = execution_cursor.getOutput().arb_gas_used;
     auto total_gas_used = current_gas + max_gas;
     {
@@ -2687,7 +2710,8 @@ rocksdb::Status ArbCore::advanceExecutionCursor(
 
     auto result = advanceExecutionCursorImpl(
         execution_cursor, total_gas_used, go_over_gas,
-        coreConfig.message_process_count, allow_slow_lookup, std::nullopt);
+        coreConfig.message_process_count, allow_slow_lookup, std::nullopt,
+        yield_instruction_count);
 
     return result.status;
 }
@@ -2698,13 +2722,15 @@ ArbCore::advanceExecutionCursorWithTracing(
     uint256_t max_gas,
     bool go_over_gas,
     bool allow_slow_lookup,
-    const DebugPrintCollectionOptions& options) {
+    const DebugPrintCollectionOptions& options,
+    uint32_t yield_instruction_count) {
     auto current_gas = execution_cursor.getOutput().arb_gas_used;
     auto total_gas_used = current_gas + max_gas;
 
     return advanceExecutionCursorImpl(
         execution_cursor, total_gas_used, go_over_gas,
-        coreConfig.message_process_count, allow_slow_lookup, options);
+        coreConfig.message_process_count, allow_slow_lookup, options,
+        yield_instruction_count);
 }
 
 MachineState& resolveExecutionVariant(std::unique_ptr<Machine>& mach) {
@@ -2751,7 +2777,8 @@ ArbCore::advanceExecutionCursorImpl(
     bool go_over_gas,
     size_t message_group_size,
     bool allow_slow_lookup,
-    const std::optional<DebugPrintCollectionOptions>& collectionOptions) {
+    const std::optional<DebugPrintCollectionOptions>& collectionOptions,
+    uint32_t yield_instruction_count) {
     if (collectionOptions && collectionOptions->log_number_begin ==
                                  collectionOptions->log_number_end) {
         return {rocksdb::Status::OK(), {}};
@@ -2833,7 +2860,14 @@ ArbCore::advanceExecutionCursorImpl(
             auto& mach =
                 std::get<std::unique_ptr<Machine>>(execution_cursor.machine);
             mach->machine_state.context = AssertionContext(execConfig);
-            auto assertion = mach->run();
+            auto assertion = mach->run(yield_instruction_count);
+            if (mach->isAborted()) {
+                if (coreConfig.debug) {
+                    std::cerr << "execution cursor machine aborted"
+                              << "\n";
+                }
+                return {rocksdb::Status::Aborted(), {}};
+            }
             if (collectionOptions) {
                 auto done = false;
                 for (const auto& debug_print : assertion.debug_prints) {
@@ -2946,7 +2980,8 @@ ArbCore::findCloserExecutionCursor(
 
 std::variant<rocksdb::Status, ExecutionCursor>
 ArbCore::getExecutionCursorAtEndOfBlock(const uint256_t& block_number,
-                                        bool allow_slow_lookup) {
+                                        bool allow_slow_lookup,
+                                        uint32_t yield_instruction_count) {
     uint256_t gas_target;
     std::unique_ptr<ExecutionCursor> execution_cursor;
     {
@@ -2969,7 +3004,7 @@ ArbCore::getExecutionCursorAtEndOfBlock(const uint256_t& block_number,
 
     auto result = advanceExecutionCursorImpl(
         *execution_cursor, gas_target, false, coreConfig.message_process_count,
-        allow_slow_lookup, std::nullopt);
+        allow_slow_lookup, std::nullopt, yield_instruction_count);
     if (!result.status.ok()) {
         std::cerr << "Couldn't advance execution machine: "
                   << result.status.ToString() << std::endl;
@@ -3179,12 +3214,19 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
             while (seq_batch_it->Valid()) {
                 auto status = tx.sequencerBatchItemDelete(seq_batch_it->key());
                 if (!status.ok()) {
+                    std::cerr << "addMessages: issue deleting batch item "
+                                 "during reorg: "
+                              << seq_batch_it->key().ToString()
+                              << ", error: " << status.ToString() << std::endl;
                     return {status, std::nullopt};
                 }
                 deleted_any = true;
                 seq_batch_it->Next();
             }
             if (!seq_batch_it->status().ok()) {
+                std::cerr
+                    << "addMessages: error with batch iterator during reorg: "
+                    << seq_batch_it->status().ToString() << std::endl;
                 return {seq_batch_it->status(), std::nullopt};
             }
             if (deleted_any) {
@@ -3241,6 +3283,10 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
             for (auto& item_and_bytes : seq_batch_items) {
                 if (!seq_batch_it->Valid()) {
                     if (!seq_batch_it->status().ok()) {
+                        std::cerr << "addMessages: error with invalid batch "
+                                     "iterator: "
+                                  << seq_batch_it->status().ToString()
+                                  << std::endl;
                         return {seq_batch_it->status(), std::nullopt};
                     }
                     break;
@@ -3284,12 +3330,17 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
                         auto status =
                             tx.sequencerBatchItemDelete(seq_batch_it->key());
                         if (!status.ok()) {
+                            std::cerr << "addMessages: unable to delete batch: "
+                                      << status.ToString() << std::endl;
                             return {status, std::nullopt};
                         }
                         seq_batch_it->Next();
-                        if (!seq_batch_it->status().ok()) {
-                            return {seq_batch_it->status(), std::nullopt};
-                        }
+                    }
+                    if (!seq_batch_it->status().ok()) {
+                        std::cerr
+                            << "addMessages: error with delete batch iterator: "
+                            << seq_batch_it->status().ToString() << std::endl;
+                        return {seq_batch_it->status(), std::nullopt};
                     }
                     break;
                 }
@@ -3302,6 +3353,9 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
         if (!delayed_messages.empty()) {
             auto delayed_msg_seq_res = totalDelayedMessagesSequencedImpl(tx);
             if (!delayed_msg_seq_res.status.ok()) {
+                std::cerr
+                    << "addMessages: error getting delayed message iterator: "
+                    << delayed_msg_seq_res.status.ToString() << std::endl;
                 return {delayed_msg_seq_res.status, std::nullopt};
             }
             uint256_t start = delayed_messages[0].first.delayed_sequence_number;
@@ -3324,6 +3378,10 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
 
                 if (!inserting && !delayed_it->Valid()) {
                     if (!delayed_it->status().ok()) {
+                        std::cerr << "addMessages: error with delayed message "
+                                     "iterator: "
+                                  << delayed_it->status().ToString()
+                                  << std::endl;
                         return {delayed_it->status(), std::nullopt};
                     }
                     if (checking_prev) {
@@ -3351,6 +3409,10 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
                                 deserializeDelayedMessageAccumulator(value_ptr);
                         } else {
                             if (!delayed_it->status().ok()) {
+                                std::cerr << "addMessages: error getting next "
+                                             "delayed message: "
+                                          << delayed_it->status().ToString()
+                                          << std::endl;
                                 return {delayed_it->status(), std::nullopt};
                             }
                             inserting = true;
@@ -3373,10 +3435,17 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
                             auto status =
                                 tx.delayedMessageDelete(delayed_it->key());
                             if (!status.ok()) {
+                                std::cerr << "addMessages: error deleting "
+                                             "delayed message: "
+                                          << status.ToString() << std::endl;
                                 return {status, std::nullopt};
                             }
                             delayed_it->Next();
                             if (!delayed_it->status().ok()) {
+                                std::cerr << "addMessages: error with iterator "
+                                             "while deleting delayed message: "
+                                          << delayed_it->status().ToString()
+                                          << std::endl;
                                 return {delayed_it->status(), std::nullopt};
                             }
                         }
@@ -3397,6 +3466,9 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
                     auto key_slice = vecToSlice(key_vec);
                     auto status = tx.delayedMessagePut(key_slice, value_slice);
                     if (!status.ok()) {
+                        std::cerr
+                            << "addMessages: error inserting delayed message: "
+                            << status.ToString() << std::endl;
                         return {status, std::nullopt};
                     }
                 }
@@ -3460,11 +3532,15 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
             auto status = tx.sequencerBatchItemPut(vecToSlice(key_vec),
                                                    item_and_slice.second);
             if (!status.ok()) {
+                std::cerr << "addMessages: error inserting batch item: "
+                          << status.ToString() << std::endl;
                 return {status, std::nullopt};
             }
         }
         auto status = tx.commit();
         if (!status.ok()) {
+            std::cerr << "addMessages: error committing database changes: "
+                      << status.ToString() << std::endl;
             return {status, std::nullopt};
         }
     }

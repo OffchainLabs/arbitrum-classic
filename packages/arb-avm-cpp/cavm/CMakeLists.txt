@@ -56,3 +56,33 @@ target_compile_options(cavm PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(cavm PUBLIC data_storage avm)
 
 source_group(cavm FILES ${LIB_HEADERS} ${LIB_SOURCES})
+
+get_property(_isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if (NOT _isMultiConfig)
+    set(INFILE ${PROJECT_SOURCE_DIR}/../cmachine/flags.go.in)
+    set(MIDDLEFILE ${PROJECT_BINARY_DIR}/../cmachine/flags.go.tmp)
+    set(OUTFILE ${PROJECT_SOURCE_DIR}/../cmachine/flags.go)
+
+    set(C_LIBRARY_PATH ${PROJECT_BINARY_DIR}/../lib)
+    set(CFLAGS "-I.")
+    string(CONCAT LDFLAGS
+        " -L${C_LIBRARY_PATH}"
+        " -L${ETHASH_LIB_FOLDER}"
+        " $<TARGET_LINKER_FILE:cavm>"
+        " $<TARGET_LINKER_FILE:data_storage>"
+        " $<TARGET_LINKER_FILE:avm>"
+        " $<TARGET_LINKER_FILE:avm_values>"
+        " $<TARGET_LINKER_FILE:ff>"
+        " $<TARGET_LINKER_FILE:secp256k1>"
+        " $<TARGET_LINKER_FILE:OpenSSL::Crypto>"
+        " $<TARGET_LINKER_FILE:RocksDB::RocksDB>"
+        " $<TARGET_LINKER_FILE:ethash::keccak>"
+        " $<TARGET_LINKER_FILE:Boost::filesystem>"
+        " ${GPROF_LIBRARY}"
+        " ${MALLOC_LIBRARY}"
+        " ${GMP_LIBRARY}"
+        " ${GMPXX_LIBRARY}"
+    )
+    configure_file( ${INFILE} ${MIDDLEFILE} )
+    file(GENERATE OUTPUT ${OUTFILE} INPUT ${MIDDLEFILE})
+endif()

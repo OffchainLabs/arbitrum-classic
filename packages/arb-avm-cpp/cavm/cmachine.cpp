@@ -53,7 +53,7 @@ void machineDestroy(CMachine* m) {
 
 void machineAbort(CMachine* m) {
     assert(m);
-    auto machine = static_cast<ExecutionCursor*>(m);
+    auto machine = static_cast<Machine*>(m);
     machine->abort();
 }
 
@@ -221,6 +221,9 @@ RawAssertionResult executeAssertion(CMachine* m,
         mach->machine_state.context.max_gas +=
             mach->machine_state.output.arb_gas_used;
         Assertion assertion = mach->run();
+        if (mach->isAborted()) {
+            return {makeEmptyAssertion(), false};
+        }
         std::vector<unsigned char> sendData;
         for (const auto& send : assertion.sends) {
             auto big_size = boost::endian::native_to_big(

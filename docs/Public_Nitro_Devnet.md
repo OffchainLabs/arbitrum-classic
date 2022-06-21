@@ -12,7 +12,7 @@ As we approach mainnet launch and incorporate feedback, we will likely reset the
 
 ## Connecting to the chain
 
-If you're using Metamask, add a custom RPC network to connect to the Arbitrum devnet:
+Connect your wallet to the devnet; if [your wallet](https://portal.arbitrum.one/#wallets) requires it, add the Arbitrum Nitro Devnet as a custom RPC:
 
 - Network Name: Arbitrum Nitro Devnet
 - RPC URL: https://nitro-devnet.arbitrum.io/rpc
@@ -39,7 +39,7 @@ You may also deposit Eth from Goerli so that you can pay for fees in L2. In orde
 
 ## Interacting with the chain
 
-Once you've added the Arbitrum Nitro Devnet network to Metamask, you should be able to interact with the Arbitrum chain just like you would with Ethereum.
+Once your wallet is connect to the Arbitrum Nitro Devnet, you should be able to interact with the chain just like you would with Ethereum.
 
 The are a couple things to note on the Arbitrum chain.
 

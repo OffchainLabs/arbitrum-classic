@@ -26,7 +26,6 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -101,20 +100,13 @@ func startup() error {
 	config := configuration.Config{
 		Core: *configuration.DefaultCoreSettingsMaxExecution(),
 		Feed: configuration.Feed{
-			Output: configuration.FeedOutput{
-				Addr:          "127.0.0.1",
-				IOTimeout:     2 * time.Second,
-				Port:          "9642",
-				Ping:          5 * time.Second,
-				ClientTimeout: 15 * time.Second,
-				Queue:         1,
-				Workers:       2,
-			},
+			Output: *configuration.DefaultFeedOutput(),
 		},
 		Node: *configuration.DefaultNodeSettings(),
 	}
 	config.Node.Sequencer.CreateBatchBlockInterval = *createBatchBlockInterval
 	config.Node.Sequencer.DelayedMessagesTargetDelay = *delayedMessagesTargetDelay
+	config.Feed.Output.Workers = 2
 
 	//go http.ListenAndServe("localhost:6060", nil)
 
@@ -188,6 +180,9 @@ func startup() error {
 	}
 
 	ownerPrivKey, err := crypto.GenerateKey()
+	if err != nil {
+		return err
+	}
 	l1OwnerAuth, err := bind.NewKeyedTransactorWithChainID(ownerPrivKey, l1ChainId)
 	if err != nil {
 		return err
@@ -252,8 +247,9 @@ func startup() error {
 
 	dummySequencerFeed := make(chan broadcaster.BroadcastFeedMessage)
 	var inboxReader *monitor.InboxReader
+	var inboxReaderDone chan bool
 	for {
-		inboxReader, err = mon.StartInboxReader(
+		inboxReader, inboxReaderDone, err = mon.StartInboxReader(
 			ctx,
 			ethclint,
 			rollupAddress,
@@ -266,7 +262,7 @@ func startup() error {
 		if err == nil {
 			break
 		}
-		if strings.Contains(err.Error(), "arbcore thread aborted") {
+		if common.IsFatalError(err) {
 			logger.Error().Err(err).Msg("aborting inbox reader start")
 			break
 		}
@@ -329,7 +325,7 @@ func startup() error {
 		return crypto.Sign(hash, seqPrivKey)
 	}
 
-	batch, err := rpc.SetupBatcher(
+	batch, broadcasterErrChan, err := rpc.SetupBatcher(
 		ctx,
 		ethclint,
 		rollupAddress,
@@ -397,8 +393,12 @@ func startup() error {
 	select {
 	case err := <-txDBErrChan:
 		return err
+	case err := <-broadcasterErrChan:
+		return err
 	case err := <-errChan:
 		return err
+	case <-inboxReaderDone:
+		return nil
 	case <-cancelChan:
 		return nil
 	}

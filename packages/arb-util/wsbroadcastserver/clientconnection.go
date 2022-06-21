@@ -31,10 +31,6 @@ import (
 	"github.com/mailru/easygo/netpoll"
 )
 
-// MaxSendQueue is the maximum number of items in a clients out channel before client gets disconnected.
-// If set too low, a burst of items will cause all clients to be disconnected
-const MaxSendQueue = 1000
-
 // ClientConnection represents client connection.
 type ClientConnection struct {
 	ioMutex sync.Mutex
@@ -56,7 +52,7 @@ func NewClientConnection(conn net.Conn, desc *netpoll.Desc, clientManager *Clien
 		Name:          conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10)),
 		clientManager: clientManager,
 		lastHeardUnix: time.Now().Unix(),
-		out:           make(chan []byte, MaxSendQueue),
+		out:           make(chan []byte, clientManager.settings.MaxSendQueue),
 	}
 }
 
