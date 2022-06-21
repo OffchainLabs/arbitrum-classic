@@ -42,7 +42,7 @@ class ExecutionCursor {
     ExecutionCursor(ExecutionCursor&& rhs) noexcept
         : machine{std::move(rhs.machine)} {}
 
-    ~ExecutionCursor() = default;
+    ~ExecutionCursor() { abort(); }
 
     ExecutionCursor(const ExecutionCursor& rhs)
         : machine(std::unique_ptr<Machine>(nullptr)) {
@@ -72,16 +72,33 @@ class ExecutionCursor {
     ExecutionCursor* clone();
 
     void abort() {
-        is_aborted = true;
         if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
-            std::get<std::unique_ptr<Machine>>(machine)->abort();
+            if (std::get<std::unique_ptr<Machine>>(machine) != nullptr) {
+                std::get<std::unique_ptr<Machine>>(machine)->abort();
+            }
         }
+        is_aborted = true;
     }
 
-    bool isAborted() { return is_aborted.load(); }
+    bool isAborted() {
+        if (is_aborted) {
+            // Ensure machine is properly stopped
+            abort();
+            return true;
+        }
+
+        if (std::holds_alternative<std::unique_ptr<Machine>>(machine) &&
+            (std::get<std::unique_ptr<Machine>>(machine) != nullptr)) {
+            return std::get<std::unique_ptr<Machine>>(machine)->isAborted();
+        }
+        return is_aborted;
+    }
 
     [[nodiscard]] std::optional<uint256_t> machineHash() const {
         if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
+            if (std::get<std::unique_ptr<Machine>>(machine) == nullptr) {
+                throw std::runtime_error("machine unique_ptr is null");
+            }
             return std::get<std::unique_ptr<Machine>>(machine)->hash();
         } else {
             return std::get<MachineStateKeys>(machine).machineHash();
@@ -90,6 +107,9 @@ class ExecutionCursor {
 
     [[nodiscard]] const MachineOutput& getOutput() const {
         if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
+            if (std::get<std::unique_ptr<Machine>>(machine) == nullptr) {
+                throw std::runtime_error("machine unique_ptr is null");
+            }
             return std::get<std::unique_ptr<Machine>>(machine)
                 ->machine_state.output;
         } else {

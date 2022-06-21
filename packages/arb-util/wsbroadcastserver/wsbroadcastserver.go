@@ -18,16 +18,18 @@ package wsbroadcastserver
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
+	"errors"
 	"net"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
+
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws-examples/src/gopool"
 	"github.com/mailru/easygo/netpoll"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 var logger = arblog.Logger.With().Str("component", "wsbroadcastserver").Logger()
@@ -43,27 +45,27 @@ type WSBroadcastServer struct {
 	catchupBuffer CatchupBuffer
 }
 
-func NewWSBroadcastServer(settings configuration.FeedOutput, catchupBuffer CatchupBuffer) *WSBroadcastServer {
+func NewWSBroadcastServer(settings *configuration.FeedOutput, catchupBuffer CatchupBuffer) *WSBroadcastServer {
 	return &WSBroadcastServer{
 		startMutex:    &sync.Mutex{},
-		settings:      settings,
+		settings:      *settings,
 		started:       false,
 		catchupBuffer: catchupBuffer,
 	}
 }
 
-func (s *WSBroadcastServer) Start(ctx context.Context) error {
+func (s *WSBroadcastServer) Start(ctx context.Context) (chan error, error) {
 	s.startMutex.Lock()
 	defer s.startMutex.Unlock()
 	if s.started {
-		return nil
+		return nil, errors.New("broadcast server already started")
 	}
 
 	var err error
 	s.poller, err = netpoll.New(nil)
 	if err != nil {
 		logger.Error().Err(err).Msg("unable to initialize netpoll for monitoring client connection events")
-		return err
+		return nil, err
 	}
 
 	// Make pool of X size, Y sized work queue and one pre-spawned
@@ -144,7 +146,7 @@ func (s *WSBroadcastServer) Start(ctx context.Context) error {
 	ln, err := net.Listen("tcp", s.settings.Addr+":"+s.settings.Port)
 	if err != nil {
 		logger.Error().Err(err).Msg("error calling net.Listen")
-		return err
+		return nil, err
 	}
 
 	s.listener = ln
@@ -152,20 +154,25 @@ func (s *WSBroadcastServer) Start(ctx context.Context) error {
 	logger.Info().Str("address", ln.Addr().String()).Msg("arbitrum websocket broadcast server is listening")
 
 	// Create netpoll descriptor for the listener.
-	// We use OneShot here to manually resume events stream when we want to.
+	// We use OneShot here to synchronously manage the rate that new connections are accepted
 	acceptDesc, err := netpoll.HandleListener(ln, netpoll.EventRead|netpoll.EventOneShot)
 	if err != nil {
 		logger.Error().Err(err).Msg("error calling HandleListener")
-		return err
+		return nil, err
 	}
 	s.acceptDesc = acceptDesc
 
-	// accept is a channel to signal about next incoming connection Accept()
-	// results.
-	accept := make(chan error, 1)
+	broadcasterErrChan := make(chan error, 10)
+	acceptErrChan := make(chan error, 10)
 
 	// Subscribe to events about listener.
 	err = s.poller.Start(acceptDesc, func(e netpoll.Event) {
+		select {
+		case <-ctx.Done():
+			broadcasterErrChan <- errors.New("broadcaster poller context done")
+			return
+		default:
+		}
 		// We do not want to accept incoming connection when goroutine pool is
 		// busy. So if there are no free goroutines during 1ms we want to
 		// cooldown the server and do not receive connection for some short
@@ -173,26 +180,24 @@ func (s *WSBroadcastServer) Start(ctx context.Context) error {
 		err := clientManager.pool.ScheduleTimeout(time.Millisecond, func() {
 			conn, err := ln.Accept()
 			if err != nil {
-				accept <- err
+				acceptErrChan <- err
 				return
 			}
 
-			accept <- nil
+			acceptErrChan <- nil
 			handle(conn)
 		})
 		if err == nil {
-			err = <-accept
+			err = <-acceptErrChan
 		}
 		if err != nil {
 			if err == gopool.ErrScheduleTimeout {
-				netError, ok := err.(net.Error)
-				if !ok || !netError.Temporary() {
-					logger.Error().Err(err).Msg("error in poller.Start")
-					return
-				}
+				var netError net.Error
+				isNetError := errors.As(err, &netError)
 				if strings.Contains(err.Error(), "file descriptor was not registered") {
-					logger.Info().Err(err).Msg("poller exiting")
-					return
+					logger.Error().Err(err).Msg("broadcast poller unable to register file descriptor")
+				} else if !isNetError || !netError.Timeout() {
+					logger.Error().Err(err).Msg("broadcast poller error")
 				}
 			}
 
@@ -205,15 +210,18 @@ func (s *WSBroadcastServer) Start(ctx context.Context) error {
 		err = s.poller.Resume(acceptDesc)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error in poller.Resume")
+			broadcasterErrChan <- err
+			return
 		}
 	})
 	if err != nil {
 		logger.Warn().Err(err).Msg("error in poller.Start")
+		return nil, err
 	}
 
 	s.started = true
 
-	return nil
+	return broadcasterErrChan, nil
 }
 
 func (s *WSBroadcastServer) Stop() {

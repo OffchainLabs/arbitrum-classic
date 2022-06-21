@@ -118,43 +118,43 @@ func (m *Monitor) StartInboxReader(
 	healthChan chan nodehealth.Log,
 	sequencerFeed chan broadcaster.BroadcastFeedMessage,
 	inboxReaderConfig configuration.InboxReader,
-) (*InboxReader, error) {
+) (*InboxReader, chan bool, error) {
 	rollup, err := ethbridge.NewRollupWatcher(rollupAddress.ToEthAddress(), fromBlock, ethClient, bind.CallOpts{})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	creationEvent, err := rollup.LookupCreation(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "error checking initial chain state")
+		return nil, nil, errors.Wrap(err, "error checking initial chain state")
 	}
 	initialExecutionCursor, err := m.Core.GetExecutionCursor(big.NewInt(0), true)
 	if err != nil {
-		return nil, errors.Wrap(err, "error loading initial ArbCore machine")
+		return nil, nil, errors.Wrap(err, "error loading initial ArbCore machine")
 	}
 	initialMachineHash := initialExecutionCursor.MachineHash()
 	if initialMachineHash != creationEvent.MachineHash {
-		return nil, errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(creationEvent.MachineHash[:]), initialMachineHash)
+		return nil, nil, errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(creationEvent.MachineHash[:]), initialMachineHash)
 	}
 
 	delayedBridgeAddress, err := rollup.DelayedBridge(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	delayedBridgeWatcher, err := ethbridge.NewDelayedBridgeWatcher(delayedBridgeAddress.ToEthAddress(), fromBlock, ethClient)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	sequencerAddress, err := rollup.SequencerBridge(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	sequencerInboxWatcher, err := ethbridge.NewSequencerInboxWatcher(sequencerAddress.ToEthAddress(), ethClient)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	bridgeUtils, err := ethbridge.NewBridgeUtils(bridgeUtilsAddress.ToEthAddress(), ethClient, delayedBridgeWatcher, sequencerInboxWatcher)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	reader, err := NewInboxReader(
 		ctx,
@@ -167,12 +167,12 @@ func (m *Monitor) StartInboxReader(
 		inboxReaderConfig,
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	reader.Start(ctx, inboxReaderConfig.DelayBlocks)
+	done := reader.Start(ctx, inboxReaderConfig.DelayBlocks)
 	m.Reader = reader
 	m.listenForSignal(ctx)
-	return reader, nil
+	return reader, done, nil
 }
 
 func (m *Monitor) listenForSignal(ctx context.Context) {

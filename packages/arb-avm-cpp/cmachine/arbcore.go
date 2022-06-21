@@ -83,7 +83,7 @@ func (ac *ArbCore) MessagesStatus() (core.MessageStatus, error) {
 	statusRaw := C.arbCoreMessagesStatus(ac.c)
 	status := core.MessageStatus(int(statusRaw))
 	if status == core.MessagesError {
-		cStr := C.arbCoreMessagesClearError(ac.c)
+		cStr := C.arbCoreMessagesGetError(ac.c)
 		defer C.free(unsafe.Pointer(cStr))
 		return core.MessagesError, errors.New(C.GoString(cStr))
 	}

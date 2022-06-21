@@ -86,6 +86,7 @@ type Core struct {
 	LazyLoadArchiveQueries     bool          `koanf:"lazy-load-archive-queries"`
 	MessageProcessCount        int           `koanf:"message-process-count"`
 	Test                       CoreTest      `koanf:"test"`
+	YieldInstructionCount      int           `koanf:"yield-instruction-count"`
 }
 
 type CoreCache struct {
@@ -125,6 +126,20 @@ type FeedOutput struct {
 	ClientTimeout time.Duration `koanf:"client-timeout"`
 	Queue         int           `koanf:"queue"`
 	Workers       int           `koanf:"workers"`
+	MaxSendQueue  int           `koanf:"max-send-queue"`
+}
+
+func DefaultFeedOutput() *FeedOutput {
+	return &FeedOutput{
+		Addr:          "0.0.0.0",
+		IOTimeout:     5 * time.Second,
+		Port:          "9642",
+		Ping:          5 * time.Second,
+		ClientTimeout: 15 * time.Second,
+		Queue:         1,
+		Workers:       128,
+		MaxSendQueue:  4096,
+	}
 }
 
 type Feed struct {
@@ -427,6 +442,7 @@ func DefaultCoreSettingsNoMaxExecution() *Core {
 		CheckpointMaxExecutionGas: 0,
 		CheckpointPruningMode:     "default",
 		MessageProcessCount:       10,
+		YieldInstructionCount:     1_000_000,
 	}
 }
 
@@ -445,6 +461,7 @@ func DefaultCoreSettingsMaxExecution() *Core {
 		CheckpointMaxExecutionGas: 1_000_000_000,
 		CheckpointPruningMode:     "default",
 		MessageProcessCount:       10,
+		YieldInstructionCount:     1_000_000,
 	}
 }
 
@@ -500,8 +517,7 @@ func ParseDBTool() (*Config, error) {
 	}
 
 	err = resolveDirectoryNames(out, wallet)
-
-	return out, nil
+	return out, err
 }
 
 func AddL1PostingStrategyOptions(f *flag.FlagSet, prefix string) {
@@ -833,10 +849,11 @@ func ParseRelay() (*Config, error) {
 func AddFeedOutputOptions(f *flag.FlagSet) {
 	f.String("feed.output.addr", "0.0.0.0", "address to bind the relay feed output to")
 	f.Duration("feed.output.io-timeout", 5*time.Second, "duration to wait before timing out HTTP to WS upgrade")
-	f.Int("feed.output.port", 9642, "port to bind the relay feed output to")
+	f.String("feed.output.port", "9642", "port to bind the relay feed output to")
 	f.Duration("feed.output.ping", 5*time.Second, "duration for ping interval")
-	f.Duration("feed.output.client-timeout", 15*time.Second, "duraction to wait before timing out connections to client")
+	f.Duration("feed.output.client-timeout", 15*time.Second, "duration to wait before timing out connections to client")
 	f.Int("feed.output.workers", 100, "Number of threads to reserve for HTTP to WS upgrade")
+	f.Int("feed.output.max-send-queue", 4096, "Maximum number of messages allowed to accumulate before client is disconnected")
 }
 
 func AddForwarderTarget(f *flag.FlagSet) {
@@ -886,6 +903,8 @@ func AddCore(f *flag.FlagSet, maxExecutionGas int) {
 	f.Int("core.test.reorg-to.message", 0, "reorg to snapshot with given message or before, zero to disable")
 	f.Bool("core.test.reset-all-except-inbox", false, "remove all database info except for inbox")
 	f.Int("core.test.run-until", 0, "run until gas is reached for profile test, zero to disable")
+
+	f.Int("core.yield-instruction-count", 50_000_000, "number of instructions to for core thread to run between calling yield")
 
 }
 
@@ -1095,7 +1114,9 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 			"wallet.local.password":                     "",
 			"wallet.local.private-key":                  "",
 		}, "."), nil)
-
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "unable overwrite wallet info in config")
+		}
 		c, err := k.Marshal(json.Parser())
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "unable to marshal config file to JSON")

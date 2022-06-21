@@ -64,6 +64,7 @@ void checkRun(Machine& mach, uint64_t gas_count_target = 27) {
     execConfig.max_gas = gas_count_target;
     mach.machine_state.context = AssertionContext(execConfig);
     auto assertion = mach.run();
+    REQUIRE(!mach.isAborted());
     REQUIRE(assertion.gas_count <= gas_count_target);
     auto val = mach.machine_state.stack.pop();
     REQUIRE(values_equal(val, Value{uint256_t{4}}));
@@ -114,6 +115,7 @@ TEST_CASE("Code serialization") {
         execConfig.max_gas = 7;
         mach2.machine_state.context = AssertionContext(execConfig);
         mach2.run();
+        REQUIRE(!mach2.isAborted());
         save_ret = saveTestMachine(*tx, mach2);
         REQUIRE(save_ret.status.ok());
 
