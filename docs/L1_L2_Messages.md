@@ -186,7 +186,7 @@ interface NodeInterface {
         * l2Block l2 block number at which sendTxToL1 call was made
         * l1Block l1 block number at which sendTxToL1 call was made
         * timestamp l2 Timestamp at which sendTxToL1 call was made
-        * amouunt value in L1 message in wei
+        * amount value in L1 message in wei
         * calldataForL1 abi-encoded L1 message data
         *
     */
