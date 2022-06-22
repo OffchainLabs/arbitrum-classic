@@ -12,7 +12,7 @@ The fundamental tradeoff between Rollup and AnyTrust is decentralization vs. tra
 
 The key changes from Rollup is in where and how the chain's data is stored.
 
-To add transactions to a Rollup chain, the transaction data must be posted on the L1 as calldata. This directly leverages the security assumptions of Ethereum itself to guarantee that the chain's data is available to any party, which, in turn, means anyone can activity validate the chain. This property, combined with the fact and any one honest validator can force correct execution of the chain, means that rollup chains are trustless.
+To add transactions to a Rollup chain, the transaction data must be posted on the L1 as calldata. This directly leverages the security assumptions of Ethereum itself to guarantee that the chain's data is available to any party, which, in turn, means anyone can actively validate the chain. This property, combined with the fact and any one honest validator can force correct execution of the chain, means that rollup chains are trustless.
 
 AnyTrust changes this in the following ways:
 
@@ -22,11 +22,11 @@ AnyTrust changes this in the following ways:
 
 For example, there might be 20 members of the committee, and an assumption that at least two of the 20 are honest.
 
-The core advantage of AnyTrust is that in the normal case transactions are much cheaper than Rollup.
+The core advantage of AnyTrust is that in the normal case, transactions are much cheaper than Rollup.
 
 **K-of-N honest**
 
-A useful shorthand is to talk about an AnyTrust chain as making, say, a 2-of-20 honest assumption. That means there is a committee of size 20 and security relies on at least 2 of the committee members being honest. In general, different AnyTrust chains could have their own different values of K and N.
+A useful shorthand is to talk about an AnyTrust chain as making, say, a 2-of-20 honest assumption. That means there is a committee of size 20 and security relies on at least 2 of the committee members being honest. In general, different AnyTrust chains could have different values of K and N.
 
 If K-of-N are honest, then it follows that anything that is vouched for by a “quorum” of N+1-K committee members must be correct. I.e., For 2-of-20, a quorum is any 19 of the 20 members, and anything that 19 members vouch more must be correct. The logic here is that there can’t be more than 18 dishonest committee members, so any quorum of 19 must have an honest party; if a quorum says that something is true, an honest party must be saying that thing is true, so that thing must be true.
 
