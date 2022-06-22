@@ -10,7 +10,7 @@ Here we will describe the mechanics of how any user can bypass the sequencer ent
 
 ## The Core Inbox
 
-When we talk about “submitting a transaction into an Arbitrum chain,” we’re talking about getting it included into the chain’s core Inbox, represented by the **inboxAccs** byte array in **SequencerInbox**. Once transactions are included in the core Inbox, they’re ordering is set in stone, their execution is fully deterministic, and we can trustlessly treat the resultant state as having L1-level finality (see [“Inside Arbitrum”](https://developer.offchainlabs.com/docs/inside_arbitrum#the-big-picture) for more). The Sequencer’s role (or lack thereof) concerns what happens prior; i.e., how a transaction makes its way into the core Inbox. We’ll break down the possible routes a transaction can take into two scenarios: a well-behaved sequencer, and a faulty sequencer. 
+When we talk about “submitting a transaction into an Arbitrum chain,” we’re talking about getting it included into the chain’s core Inbox, represented by the **inboxAccs** byte array in **SequencerInbox**. Once transactions are included in the core Inbox, their ordering is set in stone, execution is fully deterministic, and we can trustlessly treat the resultant state as having L1-level finality (see [“Inside Arbitrum”](https://developer.offchainlabs.com/docs/inside_arbitrum#the-big-picture) for more). The Sequencer’s role (or lack thereof) concerns what happens prior; i.e., how a transaction makes its way into the core Inbox. We’ll break down the possible routes a transaction can take into two scenarios: a well-behaved sequencer, and a faulty sequencer. 
 
 ## Happy/Common Case: Sequencer Is Live and Well-behaved
 
