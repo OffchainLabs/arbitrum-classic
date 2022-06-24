@@ -182,7 +182,7 @@ bool ArbCore::deliverMessages(
     std::vector<std::vector<unsigned char>> delayed_messages,
     const std::optional<uint256_t>& reorg_batch_items) {
     auto status = message_data_status.load();
-    if (status != MESSAGES_EMPTY) {
+    if (status != MESSAGES_EMPTY && status != MESSAGES_SUCCESS) {
         std::cerr << "unable to deliver messages, status: " << status
                   << std::endl;
         return false;
