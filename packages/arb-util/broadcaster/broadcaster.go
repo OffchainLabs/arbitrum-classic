@@ -18,6 +18,7 @@ package broadcaster
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/wsbroadcastserver"
@@ -27,10 +28,9 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
-	"github.com/rs/zerolog/log"
 )
 
-var logger = log.With().Caller().Str("component", "broadcaster").Logger()
+var logger = arblog.Logger.With().Str("component", "broadcaster").Logger()
 
 type Broadcaster struct {
 	server           *wsbroadcastserver.WSBroadcastServer
@@ -38,7 +38,7 @@ type Broadcaster struct {
 	prevConfirmedAcc common.Hash
 }
 
-func NewBroadcaster(settings configuration.FeedOutput) *Broadcaster {
+func NewBroadcaster(settings *configuration.FeedOutput) *Broadcaster {
 	catchupBuffer := NewConfirmedAccumulatorCatchupBuffer()
 	return &Broadcaster{
 		server:        wsbroadcastserver.NewWSBroadcastServer(settings, catchupBuffer),
@@ -50,7 +50,7 @@ func (b *Broadcaster) ClientCount() int32 {
 	return b.server.ClientCount()
 }
 
-func (b *Broadcaster) Start(ctx context.Context) error {
+func (b *Broadcaster) Start(ctx context.Context) (chan error, error) {
 	return b.server.Start(ctx)
 }
 

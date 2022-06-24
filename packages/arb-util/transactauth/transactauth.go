@@ -18,6 +18,7 @@ package transactauth
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
@@ -28,10 +29,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "transactauth").Logger()
+var logger = arblog.Logger.With().Str("component", "transactauth").Logger()
 
 type TransactAuth interface {
 	SendTransaction(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*arbtransaction.ArbTransaction, error)

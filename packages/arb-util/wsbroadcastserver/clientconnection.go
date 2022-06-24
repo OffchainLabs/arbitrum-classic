@@ -31,10 +31,6 @@ import (
 	"github.com/mailru/easygo/netpoll"
 )
 
-// MaxSendQueue is the maximum number of items in a clients out channel before client gets disconnected.
-// If set too low, a burst of items will cause all clients to be disconnected
-const MaxSendQueue = 1000
-
 // ClientConnection represents client connection.
 type ClientConnection struct {
 	ioMutex sync.Mutex
@@ -56,7 +52,7 @@ func NewClientConnection(conn net.Conn, desc *netpoll.Desc, clientManager *Clien
 		Name:          conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10)),
 		clientManager: clientManager,
 		lastHeardUnix: time.Now().Unix(),
-		out:           make(chan []byte, MaxSendQueue),
+		out:           make(chan []byte, clientManager.settings.MaxSendQueue),
 	}
 }
 
@@ -74,7 +70,7 @@ func (cc *ClientConnection) Start(parentCtx context.Context) {
 			case data := <-cc.out:
 				err := cc.writeRaw(data)
 				if err != nil {
-					logger.Error().Err(err).Str("client", cc.Name).Msg("error writing data to client")
+					logWarn(err, "error writing data to client")
 					cc.clientManager.Remove(cc)
 					for {
 						// Consume and ignore channel data until client properly stopped to prevent deadlock
@@ -122,7 +118,7 @@ func (cc *ClientConnection) readRequest(ctx context.Context, timeout time.Durati
 
 	atomic.StoreInt64(&cc.lastHeardUnix, time.Now().Unix())
 
-	return ReadData(ctx, cc.conn, timeout, ws.StateServerSide)
+	return ReadData(ctx, cc.conn, nil, timeout, ws.StateServerSide)
 }
 
 func (cc *ClientConnection) Write(x interface{}) error {

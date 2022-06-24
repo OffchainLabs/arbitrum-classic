@@ -18,14 +18,13 @@ package snapshot
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/rs/zerolog/log"
-
 	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/arbos"
@@ -38,7 +37,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "snapshot").Logger()
+var logger = arblog.Logger.With().Str("component", "snapshot").Logger()
 
 type Snapshot struct {
 	mach                  machine.Machine
@@ -110,7 +109,7 @@ func (s *Snapshot) MaxGasPriceBid() *big.Int {
 // If an error is returned, s is unmodified
 func (s *Snapshot) AddMessage(ctx context.Context, msg message.Message, sender common.Address, targetHash common.Hash) (*evm.TxResult, error) {
 	mach := s.mach.Clone()
-	res, err := s.addMessage(ctx, msg, sender, targetHash)
+	res, _, err := s.addMessage(ctx, msg, sender, targetHash, addMessageMaxAVMGas)
 	if err != nil {
 		// Revert the machine
 		s.mach = mach
@@ -118,23 +117,25 @@ func (s *Snapshot) AddMessage(ctx context.Context, msg message.Message, sender c
 	return res, err
 }
 
+const addMessageMaxAVMGas = 100000000000
+
 // addMessage can only be called if the snapshot is uniquely owned
 // leaves the machine in an undefined state on error
-func (s *Snapshot) addMessage(ctx context.Context, msg message.Message, sender common.Address, targetHash common.Hash) (*evm.TxResult, error) {
+func (s *Snapshot) addMessage(ctx context.Context, msg message.Message, sender common.Address, targetHash common.Hash, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
 	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, big.NewInt(0), chainTime)
-	res, _, err := runTxUnchecked(ctx, s.mach, inboxMsg, 100000000000)
+	res, debugPrints, err := runTxUnchecked(ctx, s.mach, inboxMsg, maxAVMGas)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if res.IncomingRequest.MessageID != targetHash {
-		return nil, errors.Errorf("call got unexpected result %v instead of %v", res.IncomingRequest.MessageID, targetHash)
+		return nil, nil, errors.Errorf("call got unexpected result %v instead of %v", res.IncomingRequest.MessageID, targetHash)
 	}
 	s.nextInboxSeqNum = new(big.Int).Add(s.nextInboxSeqNum, big.NewInt(1))
-	return res, nil
+	return res, debugPrints, nil
 }
 
 // AdvanceTime can only be called if the snapshot is uniquely owned
@@ -148,7 +149,7 @@ func (s *Snapshot) Clone() *Snapshot {
 		chainId = new(big.Int).Set(s.chainId)
 	}
 	return &Snapshot{
-		mach: s.mach,
+		mach: s.mach.Clone(),
 		time: inbox.ChainTime{
 			BlockNum:  s.time.BlockNum.Clone(),
 			Timestamp: new(big.Int).Set(s.time.Timestamp),
@@ -418,11 +419,19 @@ func (s *Snapshot) basicAddMessage(ctx context.Context, data []byte, dest common
 			Data:        data,
 		},
 	}
+	res, _, err := s.AddContractMessage(ctx, msg, common.Address{}, addMessageMaxAVMGas)
+	return res, err
+}
+
+func (s *Snapshot) AddContractMessage(ctx context.Context, msg message.ContractTransaction, sender common.Address, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
+	if s.arbosRemappingEnabled && sender != (common.Address{}) {
+		sender = message.L1RemapAccount(sender)
+	}
 	var targetHash common.Hash
 	if s.chainId != nil {
 		targetHash = hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
 	}
-	return s.addMessage(ctx, message.NewSafeL2Message(msg), common.Address{}, targetHash)
+	return s.addMessage(ctx, message.NewSafeL2Message(msg), sender, targetHash, maxAVMGas)
 }
 
 func (s *Snapshot) addArbosTestMessage(ctx context.Context, data []byte) error {

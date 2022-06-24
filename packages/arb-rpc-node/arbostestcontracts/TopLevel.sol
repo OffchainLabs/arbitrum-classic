@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity >=0.4.21 <0.7.0;
+pragma solidity >=0.4.21 <0.9.0;
 
 interface ArbSys {
     function isTopLevelCall() external view returns (bool);

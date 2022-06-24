@@ -41,13 +41,14 @@ import (
 )
 
 func TestL2ToL1Tx(t *testing.T) {
+	ctx := context.Background()
 	config := protocol.ChainParams{
 		GracePeriod:               common.NewTimeBlocksInt(3),
 		ArbGasSpeedLimitPerSecond: 2000000000000,
 	}
 
-	upgraderAuth, upgraderAccount := OwnerAuthPair(t, nil)
-	backend, db, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, upgraderAccount, nil)
+	upgraderAuth, upgraderAccount := OptsAddressPair(t, nil)
+	backend, db, srv, cancelDevNode := NewSimpleTestDevNode(t, config, upgraderAccount)
 	defer cancelDevNode()
 
 	client := web3.NewEthClient(srv, true)
@@ -74,12 +75,12 @@ func TestL2ToL1Tx(t *testing.T) {
 			},
 		}),
 	}
-	if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
+	if _, err := backend.AddInboxMessage(ctx, deposit, common.RandAddress()); err != nil {
 		t.Fatal(err)
 	}
 
 	if doUpgrade {
-		UpgradeTestDevNode(t, backend, srv, upgraderAuth)
+		UpgradeTestDevNode(t, ctx, backend, srv, upgraderAuth)
 	}
 
 	latest, err := backend.db.LatestBlock()
@@ -112,7 +113,7 @@ func TestL2ToL1Tx(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		arbRes, _, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
+		arbRes, _, _, err := backend.db.GetRequest(common.NewHashFromEth(tx.Hash()))
 		test.FailIfError(t, err)
 		if len(arbRes.ReturnData) != 32 {
 			t.Fatal("expected return data")

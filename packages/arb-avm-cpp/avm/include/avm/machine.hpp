@@ -27,6 +27,8 @@
 #include <memory>
 #include <vector>
 
+static constexpr uint32_t BASE_YIELD_INSTRUCTION_COUNT = 1'000'000;
+
 struct Assertion {
     uint64_t step_count;
     uint64_t gas_count;
@@ -45,6 +47,7 @@ class MachineExecutionConfig {
     std::deque<InboxMessage> sideloads;
     bool stop_on_sideload;
     bool stop_on_breakpoint;
+    std::optional<uint256_t> stop_after_log_count;
 
     MachineExecutionConfig();
 
@@ -78,15 +81,17 @@ class Machine {
         machine_state = std::move(machine.machine_state);
         return *this;
     }
-    ~Machine() = default;
+    virtual ~Machine() { abort(); };
 
     static Machine loadFromFile(const std::string& executable_filename) {
         return Machine{MachineState::loadFromFile(executable_filename)};
     }
 
-    void abort();
+    virtual void abort();
+    virtual bool isAborted();
 
-    Assertion run();
+    Assertion run(
+        uint32_t yield_instruction_count = BASE_YIELD_INSTRUCTION_COUNT);
 
     Status currentStatus() const { return machine_state.state; }
     uint256_t hash() const { return machine_state.hash(); }

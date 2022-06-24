@@ -1,5 +1,6 @@
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { ArbOwner__factory } from 'arb-ts/dist/lib/abi/factories/ArbOwner__factory'
+import { Contract } from 'ethers'
+import ArbOwnerAbi from './ArbOwner.json'
 import * as yargs from 'yargs'
 import * as upgrade from '../../arb-os/arb_os/upgrade.json'
 
@@ -20,10 +21,10 @@ async function updateArbOS(
   }
 
   console.log(`Upgrade split into ${batchedUpgrades.length} segments`)
-  const arbOwner = ArbOwner__factory.connect(
+  const arbOwner = new Contract(
     '0x000000000000000000000000000000000000006B',
-    wallet
-  )
+    ArbOwnerAbi
+  ).connect(wallet)
   await arbOwner.startCodeUpload()
   for (const batch of batchedUpgrades) {
     await arbOwner.continueCodeUpload(batch)

@@ -18,6 +18,7 @@ package monitor
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 	"os"
 	"os/signal"
@@ -25,9 +26,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
@@ -38,41 +36,69 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
+	"github.com/pkg/errors"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "monitor").Logger()
+var logger = arblog.Logger.With().Str("component", "monitor").Logger()
 
 type Monitor struct {
-	Storage machine.ArbStorage
-	Core    core.ArbCore
-	Reader  *InboxReader
+	Storage    machine.ArbStorage
+	Core       core.ArbCore
+	Reader     *InboxReader
+	CoreConfig *configuration.Core
 }
 
-func NewMonitor(dbDir string, contractFile string, coreConfig *configuration.Core) (*Monitor, error) {
+func NewInitializedMonitor(dbDir string, contractFile string, coreConfig *configuration.Core) (*Monitor, error) {
+	m, err := NewMonitor(dbDir, coreConfig)
+	if err != nil {
+		return nil, err
+	}
+	if err := m.Initialize(contractFile); err != nil {
+		return nil, err
+	}
+	if err := m.Start(); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func NewMonitor(dbDir string, coreConfig *configuration.Core) (*Monitor, error) {
 	storage, err := cmachine.NewArbStorage(dbDir, coreConfig)
 	if err != nil {
 		return nil, err
 	}
-
 	logger.Info().Str("directory", dbDir).Msg("database opened")
-
-	err = storage.Initialize(contractFile)
-	if err != nil {
-		return nil, err
-	}
-
-	logger.Info().Msg("storage initialized")
-
-	arbCore := storage.GetArbCore()
-	started := arbCore.StartThread()
-	if !started {
-		return nil, errors.New("error starting ArbCore thread")
-	}
-
 	return &Monitor{
-		Storage: storage,
-		Core:    arbCore,
+		Storage:    storage,
+		Core:       storage.GetArbCore(),
+		CoreConfig: coreConfig,
 	}, nil
+}
+
+func (m *Monitor) Initialize(contractFile string) error {
+	err := m.Storage.Initialize(contractFile)
+	if err != nil {
+		return err
+	}
+	logger.Info().Msg("storage initialized")
+	return nil
+}
+
+func (m *Monitor) ApplyConfig() error {
+	err := m.Storage.ApplyConfig()
+	if err != nil {
+		return err
+	}
+	logger.Info().Msg("storage initialized")
+	return nil
+}
+
+func (m *Monitor) Start() error {
+	started := m.Core.StartThread()
+	if !started {
+		return errors.New("error starting ArbCore thread")
+	}
+	return nil
 }
 
 func (m *Monitor) Close() {
@@ -92,43 +118,43 @@ func (m *Monitor) StartInboxReader(
 	healthChan chan nodehealth.Log,
 	sequencerFeed chan broadcaster.BroadcastFeedMessage,
 	inboxReaderConfig configuration.InboxReader,
-) (*InboxReader, error) {
+) (*InboxReader, chan bool, error) {
 	rollup, err := ethbridge.NewRollupWatcher(rollupAddress.ToEthAddress(), fromBlock, ethClient, bind.CallOpts{})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	creationEvent, err := rollup.LookupCreation(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "error checking initial chain state")
+		return nil, nil, errors.Wrap(err, "error checking initial chain state")
 	}
 	initialExecutionCursor, err := m.Core.GetExecutionCursor(big.NewInt(0), true)
 	if err != nil {
-		return nil, errors.Wrap(err, "error loading initial ArbCore machine")
+		return nil, nil, errors.Wrap(err, "error loading initial ArbCore machine")
 	}
 	initialMachineHash := initialExecutionCursor.MachineHash()
 	if initialMachineHash != creationEvent.MachineHash {
-		return nil, errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(creationEvent.MachineHash[:]), initialMachineHash)
+		return nil, nil, errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(creationEvent.MachineHash[:]), initialMachineHash)
 	}
 
 	delayedBridgeAddress, err := rollup.DelayedBridge(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	delayedBridgeWatcher, err := ethbridge.NewDelayedBridgeWatcher(delayedBridgeAddress.ToEthAddress(), fromBlock, ethClient)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	sequencerAddress, err := rollup.SequencerBridge(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	sequencerInboxWatcher, err := ethbridge.NewSequencerInboxWatcher(sequencerAddress.ToEthAddress(), ethClient)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	bridgeUtils, err := ethbridge.NewBridgeUtils(bridgeUtilsAddress.ToEthAddress(), ethClient, delayedBridgeWatcher, sequencerInboxWatcher)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	reader, err := NewInboxReader(
 		ctx,
@@ -141,12 +167,12 @@ func (m *Monitor) StartInboxReader(
 		inboxReaderConfig,
 	)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	reader.Start(ctx, inboxReaderConfig.DelayBlocks)
+	done := reader.Start(ctx, inboxReaderConfig.DelayBlocks)
 	m.Reader = reader
 	m.listenForSignal(ctx)
-	return reader, nil
+	return reader, done, nil
 }
 
 func (m *Monitor) listenForSignal(ctx context.Context) {

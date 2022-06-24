@@ -19,6 +19,7 @@ package cmachine
 import (
 	"math/big"
 	"os"
+	"runtime"
 	"testing"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -54,6 +55,7 @@ func TestExecutionCursor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer runtime.KeepAlive(cursor)
 	if !cursor.InboxAcc().Equals(common.Hash{}) {
 		t.Error("inbox acc isn't zero at beginning")
 	}

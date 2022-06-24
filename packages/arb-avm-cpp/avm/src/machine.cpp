@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <iostream>
+#include <thread>
 
 #include <avm/inboxmessage.hpp>
 #include <avm/machine.hpp>
@@ -68,20 +68,27 @@ void Machine::abort() {
     is_aborted = true;
 }
 
-Assertion Machine::run() {
+bool Machine::isAborted() {
+    return is_aborted.load();
+}
+
+Assertion Machine::run(uint32_t yield_instruction_count) {
     uint256_t start_steps = machine_state.output.total_steps;
     uint256_t start_gas = machine_state.output.arb_gas_used;
 
     bool has_gas_limit = machine_state.context.max_gas != 0;
     BlockReason block_reason = NotBlocked{};
     uint256_t initialConsumed = machine_state.getTotalMessagesRead();
-    uint32_t delayAbortCheckCounter = 0;
+    uint32_t delayAbortCheckCounter = yield_instruction_count;
     while (true) {
-        if (delayAbortCheckCounter >= 100) {
+        if (delayAbortCheckCounter >= yield_instruction_count) {
             if (is_aborted.load(std::memory_order_relaxed)) {
                 break;
             }
             delayAbortCheckCounter = 0;
+
+            // Allow other threads to run
+            std::this_thread::yield();
         }
         delayAbortCheckCounter++;
         if (has_gas_limit) {
@@ -99,10 +106,20 @@ Assertion Machine::run() {
             }
         }
 
+        if (machine_state.context.stop_after_log_count &&
+            machine_state.output.log_count >=
+                *machine_state.context.stop_after_log_count) {
+            break;
+        }
+
         block_reason = machine_state.runOne();
         if (!std::get_if<NotBlocked>(&block_reason)) {
             break;
         }
+    }
+    if (is_aborted.load(std::memory_order_relaxed)) {
+        machine_state.state = Status::Error;
+        return {};
     }
     std::optional<uint256_t> sideload_block_number;
     if (auto sideload_blocked = std::get_if<SideloadBlocked>(&block_reason)) {

@@ -72,9 +72,10 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 	cacheExpirationSeconds := int(coreConfig.Cache.TimedExpire.Seconds())
 	sleepMilliseconds := int(coreConfig.IdleSleep.Milliseconds())
 	databaseSaveIntervalSeconds := int(coreConfig.Database.SaveInterval.Seconds())
-	checkpointPruningAgeSeconds := int(coreConfig.CheckpointPruningAge.Seconds())
 	cConfig := C.CArbCoreConfig{
 		message_process_count:          C.int(coreConfig.MessageProcessCount),
+		add_messages_max_failure_count: C.int(coreConfig.AddMessagesMaxFailureCount),
+		thread_max_failure_count:       C.int(coreConfig.ThreadMaxFailureCount),
 		checkpoint_load_gas_cost:       C.int(coreConfig.CheckpointLoadGasCost),
 		checkpoint_load_gas_factor:     C.int(coreConfig.CheckpointLoadGasFactor),
 		checkpoint_max_execution_gas:   C.int(coreConfig.CheckpointMaxExecutionGas),
@@ -85,16 +86,17 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 		lru_cache_size:                 C.int(coreConfig.Cache.LRUSize),
 		cache_expiration_seconds:       C.int(cacheExpirationSeconds),
 		idle_sleep_milliseconds:        C.int(sleepMilliseconds),
+		yield_instruction_count:        C.int(coreConfig.YieldInstructionCount),
 		seed_cache_on_startup:          boolToCInt(coreConfig.Cache.SeedOnStartup),
 		debug:                          boolToCInt(coreConfig.Debug),
 		debug_timing:                   boolToCInt(coreConfig.DebugTiming),
 		lazy_load_core_machine:         boolToCInt(coreConfig.LazyLoadCoreMachine),
 		lazy_load_archive_queries:      boolToCInt(coreConfig.LazyLoadArchiveQueries),
 		checkpoint_prune_on_startup:    boolToCInt(coreConfig.CheckpointPruneOnStartup),
-		checkpoint_pruning_age_seconds: C.int(checkpointPruningAgeSeconds),
 		checkpoint_pruning_mode:        checkpointPruningMode,
 		checkpoint_max_to_prune:        C.int(coreConfig.CheckpointMaxToPrune),
 		database_compact:               boolToCInt(coreConfig.Database.Compact),
+		database_save_on_startup:       boolToCInt(coreConfig.Database.SaveOnStartup),
 		database_exit_after:            boolToCInt(coreConfig.Database.ExitAfter),
 		database_save_interval:         C.int(databaseSaveIntervalSeconds),
 		database_save_path:             cDatabaseSavePath,
@@ -124,6 +126,26 @@ func (s *ArbStorage) PrintDatabaseMetadata() {
 	C.printDatabaseMetadata(s.c)
 }
 
+func (s *ArbStorage) CleanupValidator() error {
+	defer runtime.KeepAlive(s)
+	success := C.cleanupValidator(s.c)
+
+	if success == 0 {
+		return errors.New("error cleaning up validator database")
+	}
+	return nil
+}
+
+func (s *ArbStorage) ApplyConfig() error {
+	defer runtime.KeepAlive(s)
+	success := C.applyArbStorageConfig(s.c)
+
+	if success == 0 {
+		return errors.New("aborting startup")
+	}
+	return nil
+}
+
 func (s *ArbStorage) Initialize(contractPath string) error {
 	defer runtime.KeepAlive(s)
 	cContractPath := C.CString(contractPath)
@@ -131,7 +153,7 @@ func (s *ArbStorage) Initialize(contractPath string) error {
 	success := C.initializeArbStorage(s.c, cContractPath)
 
 	if success == 0 {
-		return errors.Errorf("failed to initialize storage with mexe '%v', possibly corrupt database or incorrect L1 node?", contractPath)
+		return errors.New("aborting startup")
 	}
 	return nil
 }

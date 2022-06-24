@@ -2,13 +2,12 @@ package core
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 	"time"
-
-	"github.com/rs/zerolog/log"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "core").Logger()
+var logger = arblog.Logger.With().Str("component", "core").Logger()
 
 type LogReader struct {
 	consumer    LogConsumer
@@ -92,8 +91,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 				break
 			}
 
-			err = lr.cursor.LogsCursorCheckError(lr.cursorIndex)
-			if err != nil {
+			if err := lr.cursor.CheckError(); err != nil {
 				return err
 			}
 
@@ -151,7 +149,7 @@ func (lr *LogReader) getLogs(ctx context.Context) error {
 				}
 			}
 
-			err = lr.cursor.LogsCursorCheckError(lr.cursorIndex)
+			err = lr.cursor.CheckError()
 			if err != nil {
 				return err
 			}

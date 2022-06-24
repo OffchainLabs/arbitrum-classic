@@ -17,6 +17,7 @@
 package dev
 
 import (
+	"context"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -29,6 +30,7 @@ import (
 )
 
 func TestOutOfGas(t *testing.T) {
+	ctx := context.Background()
 	config := protocol.ChainParams{
 		GracePeriod:               common.NewTimeBlocksInt(3),
 		ArbGasSpeedLimitPerSecond: 2000000000000,
@@ -36,9 +38,9 @@ func TestOutOfGas(t *testing.T) {
 	senderKey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
 
-	upgraderAuth, upgraderAccount := OwnerAuthPair(t, nil)
+	upgraderAuth, upgraderAccount := OptsAddressPair(t, nil)
 
-	backend, _, srv, cancelDevNode := NewTestDevNode(t, *arbosfile, config, upgraderAccount, nil)
+	backend, _, srv, cancelDevNode := NewSimpleTestDevNode(t, config, upgraderAccount)
 	defer cancelDevNode()
 
 	auth, err := bind.NewKeyedTransactorWithChainID(senderKey, backend.chainID)
@@ -51,7 +53,7 @@ func TestOutOfGas(t *testing.T) {
 	test.FailIfError(t, err)
 
 	if doUpgrade {
-		UpgradeTestDevNode(t, backend, srv, upgraderAuth)
+		UpgradeTestDevNode(t, ctx, backend, srv, upgraderAuth)
 	}
 
 	tx, err := transfer.Receive(auth)
