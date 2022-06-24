@@ -36,6 +36,7 @@ type MessageStatus uint8
 
 const (
 	MessagesEmpty MessageStatus = iota
+	MessagesLoading
 	MessagesReady
 	MessagesSuccess
 	MessagesError
@@ -163,7 +164,7 @@ func waitForMessages(ctx context.Context, db ArbCoreInbox) (MessageStatus, error
 		if status == MessagesEmpty {
 			return 0, errors.New("should have messages")
 		}
-		if status != MessagesReady {
+		if status == MessagesSuccess {
 			break
 		}
 		duration := time.Since(start)

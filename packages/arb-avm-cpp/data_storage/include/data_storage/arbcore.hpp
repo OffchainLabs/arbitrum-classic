@@ -84,6 +84,7 @@ class ArbCore {
    public:
     typedef enum {
         MESSAGES_EMPTY,    // Out: Ready to receive messages
+        MESSAGES_LOADING,  // In:  Messages are being loading into vector
         MESSAGES_READY,    // In:  Messages in vector
         MESSAGES_SUCCESS,  // Out: Messages processed successfully
         MESSAGES_ERROR,    // Out: Error receiving messages
