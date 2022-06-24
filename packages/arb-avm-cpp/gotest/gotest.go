@@ -34,6 +34,9 @@ func OpCodeTestDir() (string, error) {
 
 func OpCodeTestFiles() ([]string, error) {
 	testCaseDir, err := OpCodeTestDir()
+	if err != nil {
+		return nil, err
+	}
 	files, err := ioutil.ReadDir(testCaseDir)
 	if err != nil {
 		return nil, err

@@ -18,15 +18,14 @@ package aggregator
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
-
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	ethcore "github.com/ethereum/go-ethereum/core"
@@ -35,16 +34,14 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/rpc"
-
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/machine"
 )
 
-var logger = log.With().Caller().Str("component", "aggregator").Logger()
+var logger = arblog.Logger.With().Str("component", "aggregator").Logger()
 
 type Server struct {
-	chain   common.Address
 	chainId *big.Int
 	batch   batcher.TransactionBatcher
 	db      *txdb.TxDB
@@ -54,12 +51,10 @@ type Server struct {
 // NewServer returns a new instance of the Server class
 func NewServer(
 	batch batcher.TransactionBatcher,
-	rollupAddress common.Address,
 	chainId *big.Int,
 	db *txdb.TxDB,
 ) *Server {
 	return &Server{
-		chain:   rollupAddress,
 		chainId: chainId,
 		batch:   batch,
 		db:      db,
@@ -104,9 +99,9 @@ func (m *Server) LatestBlockHeader() (*types.Header, error) {
 	return latest.Header, nil
 }
 
-// GetMessageResult returns the value output by the VM in response to the
+// GetRequestResult returns the value output by the VM in response to the
 // l2message with the given hash
-func (m *Server) GetRequestResult(requestId common.Hash) (*evm.TxResult, error) {
+func (m *Server) GetRequestResult(requestId common.Hash) (*evm.TxResult, core.InboxState, *big.Int, error) {
 	return m.db.GetRequest(requestId)
 }
 
@@ -119,10 +114,6 @@ func (m *Server) GetL2ToL1Proof(batchNumber *big.Int, index uint64) (*evm.Merkle
 		return nil, errors.New("batch doesn't exist")
 	}
 	return batch.GenerateProof(index)
-}
-
-func (m *Server) GetChainAddress() ethcommon.Address {
-	return m.chain.ToEthAddress()
 }
 
 func (m *Server) ChainId() *big.Int {
@@ -147,10 +138,10 @@ func (m *Server) GetMachineBlockResults(block *machine.BlockInfo) (*evm.BlockInf
 
 func (m *Server) GetTxInBlockAtIndexResults(res *machine.BlockInfo, index uint64) (*evm.TxResult, error) {
 	avmLog, err := core.GetZeroOrOneLog(m.db.Lookup, new(big.Int).SetUint64(res.InitialLogIndex()+index))
-	if err != nil || avmLog == nil {
+	if err != nil || avmLog.Value == nil {
 		return nil, err
 	}
-	evmRes, err := evm.NewTxResultFromValue(avmLog)
+	evmRes, err := evm.NewTxResultFromValue(avmLog.Value)
 	if err != nil {
 		return nil, err
 	}
@@ -160,21 +151,21 @@ func (m *Server) GetTxInBlockAtIndexResults(res *machine.BlockInfo, index uint64
 	return evmRes, nil
 }
 
-func (m *Server) GetSnapshot(blockHeight uint64) (*snapshot.Snapshot, error) {
-	return m.db.GetSnapshot(blockHeight)
+func (m *Server) GetSnapshot(ctx context.Context, blockHeight uint64) (*snapshot.Snapshot, error) {
+	return m.db.GetSnapshot(ctx, blockHeight)
 }
 
-func (m *Server) LatestSnapshot() (*snapshot.Snapshot, error) {
-	return m.db.LatestSnapshot()
+func (m *Server) LatestSnapshot(ctx context.Context) (*snapshot.Snapshot, error) {
+	return m.db.LatestSnapshot(ctx)
 }
 
-func (m *Server) PendingSnapshot() (*snapshot.Snapshot, error) {
-	pending, err := m.batch.PendingSnapshot()
+func (m *Server) PendingSnapshot(ctx context.Context) (*snapshot.Snapshot, error) {
+	pending, err := m.batch.PendingSnapshot(ctx)
 	if err != nil {
 		return nil, err
 	}
 	if pending == nil {
-		return m.LatestSnapshot()
+		return m.LatestSnapshot(ctx)
 	}
 	return pending, nil
 }
@@ -289,4 +280,8 @@ func (m *Server) SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription {
 
 func (m *Server) SubscribeBlockProcessingEvent(ch chan<- []*types.Log) event.Subscription {
 	return m.scope.Track(m.db.SubscribeBlockProcessingEvent(ch))
+}
+
+func (m *Server) GetLookup() core.ArbCoreLookup {
+	return m.db.Lookup
 }

@@ -84,7 +84,7 @@ void ec_recover(MachineState& m);
 void ec_add(MachineState& m);
 void ec_mul(MachineState& m);
 void ec_pairing(MachineState& m);
-uint64_t ec_pairing_variable_gas_cost(const MachineState& m);
+uint64_t ec_pairing_variable_gas_cost(MachineState& m);
 BlockReason breakpoint(MachineState&);
 void log(MachineState& m);
 void debug(MachineState& m);

@@ -17,10 +17,12 @@
 #ifndef tuple_hpp
 #define tuple_hpp
 
+#include <avm_values/buffer.hpp>
 #include <avm_values/codepointstub.hpp>
 #include <avm_values/exceptions.hpp>
 #include <avm_values/pool.hpp>
-#include <avm_values/value.hpp>
+#include <avm_values/unloadedvalue.hpp>
+#include <avm_values/valuetype.hpp>
 #include <utility>
 
 #include <memory>
@@ -28,6 +30,10 @@
 HashPreImage zeroPreimage();
 struct BasicValChecker;
 struct ValueBeingParsed;
+
+class Value;
+
+const static std::vector<Value> empty_value_vector;
 
 class Tuple {
    private:
@@ -37,13 +43,7 @@ class Tuple {
 
     void calculateHashPreImage() const;
 
-    void unsafe_set_element(uint64_t pos, value&& newval) {
-        if (pos >= tuple_size()) {
-            throw bad_tuple_index{};
-        }
-        tpl->data[pos] = std::move(newval);
-        tpl->deferredHashing = true;
-    }
+    void unsafe_set_element(uint64_t pos, Value&& newval);
 
     friend BasicValChecker;
     friend RawTuple;
@@ -56,43 +56,43 @@ class Tuple {
         return getHashPreImage().getSize();
     }
 
-    static Tuple createSizedTuple(const size_t size);
+    static Tuple createSizedTuple(size_t size);
 
-    static Tuple createTuple(std::vector<value> values);
+    static Tuple createTuple(std::vector<Value> values);
 
-    static Tuple createTuple(value val);
+    static Tuple createTuple(Value val);
 
-    Tuple(value val1, value val2);
+    Tuple(Value val1, Value val2);
 
-    Tuple(value val1, value val2, value val3);
+    Tuple(Value val1, Value val2, Value val3);
 
-    Tuple(value val1, value val2, value val3, value val4);
+    Tuple(Value val1, Value val2, Value val3, Value val4);
 
-    Tuple(value val1, value val2, value val3, value val4, value val5);
+    Tuple(Value val1, Value val2, Value val3, Value val4, Value val5);
 
-    Tuple(value val1,
-          value val2,
-          value val3,
-          value val4,
-          value val5,
-          value val6);
+    Tuple(Value val1,
+          Value val2,
+          Value val3,
+          Value val4,
+          Value val5,
+          Value val6);
 
-    Tuple(value val1,
-          value val2,
-          value val3,
-          value val4,
-          value val5,
-          value val6,
-          value val7);
+    Tuple(Value val1,
+          Value val2,
+          Value val3,
+          Value val4,
+          Value val5,
+          Value val6,
+          Value val7);
 
-    Tuple(value val1,
-          value val2,
-          value val3,
-          value val4,
-          value val5,
-          value val6,
-          value val7,
-          value val8);
+    Tuple(Value val1,
+          Value val2,
+          Value val3,
+          Value val4,
+          Value val5,
+          Value val6,
+          Value val7,
+          Value val8);
 
     [[nodiscard]] uint64_t tuple_size() const {
         if (tpl) {
@@ -102,37 +102,37 @@ class Tuple {
         }
     }
 
-    void set_element(const uint64_t pos, value newval) {
-        if (pos >= tuple_size()) {
-            throw bad_tuple_index{};
+    void set_element(const uint64_t pos, Value newval);
+
+    [[nodiscard]] Value get_element(const uint64_t pos) const;
+
+    [[nodiscard]] std::vector<Value>::const_iterator begin() const {
+        if (tpl == nullptr) {
+            return empty_value_vector.begin();
         }
-        std::shared_ptr<RawTuple> tmp =
-            TuplePool::get_impl().getResource(tuple_size());
-        for (uint64_t i = 0; i < tuple_size(); i++) {
-            if (i == pos) {
-                tmp->data.emplace_back(std::move(newval));
-            } else {
-                tmp->data.emplace_back(tpl->data[i]);
-            }
-        }
-        tpl = std::move(tmp);
+        return tpl->data.begin();
     }
 
-    [[nodiscard]] value get_element(const uint64_t pos) const {
-        if (pos >= tuple_size()) {
-            throw bad_tuple_index{};
+    [[nodiscard]] std::vector<Value>::const_iterator end() const {
+        if (tpl == nullptr) {
+            return empty_value_vector.end();
         }
-        return tpl->data[pos];
+        return tpl->data.end();
     }
 
-    [[nodiscard]] const value& get_element_unsafe(const uint64_t pos) const {
-        return tpl->data[pos];
+    [[nodiscard]] std::reverse_iterator<std::vector<Value>::const_iterator>
+    rbegin() const {
+        return std::reverse_iterator(end());
     }
 
-    [[nodiscard]] value& get_element_mutable_unsafe(const uint64_t pos) const {
-        tpl->deferredHashing = true;
-        return tpl->data[pos];
+    [[nodiscard]] std::reverse_iterator<std::vector<Value>::const_iterator>
+    rend() const {
+        return std::reverse_iterator(begin());
     }
+
+    [[nodiscard]] const Value& get_element_unsafe(const uint64_t pos) const;
+
+    [[nodiscard]] Value& get_element_mutable_unsafe(const uint64_t pos) const;
 
     [[nodiscard]] HashPreImage getHashPreImage() const {
         if (!tpl) {
@@ -162,5 +162,16 @@ inline bool operator!=(const Tuple& val1, const Tuple& val2) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Tuple& val);
+
+struct ValueTypeVisitor {
+    ValueTypes operator()(const uint256_t&) const { return NUM; }
+    ValueTypes operator()(const CodePointStub&) const { return CODEPT; }
+    ValueTypes operator()(const Tuple&) const { return TUPLE; }
+    ValueTypes operator()(const std::shared_ptr<HashPreImage>&) const {
+        return TUPLE;
+    }
+    ValueTypes operator()(const Buffer&) const { return BUFFER; }
+    ValueTypes operator()(const UnloadedValue& val) const { return val.type(); }
+};
 
 #endif /* tuple_hpp */

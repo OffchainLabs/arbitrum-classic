@@ -32,15 +32,14 @@
 std::string dbpath =
     boost::filesystem::current_path().generic_string() + "/machineDb";
 
-void checkGetTupleResult(const DbResult<value>& res,
+void checkGetTupleResult(const DbResult<Value>& res,
                          uint256_t expected_count,
                          uint256_t expected_hash) {
-    REQUIRE(std::holds_alternative<CountedData<value>>(res));
-    REQUIRE(
-        std::holds_alternative<Tuple>(std::get<CountedData<value>>(res).data));
-    REQUIRE(std::get<CountedData<value>>(res).reference_count ==
+    REQUIRE(std::holds_alternative<CountedData<Value>>(res));
+    REQUIRE(holds_alternative<Tuple>(std::get<CountedData<Value>>(res).data));
+    REQUIRE(std::get<CountedData<Value>>(res).reference_count ==
             expected_count);
-    REQUIRE(hash_value(std::get<CountedData<value>>(res).data) ==
+    REQUIRE(hash_value(std::get<CountedData<Value>>(res).data) ==
             expected_hash);
 }
 
@@ -49,13 +48,13 @@ void initializeDatastack(const ReadTransaction& transaction,
                          uint256_t expected_hash,
                          uint64_t expected_size) {
     ValueCache value_cache{1, 0};
-    auto results = ::getValue(transaction, tuple_hash, value_cache);
-    REQUIRE(std::holds_alternative<CountedData<value>>(results));
-    REQUIRE(std::holds_alternative<Tuple>(
-        std::get<CountedData<value>>(results).data));
+    auto results = ::getValue(transaction, tuple_hash, value_cache, false);
+    REQUIRE(std::holds_alternative<CountedData<Value>>(results));
+    REQUIRE(
+        holds_alternative<Tuple>(std::get<CountedData<Value>>(results).data));
 
     Datastack data_stack(
-        std::get<Tuple>(std::get<CountedData<value>>(results).data));
+        get<Tuple>(std::get<CountedData<Value>>(results).data));
 
     REQUIRE(data_stack.hash() == expected_hash);
     REQUIRE(data_stack.stacksize() == expected_size);
@@ -99,7 +98,7 @@ void saveAndGetDataStack(ReadWriteTransaction& transaction,
     transaction.commit();
 
     ValueCache value_cache{1, 0};
-    auto get_results = getValue(transaction, expected_hash, value_cache);
+    auto get_results = getValue(transaction, expected_hash, value_cache, false);
     checkGetTupleResult(get_results, 1, expected_hash);
 }
 
@@ -114,7 +113,7 @@ void saveTwiceAndGetDataStack(ReadWriteTransaction& transaction,
     transaction.commit();
 
     ValueCache value_cache{1, 0};
-    auto get_results = getValue(transaction, expected_hash, value_cache);
+    auto get_results = getValue(transaction, expected_hash, value_cache, false);
     checkGetTupleResult(get_results, 2, expected_hash);
 }
 

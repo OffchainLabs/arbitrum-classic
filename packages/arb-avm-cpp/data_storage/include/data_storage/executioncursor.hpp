@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,17 +27,22 @@
 #include <utility>
 
 class ExecutionCursor {
+   private:
+    std::atomic<bool> is_aborted{false};
+
    public:
     std::variant<MachineStateKeys, std::unique_ptr<Machine>> machine;
 
    public:
-    explicit ExecutionCursor(MachineStateKeys machine_)
-        : machine(std::move(machine_)) {}
+    explicit ExecutionCursor(MachineStateKeys machine_) : machine(machine_) {}
 
     explicit ExecutionCursor(std::unique_ptr<Machine> machine_)
         : machine(std::move(machine_)) {}
 
-    ~ExecutionCursor() = default;
+    ExecutionCursor(ExecutionCursor&& rhs) noexcept
+        : machine{std::move(rhs.machine)} {}
+
+    ~ExecutionCursor() { abort(); }
 
     ExecutionCursor(const ExecutionCursor& rhs)
         : machine(std::unique_ptr<Machine>(nullptr)) {
@@ -59,10 +64,41 @@ class ExecutionCursor {
         return *this;
     }
 
+    ExecutionCursor& operator=(ExecutionCursor&& rhs) noexcept {
+        machine = std::move(rhs.machine);
+        return *this;
+    }
+
     ExecutionCursor* clone();
+
+    void abort() {
+        if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
+            if (std::get<std::unique_ptr<Machine>>(machine) != nullptr) {
+                std::get<std::unique_ptr<Machine>>(machine)->abort();
+            }
+        }
+        is_aborted = true;
+    }
+
+    bool isAborted() {
+        if (is_aborted) {
+            // Ensure machine is properly stopped
+            abort();
+            return true;
+        }
+
+        if (std::holds_alternative<std::unique_ptr<Machine>>(machine) &&
+            (std::get<std::unique_ptr<Machine>>(machine) != nullptr)) {
+            return std::get<std::unique_ptr<Machine>>(machine)->isAborted();
+        }
+        return is_aborted;
+    }
 
     [[nodiscard]] std::optional<uint256_t> machineHash() const {
         if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
+            if (std::get<std::unique_ptr<Machine>>(machine) == nullptr) {
+                throw std::runtime_error("machine unique_ptr is null");
+            }
             return std::get<std::unique_ptr<Machine>>(machine)->hash();
         } else {
             return std::get<MachineStateKeys>(machine).machineHash();
@@ -71,6 +107,9 @@ class ExecutionCursor {
 
     [[nodiscard]] const MachineOutput& getOutput() const {
         if (std::holds_alternative<std::unique_ptr<Machine>>(machine)) {
+            if (std::get<std::unique_ptr<Machine>>(machine) == nullptr) {
+                throw std::runtime_error("machine unique_ptr is null");
+            }
             return std::get<std::unique_ptr<Machine>>(machine)
                 ->machine_state.output;
         } else {

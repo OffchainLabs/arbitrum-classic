@@ -29,15 +29,8 @@ import (
 func TestReceiveMessages(t *testing.T) {
 	ctx := context.Background()
 
-	settings := configuration.FeedOutput{
-		Addr:          "0.0.0.0",
-		IOTimeout:     2 * time.Second,
-		Port:          "9742",
-		Ping:          5 * time.Second,
-		ClientTimeout: 20 * time.Second,
-		Queue:         1,
-		Workers:       128,
-	}
+	settings := configuration.DefaultFeedOutput()
+	settings.Port = "9742"
 
 	messageCount := 1000
 	messageDelay := 0 * time.Millisecond
@@ -45,7 +38,7 @@ func TestReceiveMessages(t *testing.T) {
 
 	b := broadcaster.NewBroadcaster(settings)
 
-	err := b.Start(ctx)
+	_, err := b.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,19 +99,14 @@ func startMakeBroadcastClient(ctx context.Context, t *testing.T, index int, expe
 func TestServerClientDisconnect(t *testing.T) {
 	ctx := context.Background()
 
-	settings := configuration.FeedOutput{
-		Addr:          "0.0.0.0",
-		IOTimeout:     2 * time.Second,
-		Port:          "9743",
-		Ping:          1 * time.Second,
-		ClientTimeout: 2 * time.Second,
-		Queue:         1,
-		Workers:       128,
-	}
+	settings := configuration.DefaultFeedOutput()
+	settings.Port = "9743"
+	settings.Ping = 1 * time.Second
+	settings.ClientTimeout = 2 * time.Second
 
 	b := broadcaster.NewBroadcaster(settings)
 
-	err := b.Start(ctx)
+	_, err := b.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,19 +150,14 @@ func TestServerClientDisconnect(t *testing.T) {
 func TestBroadcastClientReconnectsOnServerDisconnect(t *testing.T) {
 	ctx := context.Background()
 
-	settings := configuration.FeedOutput{
-		Addr:          "0.0.0.0",
-		IOTimeout:     2 * time.Second,
-		Port:          "9743",
-		Ping:          50 * time.Second,
-		ClientTimeout: 150 * time.Second,
-		Queue:         1,
-		Workers:       128,
-	}
+	settings := configuration.DefaultFeedOutput()
+	settings.Port = "9743"
+	settings.Ping = 50 * time.Second
+	settings.ClientTimeout = 150 * time.Second
 
 	b1 := broadcaster.NewBroadcaster(settings)
 
-	err := b1.Start(ctx)
+	_, err := b1.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -200,19 +183,12 @@ func TestBroadcastClientReconnectsOnServerDisconnect(t *testing.T) {
 func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 	ctx := context.Background()
 
-	settings := configuration.FeedOutput{
-		Addr:          "0.0.0.0",
-		IOTimeout:     2 * time.Second,
-		Port:          "9842",
-		Ping:          5 * time.Second,
-		ClientTimeout: 15 * time.Second,
-		Queue:         1,
-		Workers:       128,
-	}
+	settings := configuration.DefaultFeedOutput()
+	settings.Port = "9842"
 
 	b := broadcaster.NewBroadcaster(settings)
 
-	err := b.Start(ctx)
+	_, err := b.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,6 +222,9 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 	// Confirmed Accumulator will also broadcast to the clients.
 	b.ConfirmedAccumulator(feedItem1.BatchItem.Accumulator) // remove the first message we generated
 
+	// Send next accumulator because only previous accumulator is sent to clients
+	b.ConfirmedAccumulator(feedItem2.BatchItem.Accumulator) // remove the first message we generated
+
 	updateTimeout := time.After(2 * time.Second)
 	for {
 		if b.MessageCacheCount() == 1 { // should have left the second message
@@ -259,7 +238,8 @@ func TestBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 		}
 	}
 
-	b.ConfirmedAccumulator(feedItem2.BatchItem.Accumulator) // remove the second message we generated
+	// Send second accumulator again so that the previously added accumulator is sent
+	b.ConfirmedAccumulator(feedItem2.BatchItem.Accumulator)
 
 	updateTimeout = time.After(2 * time.Second)
 	for {

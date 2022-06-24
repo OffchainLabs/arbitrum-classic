@@ -18,6 +18,7 @@ package transactauth
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
@@ -28,10 +29,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "transactauth").Logger()
+var logger = arblog.Logger.With().Str("component", "transactauth").Logger()
 
 type TransactAuth interface {
 	SendTransaction(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*arbtransaction.ArbTransaction, error)
@@ -119,15 +119,30 @@ func makeContractImpl(
 	// Actually send transaction
 	arbTx, err := t.SendTransaction(ctx, tx, "")
 	if err != nil {
-		logger.
+		ev := logger.
 			Error().
 			Err(err).
 			Str("nonce", auth.Nonce.String()).
 			Hex("sender", auth.From.Bytes()).
 			Hex("to", tx.To().Bytes()).
 			Hex("data", tx.Data()).
-			Str("nonce", auth.Nonce.String()).
-			Msg("unable to send transaction")
+			Str("nonce", auth.Nonce.String())
+		if tx.GasPrice() != nil {
+			ev = ev.Str("gasprice", tx.GasPrice().String())
+		} else {
+			ev = ev.Str("gasprice", "none")
+		}
+		if tx.GasTipCap() != nil {
+			ev = ev.Str("gastipcap", tx.GasTipCap().String())
+		} else {
+			ev = ev.Str("gastipcap", "none")
+		}
+		if tx.GasFeeCap() != nil {
+			ev = ev.Str("gasfeecap", tx.GasFeeCap().String())
+		} else {
+			ev = ev.Str("gasfeecap", "none")
+		}
+		ev.Msg("unable to send transaction")
 		return addr, nil, err
 	}
 

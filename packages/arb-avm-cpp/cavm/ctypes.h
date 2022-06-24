@@ -34,6 +34,16 @@ typedef struct {
 } ByteSliceResult;
 
 typedef struct {
+    ByteSlice slice;
+    int count;
+} ByteSliceCount;
+
+typedef struct ByteSliceCountResultStruct {
+    ByteSliceCount data;
+    int found;
+} ByteSliceCountResult;
+
+typedef struct {
     void* data;
     int count;
 } HashList;
@@ -74,19 +84,29 @@ typedef struct HashResultStruct {
 typedef struct {
     uint64_t inbox_messages_consumed;
     ByteSlice sends;
-    int sendCount;
+    int send_count;
     ByteSlice logs;
-    int logCount;
-    ByteSlice debugPrints;
-    int debugPrintCount;
-    uint64_t numSteps;
-    uint64_t numGas;
+    int log_count;
+    ByteSlice debug_prints;
+    int debug_print_count;
+    uint64_t num_steps;
+    uint64_t num_gas;
 } RawAssertion;
 
 typedef struct {
     void* machine;
     int slow_error;
 } CMachineResult;
+
+typedef struct {
+    void* execution_cursor;
+    int slow_error;
+} CExecutionCursorResult;
+
+typedef struct {
+    RawAssertion assertion;
+    int shutting_down;
+} RawAssertionResult;
 
 typedef void CAggregatorStore;
 typedef void CArbCore;

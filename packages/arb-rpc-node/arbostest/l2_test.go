@@ -1,5 +1,5 @@
 /*
- * Copyright 2020, Offchain Labs, Inc.
+ * Copyright 2020-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,9 @@
 package arbostest
 
 import (
+	"context"
 	"crypto/ecdsa"
+	"math"
 	"math/big"
 	"strings"
 	"testing"
@@ -107,6 +109,7 @@ func testBasicTx(t *testing.T, msg message.AbstractL2Message, msg2 message.Abstr
 }
 
 func TestCallTx(t *testing.T) {
+	ctx := context.Background()
 	tx := message.Call{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(10000000),
@@ -140,7 +143,7 @@ func TestCallTx(t *testing.T) {
 	// After call to contract, balance should still be 0
 	checkBalance(t, snap, tx2.DestAddress, big.NewInt(0))
 
-	callRes, _, err := snap.Call(message.ContractTransaction{
+	callRes, _, err := snap.Call(ctx, message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -148,13 +151,13 @@ func TestCallTx(t *testing.T) {
 			Payment:     big.NewInt(0),
 			Data:        hexutil.MustDecode("0xf8a8fd6d"),
 		},
-	}, common.Address{})
+	}, common.Address{}, math.MaxUint64)
 	failIfError(t, err)
 	if new(big.Int).SetBytes(callRes.ReturnData).Cmp(big.NewInt(7)) != 0 {
 		t.Errorf("Storage was updated %X", callRes.ReturnData)
 	}
 
-	call2Res, _, err := snap.Call(message.ContractTransaction{
+	call2Res, _, err := snap.Call(ctx, message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -162,13 +165,13 @@ func TestCallTx(t *testing.T) {
 			Payment:     big.NewInt(0),
 			Data:        hexutil.MustDecode("0xf8a8fd6d"),
 		},
-	}, common.Address{})
+	}, common.Address{}, math.MaxUint64)
 	failIfError(t, err)
 	if new(big.Int).SetBytes(call2Res.ReturnData).Cmp(big.NewInt(5)) != 0 {
 		t.Errorf("Storage was updated")
 	}
 
-	_, _, err = snap.Call(message.ContractTransaction{
+	_, _, err = snap.Call(ctx, message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -176,11 +179,12 @@ func TestCallTx(t *testing.T) {
 			Payment:     big.NewInt(0),
 			Data:        hexutil.MustDecode(arbostestcontracts.SimpleBin),
 		},
-	}, sender)
+	}, sender, math.MaxUint64)
 	failIfError(t, err)
 }
 
 func TestContractTx(t *testing.T) {
+	ctx := context.Background()
 	tx := message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(10000000),
@@ -212,7 +216,7 @@ func TestContractTx(t *testing.T) {
 	checkBalance(t, snap, tx.DestAddress, tx.Payment)
 	checkBalance(t, snap, tx2.DestAddress, tx2.Payment)
 
-	callRes, _, err := snap.Call(message.ContractTransaction{
+	callRes, _, err := snap.Call(ctx, message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -220,13 +224,13 @@ func TestContractTx(t *testing.T) {
 			Payment:     big.NewInt(0),
 			Data:        hexutil.MustDecode("0xf8a8fd6d"),
 		},
-	}, common.Address{})
+	}, common.Address{}, math.MaxUint64)
 	failIfError(t, err)
 	if new(big.Int).SetBytes(callRes.ReturnData).Cmp(big.NewInt(6)) != 0 {
 		t.Errorf("Storage wasn't updated %X", callRes.ReturnData)
 	}
 
-	callRes2, _, err := snap.Call(message.ContractTransaction{
+	callRes2, _, err := snap.Call(ctx, message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(100000000),
 			GasPriceBid: big.NewInt(0),
@@ -234,7 +238,7 @@ func TestContractTx(t *testing.T) {
 			Payment:     big.NewInt(0),
 			Data:        hexutil.MustDecode("0xf8a8fd6d"),
 		},
-	}, common.Address{})
+	}, common.Address{}, math.MaxUint64)
 	failIfError(t, err)
 	if new(big.Int).SetBytes(callRes2.ReturnData).Cmp(big.NewInt(8)) != 0 {
 		t.Errorf("Storage wasn't updated")

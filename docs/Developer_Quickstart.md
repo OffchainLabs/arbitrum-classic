@@ -52,7 +52,7 @@ truffle migrate --network arbitrum
 
 ### Use the dApp
 
-1. Install [Metamask](https://metamask.io/)
+1. Install [Metamask](https://metamask.io/) (See all supported wallets [here](https://portal.arbitrum.one/#wallets))
 
    > Once Metamask is installed, open it and select
    > `Import Account` and enter one of the following pre-funded private keys

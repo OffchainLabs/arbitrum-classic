@@ -23,7 +23,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/rs/zerolog"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -33,16 +33,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks/accounttype"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks/operationtype"
+	"github.com/pkg/errors"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "fireblocks").Logger()
+var logger = arblog.Logger.With().Str("component", "fireblocks").Logger()
 
 // Transaction status values
 const (
@@ -358,7 +358,7 @@ func New(fireblocksConfig configuration.WalletFireblocks) (*Fireblocks, error) {
 	}, nil
 }
 
-func (fb *Fireblocks) ListPendingTransactions() (*[]TransactionDetails, error) {
+func (fb *Fireblocks) ListPendingTransactions() ([]TransactionDetails, error) {
 	statusList := []string{
 		Submitted,
 		Queued,
@@ -374,7 +374,7 @@ func (fb *Fireblocks) ListPendingTransactions() (*[]TransactionDetails, error) {
 	return fb.ListTransactions(statusList)
 }
 
-func (fb *Fireblocks) ListTransactions(statusList []string) (*[]TransactionDetails, error) {
+func (fb *Fireblocks) ListTransactions(statusList []string) ([]TransactionDetails, error) {
 	values := url.Values{}
 	values.Set("sourceType", fb.sourceType.String())
 	values.Set("sourceId", fb.sourceId)
@@ -392,7 +392,7 @@ func (fb *Fireblocks) ListTransactions(statusList []string) (*[]TransactionDetai
 		return nil, errors.Wrap(err, "list transactions")
 	}
 
-	return &result, nil
+	return result, nil
 }
 
 func (fb *Fireblocks) ListVaultAccounts() (*[]VaultAccount, error) {

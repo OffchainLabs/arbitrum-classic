@@ -711,6 +711,7 @@ func checkEndpoint(config *configStruct, endpoint *string, port *string) healthc
 		if err != nil {
 			return err
 		}
+		defer res.Body.Close()
 		if res.StatusCode != config.successCode {
 			//The server is returning an unexpected status code
 			return errors.New("OpenEthereum not ready")

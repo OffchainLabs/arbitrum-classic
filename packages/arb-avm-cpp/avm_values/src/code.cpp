@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2020, Offchain Labs, Inc.
+ * Copyright 2022, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,3 +15,35 @@
  */
 
 #include <avm_values/code.hpp>
+
+void RunningCode::commitCodeToCore(
+    const std::map<uint64_t, uint64_t>& segment_counts,
+    const std::shared_ptr<CoreCode>& core_code) const {
+    const std::unique_lock<std::shared_mutex> lock(mutex);
+    // If our parent is an EphemeralBarrier, prune all the way down to the
+    // CoreCode
+    if (dynamic_cast<EphemeralBarrier*>(parent.get())) {
+        parent = core_code;
+    }
+    parent->commitCodeToCore(segment_counts, core_code);
+    auto root_segments = core_code->getRootSegments();
+    auto it = segment_counts.lower_bound(impl->first_segment);
+    auto end = segment_counts.lower_bound(impl->nextSegmentNum());
+    for (; it != end; ++it) {
+        auto segment = impl->getSegment(it->first);
+        if (segment == nullptr) {
+            continue;
+        }
+        auto inserted =
+            root_segments.segments->insert(std::make_pair(it->first, segment));
+        // Verify that the element didn't exist previously
+        assert(inserted.second);
+        if (!inserted.second) {
+            throw std::runtime_error(
+                "code segment id collision when filling in code");
+        }
+    }
+    if (impl->nextSegmentNum() > *root_segments.next_segment_num) {
+        *root_segments.next_segment_num = impl->nextSegmentNum();
+    }
+}

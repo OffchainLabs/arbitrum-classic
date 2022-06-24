@@ -45,7 +45,6 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/fireblocks"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 )
 
 type SequencerLockoutManager interface {
@@ -54,6 +53,7 @@ type SequencerLockoutManager interface {
 
 type txQueueItem struct {
 	tx         *types.Transaction
+	ctx        context.Context
 	resultChan chan error
 }
 
@@ -246,10 +246,10 @@ func shouldIncludeTxResult(txRes *evm.TxResult) bool {
 	return txRes.FeeStats.Paid.L2Computation.Cmp(big.NewInt(maxExcludeComputation)) > 0
 }
 
-func txLogsToResults(logs []value.Value) (map[common.Hash]*evm.TxResult, error) {
+func txLogsToResults(logs []core.ValueAndInbox) (map[common.Hash]*evm.TxResult, error) {
 	resMap := make(map[common.Hash]*evm.TxResult)
 	for _, log := range logs {
-		res, err := evm.NewResultFromValue(log)
+		res, err := evm.NewResultFromValue(log.Value)
 		if err != nil {
 			return nil, err
 		}
@@ -276,9 +276,18 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 	logger.Info().Str("hash", startTx.Hash().String()).Msg("got user tx")
 
 	startResultChan := make(chan error, 1)
-	b.txQueue <- txQueueItem{tx: startTx, resultChan: startResultChan}
+	b.txQueue <- txQueueItem{tx: startTx, resultChan: startResultChan, ctx: ctx}
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	defer b.inboxReader.MessageDeliveryMutex.Unlock()
+
+	start := time.Now()
+	debugTiming := b.config.Node.Sequencer.DebugTiming
+	if debugTiming {
+		logger.Info().Msg("acquired MessageDeliveryMutex")
+		defer (func() {
+			logger.Info().Str("elapsed", time.Since(start).String()).Msg("releasing MessageDeliveryMutex")
+		})()
+	}
 
 	if b.LockoutManager != nil && !b.LockoutManager.ShouldSequence() {
 		return errors.New("sequencer missing lockout")
@@ -300,9 +309,18 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		var batchDataSize int
 		seenOwnTx := false
 		emptiedQueue := true
+		txHashesSet := make(map[ethcommon.Hash]struct{})
 		// This pattern is safe as we acquired a lock so we are the exclusive reader
 		for len(b.txQueue) > 0 {
 			queueItem := <-b.txQueue
+			err = queueItem.ctx.Err()
+			if err != nil {
+				if queueItem.tx == startTx {
+					seenOwnTx = true
+				}
+				queueItem.resultChan <- err
+				continue
+			}
 			if batchDataSize+len(queueItem.tx.Data()) > maxTxDataSize {
 				// This batch would be too large to publish with this tx added.
 				// Put the tx back in the queue so it can be included later.
@@ -320,10 +338,17 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 			if queueItem.tx == startTx {
 				seenOwnTx = true
 			}
+			txHash := queueItem.tx.Hash()
+			_, txAlreadyInBatch := txHashesSet[txHash]
+			if txAlreadyInBatch {
+				queueItem.resultChan <- errors.New("already known")
+				continue
+			}
 			batchTxs = append(batchTxs, queueItem.tx)
 			resultChans = append(resultChans, queueItem.resultChan)
 			l2BatchContents = append(l2BatchContents, message.NewCompressedECDSAFromEth(queueItem.tx))
 			batchDataSize += len(queueItem.tx.Data())
+			txHashesSet[txHash] = struct{}{}
 		}
 		if !seenOwnTx && emptiedQueue && batchDataSize+len(startTx.Data()) <= maxTxDataSize {
 			// Another thread must have encountered an internal error attempting to process startTx
@@ -331,11 +356,16 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 			batchTxs = append(batchTxs, startTx)
 			resultChans = append(resultChans, startResultChan)
 			l2BatchContents = append(l2BatchContents, message.NewCompressedECDSAFromEth(startTx))
-			batchDataSize += len(startTx.Data())
 			seenOwnTx = true
+		}
+		if len(batchTxs) == 0 {
+			break
 		}
 		logger.Info().Int("count", len(l2BatchContents)).Msg("gather user txes")
 
+		if debugTiming {
+			logger.Info().Str("elapsed", time.Since(start).String()).Msg("preparing first sequencer message")
+		}
 		msgCount, err := b.db.GetMessageCount()
 		if err != nil {
 			return err
@@ -369,13 +399,21 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		}
 
 		txBatchItem := inbox.NewSequencerItem(totalDelayedCount, seqMsg, prevAcc)
-		err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{txBatchItem}, []inbox.DelayedMessage{}, nil)
+		if debugTiming {
+			logger.Info().Str("elapsed", time.Since(start).String()).Msg("before deliver messages")
+		}
+		err = core.DeliverMessagesAndWait(ctx, b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{txBatchItem}, []inbox.DelayedMessage{}, nil)
 		if err != nil {
 			return err
 		}
+		if debugTiming {
+			logger.Info().Str("elapsed", time.Since(start).String()).Msg("after deliver messages, before machine idle")
+		}
 		core.WaitForMachineIdle(b.db)
+		if debugTiming {
+			logger.Info().Str("elapsed", time.Since(start).String()).Msg("after machine idle")
+		}
 
-		var sequencedTxs []*types.Transaction
 		var sequencedBatchItems []inbox.SequencerBatchItem
 
 		newLogCount, err := b.db.GetLogCount()
@@ -403,7 +441,6 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 			}
 		}
 		if successCount == len(batchTxs) {
-			sequencedTxs = batchTxs
 			msgCount = new(big.Int).Add(msgCount, big.NewInt(1))
 			prevAcc = txBatchItem.Accumulator
 			sequencedBatchItems = append(sequencedBatchItems, txBatchItem)
@@ -413,12 +450,21 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 				c <- nil
 			}
 		} else {
+			if debugTiming {
+				logger.Info().Str("elapsed", time.Since(start).String()).Msg("reorging as tx failed")
+			}
 			// Reorg to before we processed the batch and re-process the messages individually
-			err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, nil, nil, msgCount)
+			err = core.DeliverMessagesAndWait(ctx, b.db, msgCount, prevAcc, nil, nil, msgCount)
 			if err != nil {
 				return err
 			}
+			if debugTiming {
+				logger.Info().Str("elapsed", time.Since(start).String()).Msg("after deliver reorg, before machine idle")
+			}
 			core.WaitForMachineIdle(b.db)
+			if debugTiming {
+				logger.Info().Str("elapsed", time.Since(start).String()).Msg("after reorg machine idle")
+			}
 			if successCount == 0 {
 				// All of the transactions failed
 				for i, c := range resultChans {
@@ -441,7 +487,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 				l2Message := message.NewSafeL2Message(batch)
 				seqMsg := message.NewInboxMessage(l2Message, b.fromAddress, new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime.Clone())
 				txBatchItem := inbox.NewSequencerItem(totalDelayedCount, seqMsg, prevAcc)
-				err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{txBatchItem}, []inbox.DelayedMessage{}, nil)
+				err = core.DeliverMessagesAndWait(ctx, b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{txBatchItem}, []inbox.DelayedMessage{}, nil)
 				if err != nil {
 					return err
 				}
@@ -460,7 +506,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 				}
 				txResult := newTxResults[txHash]
 				if !shouldIncludeTxResult(txResult) {
-					err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, nil, nil, msgCount)
+					err = core.DeliverMessagesAndWait(ctx, b.db, msgCount, prevAcc, nil, nil, msgCount)
 					if err != nil {
 						return err
 					}
@@ -470,11 +516,13 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 				msgCount = new(big.Int).Add(msgCount, big.NewInt(1))
 				prevAcc = txBatchItem.Accumulator
 				sequencedBatchItems = append(sequencedBatchItems, txBatchItem)
-				sequencedTxs = append(sequencedTxs, tx)
 				postingCostEstimate := gasCostPerMessage + gasCostPerMessageByte*len(seqMsg.Data)
 				atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(postingCostEstimate))
 				logCount = newLogCount
 				resultChans[i] <- nil
+			}
+			if debugTiming {
+				logger.Info().Str("elapsed", time.Since(start).String()).Msg("after individually processing txs")
 			}
 		}
 
@@ -488,7 +536,10 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 
 		newBlockBatchItem := inbox.NewSequencerItem(totalDelayedCount, newBlockMessage, prevAcc)
 		sequencedBatchItems = append(sequencedBatchItems, newBlockBatchItem)
-		err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{newBlockBatchItem}, []inbox.DelayedMessage{}, nil)
+		if debugTiming {
+			logger.Info().Str("elapsed", time.Since(start).String()).Msg("before deliver new block message")
+		}
+		err = core.DeliverMessagesAndWait(ctx, b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{newBlockBatchItem}, []inbox.DelayedMessage{}, nil)
 		if err != nil {
 			return err
 		}
@@ -501,7 +552,13 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 			}
 		}
 
+		if debugTiming {
+			logger.Info().Str("elapsed", time.Since(start).String()).Msg("after deliver new block message, before machine idle")
+		}
 		core.WaitForMachineIdle(b.db)
+		if debugTiming {
+			logger.Info().Str("elapsed", time.Since(start).String()).Msg("after final machine idle")
+		}
 
 		if seenOwnTx {
 			break
@@ -511,7 +568,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 	return <-startResultChan
 }
 
-func (b *SequencerBatcher) PendingSnapshot() (*snapshot.Snapshot, error) {
+func (b *SequencerBatcher) PendingSnapshot(_ context.Context) (*snapshot.Snapshot, error) {
 	// TODO: return latest machine state?
 	return nil, nil
 }
@@ -597,7 +654,7 @@ func (b *SequencerBatcher) deliverDelayedMessages(ctx context.Context, chainTime
 	)
 	endBlockBatchItem := inbox.NewSequencerItem(newDelayedCount, endOfBlockMessage, batchItem.Accumulator)
 	seqBatchItems := []inbox.SequencerBatchItem{batchItem, endBlockBatchItem}
-	err = core.DeliverMessagesAndWait(b.db, msgCount, prevAcc, seqBatchItems, []inbox.DelayedMessage{}, nil)
+	err = core.DeliverMessagesAndWait(ctx, b.db, msgCount, prevAcc, seqBatchItems, []inbox.DelayedMessage{}, nil)
 	if err != nil {
 		return false, err
 	}
@@ -836,16 +893,16 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 		doingReorg := b.consecutiveShouldReorgGaps >= 10
 
 		var msg string
-		var log *zerolog.Event
+		var partialLog *zerolog.Event
 		if doingReorg {
 			msg = "Exceeded max sequencer delay! Reorganizing to compensate..."
-			log = logger.Error()
+			partialLog = logger.Error()
 		} else {
 			msg = "Exceeded max sequencer delay! Waiting to see if this is consistent..."
-			log = logger.Warn()
+			partialLog = logger.Warn()
 		}
 
-		log.
+		partialLog.
 			Str("delayBlocks", delayBlocks.String()).
 			Str("delaySeconds", delaySeconds.String()).
 			Str("aheadBlocks", aheadBlocks.String()).
@@ -968,7 +1025,7 @@ func (b *SequencerBatcher) reorgAndModifySequencerMessages(ctx context.Context, 
 			item.Accumulator = common.Hash{}
 		}
 	}
-	err = core.DeliverMessagesAndWait(b.db, prevMsgCount, previousSeqBatchAcc, batchItems, []inbox.DelayedMessage{}, nil)
+	err = core.DeliverMessagesAndWait(ctx, b.db, prevMsgCount, previousSeqBatchAcc, batchItems, []inbox.DelayedMessage{}, nil)
 	if err != nil {
 		return err
 	}
@@ -1012,7 +1069,7 @@ func (b *SequencerBatcher) reorgOutHugeMsg(ctx context.Context, prevMsgCount *bi
 		item.LastSeqNum.Sub(item.LastSeqNum, big.NewInt(1))
 		item.Accumulator = common.Hash{}
 	}
-	err = core.DeliverMessagesAndWait(b.db, prevMsgCount, previousSeqBatchAcc, batchItems, []inbox.DelayedMessage{}, nil)
+	err = core.DeliverMessagesAndWait(ctx, b.db, prevMsgCount, previousSeqBatchAcc, batchItems, []inbox.DelayedMessage{}, nil)
 	if err != nil {
 		return err
 	}
@@ -1135,25 +1192,31 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 
 		// Maybe sequence delayed messages
 		sequencedDelayed := false
-		var dontPublishBlockNum *big.Int
 		if shouldSequence {
 			targetSequenceDelayed := new(big.Int).Add(b.lastSequencedDelayedAt, b.sequenceDelayedMessagesInterval)
 			if blockNum.Cmp(targetSequenceDelayed) >= 0 || creatingBatch {
 				sequencedDelayed, err = b.deliverDelayedMessages(ctx, chainTime, false)
 				if err != nil {
+					if common.IsFatalError(err) {
+						logger.Error().Err(err).Msg("aborting sequencer batcher")
+						break
+					}
+
 					logger.Error().Err(err).Msg("Error delivering delayed messages")
 					continue
 				}
 				b.lastSequencedDelayedAt = blockNum
 			}
-			targetUpdateTime := new(big.Int).Add(b.latestChainTime.BlockNum.AsInt(), b.updateTimestampInterval)
-			if blockNum.Cmp(targetUpdateTime) >= 0 || creatingBatch || sequencedDelayed {
-				b.inboxReader.MessageDeliveryMutex.Lock()
-				b.latestChainTime = chainTime
-				// Avoid inefficency of publishing something that just got put in this timestamp
-				dontPublishBlockNum = b.latestChainTime.BlockNum.AsInt()
-				b.inboxReader.MessageDeliveryMutex.Unlock()
-			}
+		}
+
+		var dontPublishBlockNum *big.Int
+		targetUpdateTime := new(big.Int).Add(b.latestChainTime.BlockNum.AsInt(), b.updateTimestampInterval)
+		if blockNum.Cmp(targetUpdateTime) >= 0 || creatingBatch || sequencedDelayed {
+			b.inboxReader.MessageDeliveryMutex.Lock()
+			b.latestChainTime = chainTime
+			// Avoid inefficency of publishing something that just got put in this timestamp
+			dontPublishBlockNum = b.latestChainTime.BlockNum.AsInt()
+			b.inboxReader.MessageDeliveryMutex.Unlock()
 		}
 
 		// Maybe create a batch
@@ -1179,6 +1242,11 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 			// Updates both prevMsgCount and nonce on success
 			complete, err := b.publishBatch(ctx, dontPublishBlockNum, prevMsgCount, nonce)
 			if err != nil {
+				if common.IsFatalError(err) {
+					logger.Error().Err(err).Msg("aborting sequencer batch thread")
+					break
+				}
+
 				logger.Error().Err(err).Msg("error creating batch")
 			} else if complete {
 				b.lastCreatedBatchAt = blockNum
