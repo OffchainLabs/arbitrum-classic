@@ -113,21 +113,7 @@ bool ArbCore::machineIdle() {
 }
 
 ArbCore::message_status_enum ArbCore::messagesStatus() {
-    auto current_status = message_data_status.load();
-    if (current_status == MESSAGES_SUCCESS) {
-        auto success = message_data_status.compare_exchange_strong(
-            current_status, MESSAGES_EMPTY);
-        if (!success) {
-            // Status was not updated because value changed, so return current
-            // value
-            current_status = message_data_status.load();
-        }
-    } else if (current_status == MESSAGES_EMPTY) {
-        // State was already cleared by previous check
-        return MESSAGES_SUCCESS;
-    }
-
-    return current_status;
+    return message_data_status.load();
 }
 
 std::string ArbCore::messagesGetError() {
@@ -194,8 +180,7 @@ bool ArbCore::deliverMessages(
     auto status_before = MESSAGES_ERROR;
     while (true) {
         status_before = message_data_status.load();
-        if (status_before != MESSAGES_EMPTY &&
-            status_before != MESSAGES_SUCCESS) {
+        if (status_before != MESSAGES_EMPTY) {
             std::cerr << "unable to deliver messages, status: " << status_before
                       << ", error count: " << error_count << std::endl;
         } else {
@@ -1601,7 +1586,7 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
             } else {
                 thread_data.add_messages_failure_count = 0;
                 machine_idle = false;
-                message_data_status.store(MESSAGES_SUCCESS);
+                message_data_status.store(MESSAGES_EMPTY);
                 if (add_status.data.has_value()) {
                     thread_data.next_checkpoint_gas =
                         add_status.data.value() +
