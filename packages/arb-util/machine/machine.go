@@ -1,5 +1,5 @@
 /*
- * Copyright 2019, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package machine
 
 import (
+	"context"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/protocol"
@@ -41,8 +42,8 @@ type Machine interface {
 	CurrentStatus() Status
 	IsBlocked(newMessages bool) BlockReason
 
-	ExecuteAssertion(maxGas uint64, goOverGas bool, messages []inbox.InboxMessage) (*protocol.ExecutionAssertion, []value.Value, uint64, error)
-	ExecuteAssertionAdvanced(maxGas uint64, goOverGas bool, messages []inbox.InboxMessage, sideloads []inbox.InboxMessage, stopOnSideload bool) (*protocol.ExecutionAssertion, []value.Value, uint64, error)
+	ExecuteAssertion(ctx context.Context, maxGas uint64, goOverGas bool, messages []inbox.InboxMessage) (*protocol.ExecutionAssertion, []value.Value, uint64, error)
+	ExecuteAssertionAdvanced(ctx context.Context, maxGas uint64, goOverGas bool, messages []inbox.InboxMessage, sideloads []inbox.InboxMessage, stopOnSideload bool, stopOnBreakpoint bool) (*protocol.ExecutionAssertion, []value.Value, uint64, error)
 
 	MarshalForProof() ([]byte, []byte, error)
 

@@ -17,6 +17,7 @@
 package arbostest
 
 import (
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -28,6 +29,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/arbostestcontracts"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/test"
 )
 
 func TestTrace(t *testing.T) {
@@ -66,36 +68,38 @@ func TestTrace(t *testing.T) {
 
 	checkConstructorResult(t, results[1], connAddress1)
 
-	debugPrints := debugPrintsLists[2]
-	trace, ok := debugPrints[2].(*evm.EVMTrace)
-	if !ok {
-		t.Fatal("expected trace")
+	for i, debugPrints := range debugPrintsLists[1:] {
+		trace, err := evm.GetTraceFromLogLines(debugPrints)
+		test.FailIfError(t, err)
+		t.Log("Trace", i, "of length", len(trace.Items))
+		topFrame, err := trace.FrameTree()
+		test.FailIfError(t, err)
+		fmt.Println("frame", topFrame)
+		depthCount := 0
+		for i, item := range trace.Items {
+			if _, ok := item.(*evm.CallTrace); ok {
+				depthCount++
+			}
+			if _, ok := item.(*evm.ReturnTrace); ok {
+				if depthCount == 0 {
+					t.Fatal("can only return from inside call")
+				}
+				depthCount--
+			}
+			if _, ok := item.(*evm.CreateTrace); ok {
+				if _, ok := trace.Items[i+1].(*evm.CallTrace); !ok {
+					t.Fatal("call must come after create")
+				}
+			}
+			if _, ok := item.(*evm.Create2Trace); ok {
+				if _, ok := trace.Items[i+1].(*evm.CallTrace); !ok {
+					t.Fatal("call must come after create2")
+				}
+			}
+		}
+		if depthCount != 0 {
+			t.Fatal("must end at depth 0")
+		}
 	}
-	t.Log(len(trace.Items))
 
-	depthCount := 0
-	for i, item := range trace.Items {
-		if _, ok := item.(*evm.CallTrace); ok {
-			depthCount++
-		}
-		if _, ok := item.(*evm.ReturnTrace); ok {
-			if depthCount == 0 {
-				t.Fatal("can only return from inside call")
-			}
-			depthCount--
-		}
-		if _, ok := item.(*evm.CreateTrace); ok {
-			if _, ok := trace.Items[i+1].(*evm.CallTrace); !ok {
-				t.Fatal("call must come after create")
-			}
-		}
-		if _, ok := item.(*evm.Create2Trace); ok {
-			if _, ok := trace.Items[i+1].(*evm.CallTrace); !ok {
-				t.Fatal("call must come after create2")
-			}
-		}
-	}
-	if depthCount != 0 {
-		t.Fatal("must end at depth 0")
-	}
 }

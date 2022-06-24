@@ -18,7 +18,6 @@ module.exports = {
   networks: {
     arbitrum: {
       url: 'https://rinkeby.arbitrum.io/rpc',
-      gasPrice: 0,
     },
   },
 }
@@ -58,7 +57,6 @@ To port an existing truffle configuration:
             )
           },
           network_id: '*',
-          gasPrice: 0,
         },
       },
     }
@@ -89,7 +87,6 @@ const wrapProvider = require('arb-ethers-web3-bridge').wrapProvider
             )
           },
           network_id: '*',
-          gasPrice: 0,
         },
       },
     }

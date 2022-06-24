@@ -37,48 +37,19 @@ int main(int argc, char* argv[]) {
     auto arbospath = std::string(argv[2]);
     ArbCoreConfig coreConfig{};
 
-    if (clearDb) {
-        {
-            ArbStorage storage{dbpath, coreConfig};
-            {
-                auto tx = storage.makeReadWriteTransaction();
-                saveNextSegmentID(*tx, 0);
-                auto s = tx->commit();
-                if (!s.ok()) {
-                    std::cerr << "Error overwriting segment: " << s.ToString()
-                              << std::endl;
-                    return -1;
-                }
-            }
-        }
-        {
-            DataStorage storage{dbpath};
-            auto s = storage.clearDBExceptInbox();
-            if (!s.ok()) {
-                std::cerr << "Error deleting columns: " << s.ToString()
-                          << std::endl;
-                return -1;
-            }
-            storage.closeDb();
-        }
-        {
-            ArbStorage storage{dbpath, coreConfig};
-            auto s = storage.initialize(arbospath);
-            if (!s.ok()) {
-                std::cerr << "Failed to get initialize storage" << s.ToString()
-                          << std::endl;
-                return -1;
-            }
-        }
-    }
+    coreConfig.test_reset_db_except_inbox = clearDb;
 
     std::cout << "Loading db\n";
     ArbStorage storage{dbpath, coreConfig};
     std::cout << "Initializing arbstorage\n";
-    auto status = storage.initialize(arbospath);
-    if (!status.ok()) {
-        std::cerr << "Failed to get initialize storage" << status.ToString()
-                  << std::endl;
+    auto result = storage.initialize(arbospath);
+    if (result.finished) {
+        // Nothing left to do
+        return 0;
+    }
+    if (!result.status.ok()) {
+        std::cerr << "Failed to get initialize storage"
+                  << result.status.ToString() << std::endl;
         return -1;
     }
     auto core = storage.getArbCore();

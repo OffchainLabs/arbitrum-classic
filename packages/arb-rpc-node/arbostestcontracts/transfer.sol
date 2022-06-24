@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity >=0.4.21 <0.7.0;
+pragma solidity >=0.4.21 <0.9.0;
 
 contract Transfer {
     event TestEvent(uint256 value);
@@ -33,5 +33,18 @@ contract Transfer {
 
     function send2(address payable wrapped) external {
         Transfer(wrapped).send();
+    }
+
+    function send3() external {
+        address(this).transfer(1);
+    }
+
+    function send4(uint256 gas) external {
+        address(this).call{ value: 1 }{ gas: gas }("");
+    }
+
+    function spin() external {
+        while (gasleft() > 0) {}
+        emit TestEvent(0);
     }
 }

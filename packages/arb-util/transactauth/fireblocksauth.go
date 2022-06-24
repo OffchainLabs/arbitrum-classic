@@ -91,20 +91,37 @@ func waitForPendingTransactions(
 	fb *fireblocks.Fireblocks,
 ) error {
 	for {
-		pendingTx, err := fb.ListPendingTransactions()
+		pendingTxRaw, err := fb.ListPendingTransactions()
 		if err != nil {
 			logger.Error().Err(err).Msg("error listing pending transactions")
 			return err
 		}
 
-		if len(*pendingTx) == 0 {
+		pendingTx := make([]fireblocks.TransactionDetails, 0, len(pendingTxRaw))
+		for _, details := range pendingTxRaw {
+			creationTime := time.Unix(details.CreatedAt, 0)
+			if time.Unix(details.CreatedAt, 0).Add(time.Hour * 48).After(time.Now()) {
+				// Tx is less than 48 hours old
+				pendingTx = append(pendingTx, details)
+			} else {
+				logger.
+					Info().
+					Str("id", details.Id).
+					Str("status", details.Status).
+					Str("destination", details.DestinationAddress).
+					Time("creationTime", creationTime).
+					Msg("ignoring old fireblocks transaction")
+			}
+		}
+
+		if len(pendingTx) == 0 {
 			logger.Info().Msg("no pending fireblocks transactions to take care of")
 			return nil
 		}
 
-		logger.Info().Int("count", len(*pendingTx)).Msg("pending fireblocks transactions need to be handled")
+		logger.Info().Int("count", len(pendingTx)).Msg("pending fireblocks transactions need to be handled")
 		failed := false
-		for _, details := range *pendingTx {
+		for _, details := range pendingTx {
 			if details.Status == fireblocks.Broadcasting {
 				logger.
 					Info().
@@ -177,8 +194,9 @@ func (ta *FireblocksTransactAuth) TransactionReceipt(ctx context.Context, tx *ar
 			Warn().
 			Err(err).
 			Str("hash", tx.Hash().String()).
+			Str("id", tx.Id()).
 			Msg("error getting fireblocks transaction for receipt")
-		return nil, errors.Wrapf(err, "error getting fireblocks transaction for receipt: %s", details.Status)
+		return nil, errors.Wrapf(err, "error getting fireblocks transaction for receipt")
 	}
 	if ta.fb.IsTransactionStatusFailed(details.Status) {
 		logger.
@@ -200,9 +218,13 @@ func (ta *FireblocksTransactAuth) NonceAt(ctx context.Context, account ethcommon
 }
 
 func (ta *FireblocksTransactAuth) SendTransaction(ctx context.Context, tx *types.Transaction, replaceTxByHash string) (*arbtransaction.ArbTransaction, error) {
+	var destinationId string
+	if tx.To() != nil {
+		destinationId = tx.To().Hex()
+	}
 	input := fireblocks.CreateTransactionInput{
 		DestinationType:     accounttype.OneTimeAddress,
-		DestinationId:       tx.To().Hex(),
+		DestinationId:       destinationId,
 		DestinationTag:      "",
 		AmountWei:           tx.Value(),
 		GasLimitWei:         big.NewInt(int64(tx.Gas())),
@@ -236,13 +258,17 @@ func (ta *FireblocksTransactAuth) SendTransaction(ctx context.Context, tx *types
 
 		details, err := ta.fb.GetTransaction(txResponse.Id)
 		if err != nil {
-			logger.
+			partial := logger.
 				Warn().
 				Err(err).
-				Hex("to", tx.To().Bytes()).
-				Str("id", txResponse.Id).
-				Str("status", details.Status).
-				Msg("error getting fireblocks transaction")
+				Str("id", txResponse.Id)
+
+			if tx.To() != nil {
+				partial.Hex("to", tx.To().Bytes())
+			}
+
+			partial.Msg("error getting fireblocks transaction")
+
 			return nil, errors.Wrapf(err, "error getting fireblocks transaction: %s", details.Status)
 		}
 

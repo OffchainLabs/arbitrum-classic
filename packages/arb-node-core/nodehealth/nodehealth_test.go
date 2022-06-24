@@ -84,7 +84,7 @@ func startTestingServerFail(testConfig *testConfigStruct) {
 	httpMux := http.NewServeMux()
 
 	//Readiness check that always fails
-	health.AddReadinessCheck("failing-check", func() error {
+	health.AddReadinessCheck("failing_check", func() error {
 		return fmt.Errorf("example failure")
 	})
 
@@ -99,7 +99,7 @@ func startTestingServerPass(testConfig *testConfigStruct) {
 	httpMux := http.NewServeMux()
 
 	//Readiness check that always fails
-	health.AddReadinessCheck("pass-check", func() error {
+	health.AddReadinessCheck("pass_check", func() error {
 		return nil
 	})
 
@@ -123,7 +123,10 @@ func setNodeHealthBaseConfig(healthChan chan Log) {
 func healthEndpointStatus(testConfig *testConfigStruct, mode string, healthChan chan Log) error {
 	function := "healthEndpointStatus: "
 	time.Sleep(testConfig.startUpSleepTime)
-	_, err := http.Get(testConfig.nodehealthAddress + testConfig.readinessEndpoint)
+	resp, err := http.Get(testConfig.nodehealthAddress + testConfig.readinessEndpoint)
+	if err == nil {
+		defer resp.Body.Close()
+	}
 	if mode == "unavailable" {
 		if err != nil {
 			if testConfig.verbose {
@@ -295,6 +298,7 @@ func getHealthcheckStatus(testConfig *testConfigStruct, healthChan chan Log) (ma
 
 	resp, err := http.Get(testConfig.nodehealthAddress + testConfig.readinessEndpoint + "?full=1")
 	if err == nil {
+		defer resp.Body.Close()
 		if testConfig.verbose {
 			fmt.Println(function + testConfig.passMessage)
 		}
@@ -343,11 +347,11 @@ func disablePrimaryCheckTest(testConfig *testConfigStruct, healthChan chan Log) 
 	if testConfig.verbose {
 		fmt.Println("Check if the response contains the primary healthcheck")
 	}
-	_, ok := respMap["primary-status"]
+	_, ok := respMap["primary_status"]
 	if ok {
 		return errors.New("Primary healthcheck still present after being disabled")
 	}
-	_, ok = respMap["openethereum-api-status"]
+	_, ok = respMap["openethereum_api_status"]
 	if !ok {
 		return errors.New("OpenEthereum healthcheck improperly disabled")
 	}
@@ -368,11 +372,11 @@ func retrieveVerifyOpenEthereumDisabled(testConfig *testConfigStruct, healthChan
 	if testConfig.verbose {
 		fmt.Println("Check if the response contains the OpenEthereum healthcheck")
 	}
-	_, ok := respMap["openethereum-api-status"]
+	_, ok := respMap["openethereum_api_status"]
 	if ok {
 		return errors.New("OpenEthereum healthcheck still present after being disabled")
 	}
-	_, ok = respMap["primary-status"]
+	_, ok = respMap["primary_status"]
 	if !ok {
 		return errors.New("Primary healthcheck improperly disabled")
 	}
@@ -433,11 +437,11 @@ func disableOpenEthereumPrimaryCheckTest(testConfig *testConfigStruct, healthCha
 	if testConfig.verbose {
 		fmt.Println("Check if the response contains the primary healthcheck")
 	}
-	_, ok := respMap["primary-status"]
+	_, ok := respMap["primary_status"]
 	if ok {
 		return errors.New("Primary healthcheck still present after being disabled")
 	}
-	_, ok = respMap["openethereum-api-status"]
+	_, ok = respMap["openethereum_api_status"]
 	if ok {
 		return errors.New("OpenEthereum healthcheck improperly disabled")
 	}
@@ -467,6 +471,7 @@ func disableMetricsTest(testConfig *testConfigStruct, healthChan chan Log) error
 		fmt.Println(err)
 		return err
 	}
+	defer res.Body.Close()
 	if res.StatusCode != 404 {
 		return errors.New("Prometheus metrics not properly disabled")
 	}
@@ -484,6 +489,7 @@ func testServerResponse(testConfig *testConfigStruct, mode string, healthChan ch
 		fmt.Println(err)
 		return err
 	}
+	defer res.Body.Close()
 	if mode == "ready" {
 		if res.StatusCode != testConfig.successfulStatus {
 			return errors.New(function + "Error - node not ready")

@@ -128,22 +128,6 @@ inline Uint64Result returnUint64Result(const ValueResult<uint64_t>& val) {
     return {val.data, true};
 }
 
-inline ByteSlice returnValueResult(const DbResult<value>& res) {
-    if (std::holds_alternative<rocksdb::Status>(res)) {
-        return {nullptr, 0};
-    }
-
-    std::vector<unsigned char> serialized_value;
-    marshal_value(std::get<CountedData<value>>(res).data, serialized_value);
-
-    auto value_data =
-        reinterpret_cast<unsigned char*>(malloc(serialized_value.size()));
-    std::copy(serialized_value.begin(), serialized_value.end(), value_data);
-
-    auto void_data = reinterpret_cast<void*>(value_data);
-    return {void_data, static_cast<int>(serialized_value.size())};
-}
-
 inline RawAssertion makeEmptyAssertion() {
     return {0, returnCharVector(std::vector<char>{}),
             0, returnCharVector(std::vector<char>{}),
@@ -154,7 +138,7 @@ inline RawAssertion makeEmptyAssertion() {
 
 inline Tuple getTuple(void* data) {
     auto charData = reinterpret_cast<const char*>(data);
-    return std::get<Tuple>(deserialize_value(charData));
+    return get<Tuple>(deserialize_value(charData));
 }
 
 inline std::vector<std::vector<unsigned char>> getInboxMessages(void* data) {

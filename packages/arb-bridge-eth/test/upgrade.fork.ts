@@ -1,8 +1,7 @@
-import { ethers, deployments, run, network } from 'hardhat'
-import { assert, expect } from 'chai'
-import { networks } from 'arb-ts/src/lib/networks'
+import { ethers, network } from 'hardhat'
+import { expect } from 'chai'
 import { CurrentDeployments } from 'arb-upgrades/types'
-import { writeFileSync, readFileSync, unlinkSync, existsSync } from 'fs'
+import { readFileSync } from 'fs'
 
 describe('Mainnet fork', () => {
   it('should upgrade rollup contract correctly', async function () {
@@ -98,10 +97,8 @@ describe('Mainnet fork', () => {
       .connect(ownerSigner)
       .upgrade(sequencerInbox.address, newSequencerInbox.address)
 
-    const externalCall = rollupDispatch.interface.encodeFunctionData(
-      'postUpgradeInit',
-      [newAdminFacet.address]
-    )
+    const externalCall =
+      rollupDispatch.interface.encodeFunctionData('postUpgradeInit')
 
     await proxyAdmin
       .connect(ownerSigner)
@@ -131,8 +128,8 @@ describe('Mainnet fork', () => {
     const newerAdminFacet = await NewAdminFacet.deploy()
     await newerAdminFacet.deployed()
 
-    await expect(
-      rollupDispatch.postUpgradeInit(newerAdminFacet.address)
-    ).to.be.revertedWith('NOT_FROM_ADMIN')
+    await expect(rollupDispatch.postUpgradeInit()).to.be.revertedWith(
+      'NOT_FROM_ADMIN'
+    )
   })
 })

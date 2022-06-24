@@ -30,48 +30,58 @@ struct SaveResults;
 class Transaction;
 
 SaveResults saveValueImpl(ReadWriteTransaction& transaction,
-                          const value& val,
+                          const Value& val,
                           std::map<uint64_t, uint64_t>& segment_counts);
 DeleteResults deleteValueImpl(ReadWriteTransaction& tx,
                               const uint256_t& value_hash,
                               std::map<uint64_t, uint64_t>& segment_counts);
-DbResult<value> getValueImpl(const ReadTransaction& tx,
+DbResult<Value> getValueImpl(const ReadTransaction& tx,
                              uint256_t value_hash,
                              std::set<uint64_t>& segment_ids,
-                             ValueCache& value_cache);
+                             ValueCache& value_cache,
+                             bool lazy_load);
 
-DbResult<value> getValue(const ReadTransaction& tx,
+DbResult<Value> getValue(const ReadTransaction& tx,
                          uint256_t value_hash,
-                         ValueCache& value_cache);
-SaveResults saveValue(ReadWriteTransaction& tx, const value& val);
+                         ValueCache& value_cache,
+                         bool lazy_load);
+SaveResults saveValue(ReadWriteTransaction& tx, const Value& val);
 DeleteResults deleteValue(ReadWriteTransaction& tx, uint256_t value_hash);
-
-struct ValueHash {
-    uint256_t hash;
-};
 
 struct ParsedBuffer {
     uint64_t depth;
     std::vector<uint256_t> nodes;
 };
 
-using ParsedTupVal =
-    std::variant<uint256_t, CodePointStub, Buffer, ValueHash, ParsedBuffer>;
+class ParsedTupValVector;
+using ParsedTupVal = std::variant<ParsedTupValVector,
+                                  uint256_t,
+                                  CodePointStub,
+                                  Buffer,
+                                  BigUnloadedValue,
+                                  ParsedBuffer>;
+
+class ParsedTupValVector : public std::vector<ParsedTupVal> {};
 
 using ParsedBufVal = std::variant<Buffer, ParsedBuffer>;
 
-using ParsedSerializedVal = std::variant<uint256_t,
+using ParsedSerializedVal = std::variant<std::vector<ParsedTupVal>,
+                                         uint256_t,
                                          CodePointStub,
                                          Buffer,
-                                         std::vector<ParsedTupVal>,
                                          ParsedBuffer>;
 
-DbResult<value> getValueRecord(const ReadTransaction& tx,
+bool shouldInlineValue(const Value& tuple,
+                       const std::vector<unsigned char>& seed);
+
+DbResult<Value> getValueRecord(const ReadTransaction& tx,
                                const ParsedSerializedVal& record,
                                std::set<uint64_t>& segment_ids,
-                               ValueCache& value_cache);
-ParsedSerializedVal parseRecord(std::vector<unsigned char>::const_iterator& it);
-std::vector<value> serializeValue(const value& val,
+                               ValueCache& value_cache,
+                               bool lazy_load);
+ParsedSerializedVal parseRecord(const char*& buf);
+std::vector<Value> serializeValue(const std::vector<unsigned char>& seed,
+                                  const Value& val,
                                   std::vector<unsigned char>& value_vector,
                                   std::map<uint64_t, uint64_t>& segment_counts);
 DeleteResults deleteValueRecord(ReadWriteTransaction& tx,

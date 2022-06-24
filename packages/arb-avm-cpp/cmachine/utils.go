@@ -65,6 +65,25 @@ func receiveByteSliceArray(sliceArray C.ByteSliceArray) [][]byte {
 	return slices
 }
 
+// Note: the slices field of the returned struct needs manually freed by C.free
+func bytesArrayToByteSliceArray(bytes [][]byte) C.struct_ByteSliceArrayStruct {
+	byteSlices := encodeByteSliceList(bytes)
+	sliceArrayData := C.malloc(C.size_t(C.sizeof_struct_ByteSliceStruct * len(byteSlices)))
+	sliceArray := (*[1 << 30]C.struct_ByteSliceStruct)(sliceArrayData)[:len(byteSlices):len(byteSlices)]
+	for i, data := range byteSlices {
+		sliceArray[i] = data
+	}
+	return C.struct_ByteSliceArrayStruct{slices: sliceArrayData, count: C.int(len(byteSlices))}
+}
+
+func freeByteSliceArray(sliceArray C.struct_ByteSliceArrayStruct) {
+	dataSlices := (*[1 << 30]C.struct_ByteSliceStruct)(unsafe.Pointer(sliceArray.slices))[:sliceArray.count:sliceArray.count]
+	for _, slice := range dataSlices {
+		C.free(slice.data)
+	}
+	C.free(sliceArray.slices)
+}
+
 func toByteSliceView(data []byte) C.ByteSlice {
 	return C.struct_ByteSliceStruct{data: C.CBytes(data), length: C.int(len(data))}
 }

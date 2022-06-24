@@ -1,16 +1,21 @@
-FROM debian:bullseye-slim
+### --------------------------------------------------------------------
+### Dockerfile
+### backend-base
+### --------------------------------------------------------------------
 
-RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && \
-    apt-get install -y curl git librocksdb-dev libgmp-dev sudo netcat-openbsd gcc g++ libjemalloc-dev && \
-    rm -rf /var/lib/apt/lists/* && \
-    curl https://dl.google.com/go/go1.15.2.linux-amd64.tar.gz --output go1.15.2.linux-amd64.tar.gz && \
-    tar -xf go1.15.2.linux-amd64.tar.gz && \
+FROM offchainlabs/cpp-base:0.6.1
+
+USER root
+WORKDIR /
+RUN export DEBIAN_FRONTEND=noninteractive && \
+    curl https://dl.google.com/go/go1.17.3.linux-amd64.tar.gz --output go1.17.3.linux-amd64.tar.gz && \
+    tar -xf go1.17.3.linux-amd64.tar.gz && \
     mv go /usr/local && \
-    useradd -ms /bin/bash user
+    rm *.tar.gz
+
 USER user
 WORKDIR /home/user/
-ENV PATH="/usr/local/go/bin:/home/user/go/bin:/home/user/bin:/home/user/.local/bin:/home/user/.yarn/bin:${PATH}"
-RUN export GOROOT=/usr/local/go && \
-    mkdir bin && curl -s https://codecov.io/bash > ~/bin/codecovbash && \
-    chmod +x /home/user/bin/codecovbash && \
-    go get gotest.tools/gotestsum
+ENV PATH="/home/user/go/bin:/home/user/bin:/home/user/.local/bin:/usr/local/go/bin:${PATH}" \
+    GOROOT=/usr/local/go
+RUN go install gotest.tools/gotestsum@v1.7.0 && \
+    go clean --modcache

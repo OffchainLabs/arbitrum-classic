@@ -4,6 +4,7 @@
 package arboscontracts
 
 import (
+	"errors"
 	"math/big"
 	"strings"
 
@@ -17,6 +18,7 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var (
+	_ = errors.New
 	_ = big.NewInt
 	_ = strings.NewReader
 	_ = ethereum.NotFound
@@ -26,20 +28,31 @@ var (
 	_ = event.NewSubscription
 )
 
+// ArbInfoMetaData contains all meta data concerning the ArbInfo contract.
+var ArbInfoMetaData = &bind.MetaData{
+	ABI: "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getBalance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getCode\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	Bin: "0x608060405234801561001057600080fd5b506101ba806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80637e105ce21461003b578063f8b2cb4f14610064575b600080fd5b61004e6100493660046100e9565b61008d565b60405161005b9190610119565b60405180910390f35b61007f6100723660046100e9565b6001600160a01b03163190565b60405190815260200161005b565b6060813b60008167ffffffffffffffff8111156100ac576100ac61016e565b6040519080825280601f01601f1916602001820160405280156100d6576020820181803683370190505b50905081600060208301863c9392505050565b6000602082840312156100fb57600080fd5b81356001600160a01b038116811461011257600080fd5b9392505050565b600060208083528351808285015260005b818110156101465785810183015185820160400152820161012a565b81811115610158576000604083870101525b50601f01601f1916929092016040019392505050565b634e487b7160e01b600052604160045260246000fdfea26469706673582212205f4f32f3428485229109817950665b5020c32f258ff8408368e677f22237dc2464736f6c634300080a0033",
+}
+
 // ArbInfoABI is the input ABI used to generate the binding from.
-const ArbInfoABI = "[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getBalance\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getCode\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+// Deprecated: Use ArbInfoMetaData.ABI instead.
+var ArbInfoABI = ArbInfoMetaData.ABI
 
 // ArbInfoBin is the compiled bytecode used for deploying new contracts.
-var ArbInfoBin = "0x608060405234801561001057600080fd5b50610211806100206000396000f3fe608060405234801561001057600080fd5b50600436106100365760003560e01c80637e105ce21461003b578063f8b2cb4f146100f8575b600080fd5b61007d6004803603602081101561005157600080fd5b81019080803573ffffffffffffffffffffffffffffffffffffffff169060200190929190505050610150565b6040518080602001828103825283818151815260200191508051906020019080838360005b838110156100bd5780820151818401526020810190506100a2565b50505050905090810190601f1680156100ea5780820380516001836020036101000a031916815260200191505b509250505060405180910390f35b61013a6004803603602081101561010e57600080fd5b81019080803573ffffffffffffffffffffffffffffffffffffffff1690602001909291905050506101ba565b6040518082815260200191505060405180910390f35b60606000823b905060608167ffffffffffffffff8111801561017157600080fd5b506040519080825280601f01601f1916602001820160405280156101a45781602001600182028036833780820191505090505b50905081600060208301863c8092505050919050565b60008173ffffffffffffffffffffffffffffffffffffffff1631905091905056fea2646970667358221220483b2c0267d18e9080bddafc2cd0a2c10afd08ba37b502e758136e701716883a64736f6c634300060b0033"
+// Deprecated: Use ArbInfoMetaData.Bin instead.
+var ArbInfoBin = ArbInfoMetaData.Bin
 
 // DeployArbInfo deploys a new Ethereum contract, binding an instance of ArbInfo to it.
 func DeployArbInfo(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *ArbInfo, error) {
-	parsed, err := abi.JSON(strings.NewReader(ArbInfoABI))
+	parsed, err := ArbInfoMetaData.GetAbi()
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
+	if parsed == nil {
+		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
+	}
 
-	address, tx, contract, err := bind.DeployContract(auth, parsed, common.FromHex(ArbInfoBin), backend)
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(ArbInfoBin), backend)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}

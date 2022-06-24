@@ -24,7 +24,7 @@
 
 TEST_CASE("Aggregator tests") {
     DBDeleter deleter;
-    auto storage = std::make_shared<DataStorage>(dbpath);
+    auto storage = std::make_shared<DataStorage>(dbpath, ArbCoreConfig{});
     auto store = std::make_unique<AggregatorStore>(storage);
 
     /* TODO

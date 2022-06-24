@@ -53,6 +53,7 @@ const (
 	ForbiddenSender           ResultType = 13
 	SequenceNumberTooLow      ResultType = 14
 	SequenceNumberTooHigh     ResultType = 15
+	ExecutionRanOutOfGas      ResultType = 16
 )
 
 func (r ResultType) String() string {
@@ -87,6 +88,8 @@ func (r ResultType) String() string {
 		return "SequenceNumberTooLow"
 	case SequenceNumberTooHigh:
 		return "SequenceNumberTooHigh"
+	case ExecutionRanOutOfGas:
+		return "ExecutionRanOutOfGas"
 	default:
 		return fmt.Sprintf("%v", int(r))
 	}
@@ -187,6 +190,8 @@ func HandleCallError(res *TxResult, ganacheMode bool) error {
 	} else if res.ResultCode == SequenceNumberTooHigh {
 		// Maintain error message backwards compatibility
 		return errors.New("invalid transaction nonce")
+	} else if res.ResultCode == ExecutionRanOutOfGas {
+		return errors.New("execution ran out of gas")
 	} else {
 		return errors.Errorf("execution reverted: error code %v", res.ResultCode)
 	}
@@ -267,6 +272,33 @@ func (r *TxResult) CalcGasUsed() *big.Int {
 	}
 }
 
+func (r *TxResult) IsContractCreation() bool {
+	if r.IncomingRequest.Kind == message.L2Type || r.IncomingRequest.Kind == message.EthDepositTxType {
+		msg, err := message.L2Message{Data: r.IncomingRequest.Data}.AbstractMessage()
+		if err == nil {
+			if msg, ok := msg.(message.AbstractTransaction); ok {
+				if msg.Destination() == (common.Address{}) {
+					if r.GasUsed.BitLen() > 0 {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
+func (r *TxResult) GetCreatedContractAddress() (ethcommon.Address, bool) {
+	contractAddress := ethcommon.Address{}
+	if len(r.ReturnData) == 32 {
+		copy(contractAddress[:], r.ReturnData[12:])
+		return contractAddress, true
+	} else {
+		logger.Warn().Str("txresult", r.String()).Msg("incorrect returndata size in ToEthReceipt")
+		return contractAddress, false
+	}
+}
+
 func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 	contractAddress := ethcommon.Address{}
 	if r.IncomingRequest.Kind == message.L2Type && r.ResultCode == ReturnCode {
@@ -284,7 +316,6 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 			}
 		}
 	}
-
 	status := uint64(0)
 	if r.ResultCode == ReturnCode {
 		status = 1

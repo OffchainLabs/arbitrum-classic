@@ -18,17 +18,19 @@
 #define pool_hpp
 
 #include <avm_values/tuplestub.hpp>
-#include <avm_values/value.hpp>
 
 #include <array>
+#include <atomic>
 #include <deque>
 #include <memory>
 #include <vector>
 
+class Value;
+
 struct RawTuple {
     HashPreImage cachedPreImage;
-    std::vector<value> data;
-    bool deferredHashing = true;
+    std::vector<Value> data;
+    std::atomic<bool> deferredHashing = true;
 
     RawTuple() : cachedPreImage({}, 0), deferredHashing(true) {}
     RawTuple(const RawTuple&) = delete;

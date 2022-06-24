@@ -42,11 +42,9 @@ Recall that the key features of Rollups is that they log all transaction data on
 
 ## Aggregating Transactions
 
-While users can submit their transactions to the inbox contract directly, they may elect to go through an aggregator, a node which collects transactions and submits them in batches to Ethereum.
+While users can submit their transactions to the inbox contract directly, they may elect to go through an aggregator, a node which collects transactions and submits them in batches to Ethereum; the primary, designated aggregator for an Arbitrum chain is called the chain's sequencer.
 
 There are two primary benefits to using aggregators. First, Ethereum transactions have a minimum cost that is significantly larger than a typical Arbitrum transaction. Submitting Arbitrum transactions individually will incur a sizable overhead. By submitting batches of Arbitrum transactions as a single Ethereum transaction, this minimum cost gets amortized over all transactions in the batch and substantially lowers gas costs. Second, transacting through an aggregator makes it possible for users to use the Rollup chain without the need to directly transact with or hold assets on Layer 1 Ethereum.
-
-To learn more about Arbitrum aggregators, click [here](https://developer.offchainlabs.com/docs/aggregator).
 
 ## Throughput
 

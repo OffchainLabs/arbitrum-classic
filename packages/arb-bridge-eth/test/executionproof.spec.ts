@@ -17,33 +17,36 @@
 /* eslint-env node, mocha */
 
 import { ethers } from 'hardhat'
-import { BigNumber, BigNumberish } from 'ethers'
-import { ContractTransaction } from '@ethersproject/contracts'
-import { TransactionReceipt } from '@ethersproject/providers'
+import { BigNumberish, BigNumber } from '@ethersproject/bignumber'
 import { BytesLike } from '@ethersproject/bytes'
-import { use, expect, assert } from 'chai'
-import { OneStepProofTester } from '../build/types/OneStepProofTester'
-import { IOneStepProof } from '../build/types/IOneStepProof'
-import { Bridge } from '../build/types/Bridge'
-import { SequencerInbox } from '../build/types/SequencerInbox'
+import { TransactionReceipt } from '@ethersproject/providers'
+import { expect, assert } from 'chai'
+import {
+  Bridge,
+  OneStepProof,
+  OneStepProof2,
+  OneStepProofHash,
+  OneStepProofTester,
+  SequencerInbox,
+} from '../build/types'
 import * as fs from 'fs'
 
 const { utils } = ethers
 
 interface ExecutionState {
-  MachineHash: BytesLike
-  InboxAcc: BytesLike
-  TotalMessagesRead: BigNumberish
-  TotalGasConsumed: BigNumberish
-  TotalSendCount: BigNumberish
-  TotalLogCount: BigNumberish
-  SendAcc: BytesLike
-  LogAcc: BytesLike
+  machineHash: BytesLike
+  inboxAcc: BytesLike
+  inboxCount: BigNumberish
+  gasUsed: BigNumberish
+  sendCount: BigNumberish
+  logCount: BigNumberish
+  sendAcc: BytesLike
+  logAcc: BytesLike
 }
 
 interface Assertion {
-  Before: ExecutionState
-  After: ExecutionState
+  beforeState: ExecutionState
+  afterState: ExecutionState
 }
 
 interface Proof {
@@ -53,7 +56,7 @@ interface Proof {
 }
 
 let ospTester: OneStepProofTester
-let executors: IOneStepProof[]
+let executors: (OneStepProof | OneStepProof2 | OneStepProofHash)[]
 let bridge: Bridge
 let sequencerInbox: SequencerInbox
 
@@ -76,15 +79,15 @@ describe('OneStepProof', function () {
     await ospTester.deployed()
 
     const OneStepProof = await ethers.getContractFactory('OneStepProof')
-    const osp1 = (await OneStepProof.deploy()) as IOneStepProof
+    const osp1 = await OneStepProof.deploy()
     await osp1.deployed()
 
     const OneStepProof2 = await ethers.getContractFactory('OneStepProof2')
-    const osp2 = (await OneStepProof2.deploy()) as IOneStepProof
+    const osp2 = await OneStepProof2.deploy()
     await osp2.deployed()
 
     const OneStepProofHash = await ethers.getContractFactory('OneStepProofHash')
-    const osp3 = (await OneStepProofHash.deploy()) as IOneStepProof
+    const osp3 = await OneStepProofHash.deploy()
     await osp3.deployed()
 
     executors = [osp1, osp2, osp3]
@@ -146,8 +149,11 @@ describe('OneStepProof', function () {
               executors[prover].address,
               sequencerInbox.address,
               bridge.address,
-              proof.Assertion.Before.TotalMessagesRead,
-              [proof.Assertion.Before.SendAcc, proof.Assertion.Before.LogAcc],
+              proof.Assertion.beforeState.inboxCount,
+              [
+                proof.Assertion.beforeState.sendAcc,
+                proof.Assertion.beforeState.logAcc,
+              ],
               proof.Proof,
               proof.BufferProof
             )
@@ -156,7 +162,7 @@ describe('OneStepProof', function () {
             receipts.push(receipt)
             opcodes.push(opcode)
           } catch (e) {
-            assert.fail(`Failed to generate proof ${opcode}, ${prover}`)
+            assert.fail(`Failed to generate proof ${opcode}, ${prover}: ${e}`)
           }
         }
       })
@@ -186,23 +192,25 @@ describe('OneStepProof', function () {
           }
           // console.log("opcode", opcode, fields)
           expect(parsedEv.args.fields[0], message).to.equal(
-            utils.hexlify(proof.Assertion.Before.MachineHash)
+            utils.hexlify(proof.Assertion.beforeState.machineHash)
           )
           expect(parsedEv.args.fields[1], message).to.equal(
-            utils.hexlify(proof.Assertion.After.MachineHash)
+            utils.hexlify(proof.Assertion.afterState.machineHash)
           )
           expect(parsedEv.args.fields[2], message).to.equal(
-            utils.hexlify(proof.Assertion.After.SendAcc)
+            utils.hexlify(proof.Assertion.afterState.sendAcc)
           )
           expect(parsedEv.args.fields[3], message).to.equal(
-            utils.hexlify(proof.Assertion.After.LogAcc)
+            utils.hexlify(proof.Assertion.afterState.logAcc)
           )
           expect(parsedEv.args.totalMessagesRead, message).to.equal(
-            BigNumber.from(proof.Assertion.After.TotalMessagesRead)
+            BigNumber.from(proof.Assertion.afterState.inboxCount).sub(
+              proof.Assertion.beforeState.inboxCount
+            )
           )
           expect(parsedEv.args.gas, message).to.equal(
-            BigNumber.from(proof.Assertion.After.TotalGasConsumed).sub(
-              proof.Assertion.Before.TotalGasConsumed
+            BigNumber.from(proof.Assertion.afterState.gasUsed).sub(
+              proof.Assertion.beforeState.gasUsed
             )
           )
         }

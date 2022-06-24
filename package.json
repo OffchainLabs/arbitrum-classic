@@ -13,11 +13,10 @@
   },
   "homepage": "https://offchainlabs.com/",
   "scripts": {
-    "audit:ci": "audit-ci -l -a 1748",
+    "audit:ci": "audit-ci -l -a 1006805 1006806 1006865 1006896 1006899",
     "install:deps": "./scripts/install-deps",
     "install:validator": "./scripts/install-validator",
-    "update:abi": "yarn go:generate && yarn workspace arb-ts update:abi",
-    "build": "yarn workspace arb-ts build",
+    "update:abi": "yarn go:generate",
     "docker:build:parity": "yarn workspace arb-bridge-eth docker:build:parity",
     "docker:build:ganache": "yarn workspace arb-bridge-eth docker:build:ganache",
     "run:local:geth": "yarn workspace arb-bridge-eth run:local:geth",
@@ -33,8 +32,7 @@
     "demo:initialize": "yarn workspace tools demo:initialize",
     "demo:deploy": "./scripts/arb_deploy.py local",
     "prod:initialize": "yarn workspace tools prod:initialize",
-    "deploy:validators": "./scripts/arb_deploy.py",
-    "sol_docs:generate": "python docs/sol_contract_docs/generate_docs.py"
+    "deploy:validators": "./scripts/arb_deploy.py"
   },
   "engines": {
     "node": ">= 8.0.0",
@@ -48,7 +46,6 @@
       "packages/arb-bridge-eth",
       "packages/tools",
       "packages/arb-bridge-peripherals",
-      "packages/arb-ts",
       "packages/arb-os/contracts",
       "packages/arb-upgrades"
     ],
@@ -63,13 +60,6 @@
     "eslint-plugin-mocha": "^9.0.0",
     "eslint-plugin-prettier": "^4.0.0",
     "prettier": "^2.3.2",
-    "prettier-plugin-solidity": "^1.0.0-beta.17",
-    "solidity-docgen": "^0.5.11"
-  },
-  "resolutions": {
-    "eth-sig-util/ethereumjs-abi": "^0.6.8-1",
-    "typechain/truffle-v4/truffle": "^4.0.0",
-    "typechain/truffle-v5/truffle": "^5.0.0",
-    "typechain/web3-v1/web3": "^1.0.0"
+    "prettier-plugin-solidity": "^1.0.0-beta.17"
   }
 }

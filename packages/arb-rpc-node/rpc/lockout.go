@@ -18,16 +18,13 @@ package rpc
 
 import (
 	"context"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
-
-	ethcore "github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
+	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/monitor"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
@@ -37,7 +34,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 )
 
-var logger = log.With().Caller().Stack().Str("component", "rpc").Logger()
+var logger = arblog.Logger.With().Str("component", "rpc").Logger()
 
 type LockoutBatcher struct {
 	// Mutex protects currentBatcher and lockoutExpiresAt
@@ -87,8 +84,8 @@ func SetupLockout(
 const ACCEPTABLE_SEQ_NUM_GAP int64 = 0
 const SEQUENCER_INIT_FATAL_ERROR_BACKOFF time.Duration = time.Minute * 5
 
-func (b *LockoutBatcher) getErrorBatcher(err error) *errorBatcher {
-	return &errorBatcher{
+func (b *LockoutBatcher) getErrorBatcher(err error) *ErrorBatcher {
+	return &ErrorBatcher{
 		err:        err,
 		aggregator: b.sequencerBatcher.Aggregator(),
 	}
@@ -172,7 +169,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 							select {
 							case <-ctx.Done():
 								return
-							case <-time.After(5 * time.Second):
+							case <-time.After(1 * time.Second):
 							}
 						}
 						if currentSeqNum.Cmp(targetSeqNum) >= 0 {
@@ -183,7 +180,7 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 								Msg("caught up to previous sequencer position")
 							break
 						}
-						if attemptCatchupUntil.After(time.Now()) {
+						if time.Now().After(attemptCatchupUntil) {
 							msg := "failed to catch up to previous sequencer position"
 							logger.
 								Warn().
@@ -193,7 +190,11 @@ func (b *LockoutBatcher) lockoutManager(ctx context.Context) {
 							fatalError = errors.New(msg)
 							break
 						}
-						time.Sleep(500 * time.Millisecond)
+						select {
+						case <-ctx.Done():
+							return
+						case <-time.After(100 * time.Millisecond):
+						}
 					}
 					if fatalError == nil && b.hasSequencerLockout() {
 						err := b.sequencerBatcher.SequenceDelayedMessages(ctx, true)
@@ -317,12 +318,8 @@ func (b *LockoutBatcher) SendTransaction(ctx context.Context, tx *types.Transact
 	return b.getBatcher().SendTransaction(ctx, tx)
 }
 
-func (b *LockoutBatcher) PendingSnapshot() (*snapshot.Snapshot, error) {
-	return b.getBatcher().PendingSnapshot()
-}
-
-func (b *LockoutBatcher) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) event.Subscription {
-	return b.sequencerBatcher.SubscribeNewTxsEvent(ch)
+func (b *LockoutBatcher) PendingSnapshot(ctx context.Context) (*snapshot.Snapshot, error) {
+	return b.getBatcher().PendingSnapshot(ctx)
 }
 
 func (b *LockoutBatcher) Aggregator() *common.Address {
@@ -333,30 +330,26 @@ func (b *LockoutBatcher) Start(ctx context.Context) {
 	b.sequencerBatcher.Start(ctx)
 }
 
-type errorBatcher struct {
+type ErrorBatcher struct {
 	err        error
 	aggregator *common.Address
 }
 
-func (b *errorBatcher) PendingTransactionCount(ctx context.Context, account common.Address) (*uint64, error) {
+func (b *ErrorBatcher) PendingTransactionCount(_ context.Context, _ common.Address) (*uint64, error) {
 	return nil, b.err
 }
 
-func (b *errorBatcher) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+func (b *ErrorBatcher) SendTransaction(_ context.Context, _ *types.Transaction) error {
 	return b.err
 }
 
-func (b *errorBatcher) PendingSnapshot() (*snapshot.Snapshot, error) {
+func (b *ErrorBatcher) PendingSnapshot(_ context.Context) (*snapshot.Snapshot, error) {
 	return nil, b.err
 }
 
-func (b *errorBatcher) SubscribeNewTxsEvent(ch chan<- ethcore.NewTxsEvent) event.Subscription {
-	return nil
-}
-
-func (b *errorBatcher) Aggregator() *common.Address {
+func (b *ErrorBatcher) Aggregator() *common.Address {
 	return b.aggregator
 }
 
-func (b *errorBatcher) Start(ctx context.Context) {
+func (b *ErrorBatcher) Start(_ context.Context) {
 }

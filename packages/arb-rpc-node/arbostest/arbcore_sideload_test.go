@@ -65,7 +65,7 @@ package arbostest
 //	}
 //
 //	// ArbCore should look back to find the last previous sideload
-//	sideloadMachine, err := arbCore.GetMachineForSideload(5)
+//	sideloadMachine, err := arbCore.GetMachineAtBlock(5)
 //	test.FailIfError(t, err)
 //
 //	precompileAddress := ethcommon.BytesToAddress([]byte{precompileNum})
