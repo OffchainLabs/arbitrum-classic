@@ -29,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/message"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
@@ -203,7 +202,7 @@ func newBatcher(
 				server.Lock()
 				if server.pendingSentBatches.Len() > 0 {
 					if err := server.checkForNextBatch(ctx, receiptFetcher); err != nil {
-						log.Error().Err(err).Msg("error checking for submitted batch")
+						logger.Error().Err(err).Msg("error checking for submitted batch")
 					}
 				}
 				server.Unlock()
@@ -233,7 +232,6 @@ func (m *Batcher) maybeSubmitBatch(ctx context.Context, maxBatchTime time.Durati
 	if !full && !(len(txes) > 0 && !moreTxesWaiting && time.Since(lastBatch) > maxBatchTime) {
 		return false, nil
 	}
-	lastBatch = time.Now()
 	batchTxes := make([]message.AbstractL2Message, 0, len(txes))
 	for _, tx := range txes {
 		batchTxes = append(batchTxes, message.NewCompressedECDSAFromEth(tx))

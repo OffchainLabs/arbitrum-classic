@@ -60,7 +60,7 @@ func (c CallType) RPCString() string {
 	case Call:
 		return "call"
 	case CallCode:
-		return "callCode"
+		return "callcode"
 	case DelegateCall:
 		return "delegatecall"
 	case StaticCall:
@@ -529,6 +529,21 @@ func (e *EVMTrace) FrameTree() (Frame, error) {
 				},
 			})
 		case *CallTrace:
+			if item.Type == DelegateCall {
+				var from *common.Address
+				for i := 0; i < len(frames); i++ {
+					prevFrame := frames[len(frames)-1-i]
+					prevCall := prevFrame.GetCallFrame().Call
+					if prevCall.Type != DelegateCall && prevCall.Type != CallCode {
+						from = prevCall.To
+						break
+					}
+				}
+				if from == nil {
+					return nil, errors.New("expected to find non-delegatecall or callcode in call tree")
+				}
+				item.From = *from
+			}
 			frames = append(frames, &CallFrame{
 				Call: item,
 			})

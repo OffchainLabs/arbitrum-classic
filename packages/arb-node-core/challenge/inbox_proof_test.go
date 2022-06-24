@@ -25,6 +25,7 @@ import (
 )
 
 func TestInboxProof(t *testing.T) {
+	ctx := context.Background()
 	testDir, err := gotest.OpCodeTestDir()
 	test.FailIfError(t, err)
 	mexe := filepath.Join(testDir, "inbox.mexe")
@@ -152,10 +153,19 @@ func TestInboxProof(t *testing.T) {
 	test.FailIfError(t, err)
 	client.Commit()
 
-	err = core.DeliverMessagesAndWait(arbCore.Core, big.NewInt(0), common.Hash{}, []inbox.SequencerBatchItem{delayedItem1, endBlockBatchItem1}, []inbox.DelayedMessage{delayed1}, nil)
+	err = core.DeliverMessagesAndWait(
+		ctx,
+		arbCore.Core,
+		big.NewInt(0),
+		common.Hash{},
+		[]inbox.SequencerBatchItem{delayedItem1, endBlockBatchItem1},
+		[]inbox.DelayedMessage{delayed1},
+		nil,
+	)
 	test.FailIfError(t, err)
 
 	err = core.DeliverMessagesAndWait(
+		ctx,
 		arbCore.Core,
 		big.NewInt(2),
 		endBlockBatchItem1.Accumulator,

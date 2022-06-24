@@ -28,6 +28,7 @@
 #include <unordered_map>
 #include <vector>
 
+class CoreCode;
 class RunningCode;
 
 struct CodeSegmentData {
@@ -178,6 +179,10 @@ struct CodeSegmentSnapshot {
     [[nodiscard]] const uint256_t& loadCachedHash(uint64_t i) const {
         return segment->loadCachedHash(i);
     }
+
+    [[nodiscard]] CodeSegmentData getDataSubset(uint64_t pc) const {
+        return segment->data.getSubset(pc);
+    }
 };
 
 struct CodeSnapshot {
@@ -229,7 +234,8 @@ class Code {
     [[nodiscard]] virtual bool containsSegment(uint64_t segment_id) const = 0;
 
     virtual void commitCodeToCore(
-        const std::map<uint64_t, uint64_t>& segment_counts) const = 0;
+        const std::map<uint64_t, uint64_t>& segment_counts,
+        const std::shared_ptr<CoreCode>& core_code) const = 0;
 
     // Removes any segments colliding with the CoreCode,
     // which should only happen after a reorg.
@@ -428,7 +434,14 @@ class CoreCode : public CodeBase<CoreCodeImpl>, public Code {
         return {0, impl->segments.at(0)->size() - 1};
     }
 
-    void commitCodeToCore(const std::map<uint64_t, uint64_t>&) const override {}
+    void commitCodeToCore(
+        const std::map<uint64_t, uint64_t>&,
+        const std::shared_ptr<CoreCode>& core_code) const override {
+        if (this != core_code.get()) {
+            throw std::runtime_error(
+                "commitCodeToCore called with wrong core code");
+        }
+    }
 
     void cleanupAfterReorg() override {}
 };
@@ -458,7 +471,7 @@ struct RunningCodeImpl {
 class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
     mutable std::shared_mutex mutex;
 
-    std::shared_ptr<Code> parent;
+    mutable std::shared_ptr<Code> parent;
 
     // Requires the mutex is held.
     // Gives no guarantee that parent actually contains segment_id,
@@ -483,30 +496,8 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
     }
 
     void commitCodeToCore(
-        const std::map<uint64_t, uint64_t>& segment_counts) const override {
-        parent->commitCodeToCore(segment_counts);
-        const std::shared_lock<std::shared_mutex> lock(mutex);
-        auto root_segments = parent->getRootSegments();
-        auto it = segment_counts.lower_bound(impl->first_segment);
-        auto end = segment_counts.lower_bound(impl->nextSegmentNum());
-        for (; it != end; ++it) {
-            auto segment = impl->getSegment(it->first);
-            if (segment == nullptr) {
-                continue;
-            }
-            auto inserted = root_segments.segments->insert(
-                std::make_pair(it->first, segment));
-            // Verify that the element didn't exist previously
-            assert(inserted.second);
-            if (!inserted.second) {
-                throw std::runtime_error(
-                    "code segment id collision when filling in code");
-            }
-        }
-        if (impl->nextSegmentNum() > *root_segments.next_segment_num) {
-            *root_segments.next_segment_num = impl->nextSegmentNum();
-        }
-    }
+        const std::map<uint64_t, uint64_t>& segment_counts,
+        const std::shared_ptr<CoreCode>& core_code) const override;
 
     const std::shared_ptr<Code>& getParent() const { return parent; }
 
@@ -575,7 +566,7 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
     std::variant<CodePointStub, CodeSegmentData> tryAddOperation(
         const CodePointRef& ref,
         Operation op) override {
-        std::shared_lock<std::shared_mutex> lock(mutex);
+        std::unique_lock<std::shared_mutex> lock(mutex);
         if (segmentInParent(ref.segment)) {
             lock.unlock();
             return parent->tryAddOperation(ref, std::move(op));
@@ -604,6 +595,60 @@ class RunningCode : public CodeBase<RunningCodeImpl>, public Code {
             }
         }
     }
+};
+
+class EphemeralBarrier : public Code {
+   public:
+    std::shared_ptr<Code> parent;
+
+    explicit EphemeralBarrier(std::shared_ptr<Code> parent_)
+        : parent(std::move(parent_)) {}
+
+    CodePointStub addOperation(const CodePointRef&, Operation) override {
+        throw std::runtime_error("Cannot call addOperation on EphemeralCode");
+    }
+
+    std::variant<CodePointStub, CodeSegmentData> tryAddOperation(
+        const CodePointRef& ref,
+        Operation op) override {
+        auto new_segment = loadCodeSegment(ref.segment).getDataSubset(ref.pc);
+        new_segment.addOperation(op);
+        return new_segment;
+    }
+
+    void commitCodeToCore(const std::map<uint64_t, uint64_t>&,
+                          const std::shared_ptr<CoreCode>&) const override {
+        throw std::runtime_error(
+            "Cannot call commitCodeToCore on EphemeralBarrier");
+    }
+
+    // All functions from this point onwards just delegate to parent
+
+    SegmentsAndLock getRootSegments() const override {
+        return parent->getRootSegments();
+    }
+
+    uint64_t initialSegmentForChildCode() const override {
+        return parent->initialSegmentForChildCode();
+    }
+
+    CodeSegmentSnapshot loadCodeSegment(uint64_t segment_num) const override {
+        return parent->loadCodeSegment(segment_num);
+    }
+
+    CodePoint loadCodePoint(const CodePointRef& ref) const override {
+        return parent->loadCodePoint(ref);
+    }
+
+    CodePointStub addSegment() override { return parent->addSegment(); }
+
+    CodeSnapshot snapshot() const override { return parent->snapshot(); }
+
+    bool containsSegment(uint64_t segment_id) const override {
+        return parent->containsSegment(segment_id);
+    }
+
+    void cleanupAfterReorg() override { return parent->cleanupAfterReorg(); }
 };
 
 #endif /* code_hpp */

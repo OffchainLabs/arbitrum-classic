@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-pragma solidity >=0.4.21 <0.7.0;
+pragma solidity >=0.4.21 <0.9.0;
 
 contract ComplexConstructorCon {
-    constructor(bytes32 salt) public payable {
-        Simple(msg.sender).exists();
+    constructor(bytes32 salt) payable {
+        Simple(payable(msg.sender)).exists();
         new ComplexConstructorCon2{ salt: salt, value: msg.value / 2 }(654);
-        Simple(msg.sender).nestedCall(54);
+        Simple(payable(msg.sender)).nestedCall(54);
     }
 
     receive() external payable {}
@@ -33,8 +33,8 @@ contract ComplexConstructorCon {
 }
 
 contract ComplexConstructorCon2 {
-    constructor(uint256 val) public payable {
-        msg.sender.transfer(msg.value / 2);
+    constructor(uint256 val) payable {
+        payable(msg.sender).transfer(msg.value / 2);
     }
 
     function getVal() external returns (uint256) {
@@ -43,20 +43,51 @@ contract ComplexConstructorCon2 {
 }
 
 contract Reverter {
-    constructor() public {
+    constructor() {
         require(false, "Intentional revert");
     }
 }
 
 contract Destroyer1 {
-    constructor() public {
-        selfdestruct(msg.sender);
+    constructor() {
+        selfdestruct(payable(msg.sender));
     }
 }
 
 contract Destroyer2 {
     function destroy() public {
-        selfdestruct(msg.sender);
+        selfdestruct(payable(msg.sender));
+    }
+
+    function test1() public payable returns (uint256) {
+        return 10;
+    }
+
+    function test2(address to) public payable returns (uint256) {
+        (bool success, bytes memory data) = to.delegatecall(
+            abi.encodeWithSelector(this.test1.selector)
+        );
+        require(success);
+        uint256 ret = abi.decode(data, (uint256));
+        return ret;
+    }
+
+    function test3(address to) public payable returns (uint256 c) {
+        bytes memory input = abi.encodeWithSelector(this.test1.selector);
+        uint256 inputLength = input.length;
+        bool success;
+        assembly {
+            let d := add(input, 32)
+            let ret := mload(0x40)
+            success := callcode(gas(), to, 0, d, inputLength, ret, 0x20)
+            c := mload(ret)
+        }
+        require(success);
+        return c;
+    }
+
+    function test4(address to) public payable returns (uint256) {
+        return Destroyer2(to).test1();
     }
 }
 
@@ -67,7 +98,7 @@ contract Simple {
 
     event TestEvent(uint256 value, address sender);
 
-    constructor() public payable {
+    constructor() payable {
         y = msg.value;
         emit TestEvent(msg.value, msg.sender);
     }
@@ -83,7 +114,7 @@ contract Simple {
     }
 
     function arrayPush() external payable returns (uint256) {
-        array.push(x+1);
+        array.push(x + 1);
         emit TestEvent(msg.value, msg.sender);
         return 10;
     }
@@ -115,10 +146,28 @@ contract Simple {
         try new Reverter() {} catch {}
         new Destroyer1();
         Destroyer2 test = new Destroyer2();
-        test.destroy();
-        (bool success, bytes memory data) = address(test).delegatecall(
-            abi.encodeWithSelector(Destroyer2.destroy.selector)
-        );
+        Destroyer2 test2 = new Destroyer2();
+
+        bytes memory input1 = abi.encodeWithSelector(Destroyer2.test2.selector, test2);
+        bytes memory input2 = abi.encodeWithSelector(Destroyer2.test3.selector, test2);
+        uint256 inputLength = input1.length;
+        address to = address(test);
+        assembly {
+            let d := add(input1, 32)
+            let ret := mload(0x40)
+            let success := callcode(gas(), to, 0, d, inputLength, ret, 0x20)
+            mstore(0x40, add(ret, 0x44))
+        }
+        assembly {
+            let d := add(input2, 32)
+            let ret := mload(0x40)
+            let success := callcode(gas(), to, 0, d, inputLength, ret, 0x20)
+            mstore(0x40, add(ret, 0x44))
+        }
+        to.delegatecall(input1);
+        to.delegatecall(input2);
+        to.delegatecall(abi.encodeWithSelector(Destroyer2.test4.selector, test2));
+        test.test2(address(test2));
         return con.getVal();
     }
 

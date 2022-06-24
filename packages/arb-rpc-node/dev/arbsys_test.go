@@ -24,6 +24,7 @@ import (
 
 func TestTopLevelCall(t *testing.T) {
 	skipBelowVersion(t, 30)
+	ctx := context.Background()
 	config := protocol.ChainParams{
 		GracePeriod:               common.NewTimeBlocksInt(3),
 		ArbGasSpeedLimitPerSecond: 2000000000000,
@@ -94,7 +95,7 @@ func TestTopLevelCall(t *testing.T) {
 			GasPriceBid:       gasBig,
 			Data:              topABI.Methods["isTopLevel"].ID,
 		}
-		requestId1, err := backend.AddInboxMessage(retryableTx, common.RandAddress())
+		requestId1, err := backend.AddInboxMessage(ctx, retryableTx, common.RandAddress())
 		test.FailIfError(t, err)
 		ticketId1 := hashing.SoliditySHA3(hashing.Bytes32(requestId1), hashing.Uint256(big.NewInt(0)))
 
@@ -109,14 +110,14 @@ func TestTopLevelCall(t *testing.T) {
 			GasPriceBid:       gasBig,
 			Data:              topABI.Methods["nestedNotTop"].ID,
 		}
-		requestId2, err := backend.AddInboxMessage(retryableTx2, common.RandAddress())
+		requestId2, err := backend.AddInboxMessage(ctx, retryableTx2, common.RandAddress())
 		test.FailIfError(t, err)
 		ticketId2 := hashing.SoliditySHA3(hashing.Bytes32(requestId2), hashing.Uint256(big.NewInt(0)))
 		return ticketId1, ticketId2
 	}
 
 	if doUpgrade {
-		UpgradeTestDevNode(t, backend, srv, upgraderAuth)
+		UpgradeTestDevNode(t, ctx, backend, srv, upgraderAuth)
 	}
 
 	// Immediate Redeem

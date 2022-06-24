@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/assets/offchain_labs_logo.png" width="600"></p>
+<p align="center"><img src="docs/assets/arbitrum_horizontal_logo.png" width="600"></p>
 
 # Arbitrum Monorepo
 

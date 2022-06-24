@@ -71,6 +71,12 @@ type SequencerBatcherMode struct {
 
 func (b SequencerBatcherMode) isBatcherMode() {}
 
+type ErrorBatcherMode struct {
+	Error error
+}
+
+func (b ErrorBatcherMode) isBatcherMode() {}
+
 func SetupBatcher(
 	ctx context.Context,
 	client ethutils.EthClient,
@@ -82,10 +88,16 @@ func SetupBatcher(
 	dataSigner func([]byte) ([]byte, error),
 	config *configuration.Config,
 	walletConfig *configuration.Wallet,
-) (batcher.TransactionBatcher, error) {
+) (batcher.TransactionBatcher, chan error, error) {
 	switch batcherMode := batcherMode.(type) {
 	case ForwarderBatcherMode:
-		return batcher.NewForwarder(ctx, batcherMode.Config)
+		newBatcher, err := batcher.NewForwarder(ctx, batcherMode.Config)
+		if err != nil {
+			return nil, nil, err
+		}
+		return newBatcher, nil, nil
+	case ErrorBatcherMode:
+		return &ErrorBatcher{err: batcherMode.Error}, nil, nil
 	case StatelessBatcherMode:
 		var auth transactauth.TransactAuth
 		var err error
@@ -95,13 +107,17 @@ func SetupBatcher(
 			auth, err = transactauth.NewTransactAuth(ctx, client, batcherMode.Auth)
 		}
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		inbox, err := ethbridge.NewStandardInbox(batcherMode.InboxAddress.ToEthAddress(), client, auth)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		return batcher.NewStatelessBatcher(ctx, db, l2ChainId, auth, inbox, maxBatchTime), nil
+		newBatcher, err := batcher.NewStatelessBatcher(ctx, db, l2ChainId, auth, inbox, maxBatchTime), nil
+		if err != nil {
+			return nil, nil, err
+		}
+		return newBatcher, nil, nil
 	case StatefulBatcherMode:
 		var auth transactauth.TransactAuth
 		var err error
@@ -111,28 +127,32 @@ func SetupBatcher(
 			auth, err = transactauth.NewTransactAuth(ctx, client, batcherMode.Auth)
 		}
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		inbox, err := ethbridge.NewStandardInbox(batcherMode.InboxAddress.ToEthAddress(), client, auth)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		return batcher.NewStatefulBatcher(ctx, db, l2ChainId, auth, inbox, maxBatchTime)
+		newBatcher, err := batcher.NewStatefulBatcher(ctx, db, l2ChainId, auth, inbox, maxBatchTime)
+		if err != nil {
+			return nil, nil, err
+		}
+		return newBatcher, nil, nil
 	case SequencerBatcherMode:
 		rollup, err := ethbridgecontracts.NewRollupUserFacet(rollupAddress.ToEthAddress(), client)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		callOpts := &bind.CallOpts{Context: ctx}
 		seqInboxAddr, err := rollup.SequencerBridge(callOpts)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		seqInbox, err := ethbridgecontracts.NewSequencerInbox(seqInboxAddr, client)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		feedBroadcaster := broadcaster.NewBroadcaster(config.Feed.Output)
+		feedBroadcaster := broadcaster.NewBroadcaster(&config.Feed.Output)
 		seqBatcher, err := batcher.NewSequencerBatcher(
 			ctx,
 			batcherMode.Core,
@@ -146,16 +166,16 @@ func SetupBatcher(
 			config,
 			walletConfig)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
-		err = feedBroadcaster.Start(ctx)
+		broadcasterErrChan, err := feedBroadcaster.Start(ctx)
 		if err != nil {
-			return nil, errors.Wrap(err, "error starting feed broadcaster")
+			return nil, nil, errors.Wrap(err, "error starting feed broadcaster")
 		}
-		return seqBatcher, nil
+		return seqBatcher, broadcasterErrChan, nil
 	default:
-		return nil, errors.New("unexpected batcher type")
+		return nil, nil, errors.New("unexpected batcher type")
 	}
 }
 

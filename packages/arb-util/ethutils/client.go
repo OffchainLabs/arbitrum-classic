@@ -31,13 +31,21 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 )
+
+var logger = arblog.Logger.With().Str("component", "ethutils").Logger()
 
 const maxErrCount = 5
 
 type ReceiptFetcher interface {
 	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
 	NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error)
+}
+
+type BasicEthClient interface {
+	bind.ContractBackend
+	ReceiptFetcher
 }
 
 type EthClient interface {
@@ -102,6 +110,11 @@ func (r *RPCEthClient) handleCallErr(err error) error {
 
 	// If we've had above a threshold number of errors, reinitialize the connection
 	if totalErrCount >= maxErrCount {
+		logger.Warn().
+			Err(err).
+			Str("url", r.url).
+			Msg("Reconnecting to client endpoint after repeated errors")
+
 		if err := r.reconnect(); err != nil {
 			return err
 		}
@@ -110,6 +123,11 @@ func (r *RPCEthClient) handleCallErr(err error) error {
 }
 
 func (r *RPCEthClient) BlockInfoByNumber(ctx context.Context, number *big.Int) (*BlockInfo, error) {
+	info, err := r.blockInfoByNumberImpl(ctx, number)
+	return info, r.handleCallErr(err)
+}
+
+func (r *RPCEthClient) blockInfoByNumberImpl(ctx context.Context, number *big.Int) (*BlockInfo, error) {
 	var raw json.RawMessage
 	var numParam string
 	if number != nil {
@@ -117,7 +135,10 @@ func (r *RPCEthClient) BlockInfoByNumber(ctx context.Context, number *big.Int) (
 	} else {
 		numParam = "latest"
 	}
-	if err := r.rpc.CallContext(ctx, &raw, "eth_getBlockByNumber", numParam, false); err != nil {
+	r.RLock()
+	err := r.rpc.CallContext(ctx, &raw, "eth_getBlockByNumber", numParam, false)
+	r.RUnlock()
+	if err != nil {
 		return nil, err
 	}
 	if len(raw) == 0 {

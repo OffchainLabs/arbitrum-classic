@@ -96,7 +96,7 @@ func TestTrace(t *testing.T) {
 		message.NewCompressedECDSAFromEth(userTx2),
 	})
 	test.FailIfError(t, err)
-	_, err = backend.AddInboxMessage(message.NewSafeL2Message(arbMsg), common.Address{})
+	_, err = backend.AddInboxMessage(ctx, message.NewSafeL2Message(arbMsg), common.Address{})
 	test.FailIfError(t, err)
 
 	tx1TraceData, err := tracer.ReplayTransaction(ctx, userTx1.Hash().Bytes(), []string{"trace", "deletedContracts"})
@@ -198,7 +198,7 @@ func TestTraceConstructor(t *testing.T) {
 			},
 		}),
 	}
-	_, err = backend.AddInboxMessage(deposit, message.L1RemapAccount(common.NewAddressFromEth(senderAuth.From)))
+	_, err = backend.AddInboxMessage(ctx, deposit, message.L1RemapAccount(common.NewAddressFromEth(senderAuth.From)))
 	test.FailIfError(t, err)
 
 	retryableTx := message.RetryableTx{
@@ -213,7 +213,7 @@ func TestTraceConstructor(t *testing.T) {
 		Data:              successTx.Data(),
 	}
 
-	retryableRequestId, err := backend.AddInboxMessage(retryableTx, message.L1RemapAccount(common.NewAddressFromEth(senderAuth.From)))
+	retryableRequestId, err := backend.AddInboxMessage(ctx, retryableTx, message.L1RemapAccount(common.NewAddressFromEth(senderAuth.From)))
 	test.FailIfError(t, err)
 
 	redeemId := hashing.SoliditySHA3(hashing.Bytes32(retryableRequestId), hashing.Uint256(big.NewInt(1)))
@@ -238,7 +238,7 @@ func TestTraceConstructor(t *testing.T) {
 		}),
 	}
 
-	successDepositRequestId, err := backend.AddInboxMessage(successCreateDeposit, message.L1RemapAccount(common.NewAddressFromEth(senderAuth.From)))
+	successDepositRequestId, err := backend.AddInboxMessage(ctx, successCreateDeposit, message.L1RemapAccount(common.NewAddressFromEth(senderAuth.From)))
 	test.FailIfError(t, err)
 
 	failedCreateDeposit := message.EthDepositTx{
@@ -253,7 +253,7 @@ func TestTraceConstructor(t *testing.T) {
 		}),
 	}
 
-	failedDepositRequestId, err := backend.AddInboxMessage(failedCreateDeposit, message.L1RemapAccount(common.NewAddressFromEth(senderAuth.From)))
+	failedDepositRequestId, err := backend.AddInboxMessage(ctx, failedCreateDeposit, message.L1RemapAccount(common.NewAddressFromEth(senderAuth.From)))
 	test.FailIfError(t, err)
 
 	checkCreateRequest := func(txHash []byte, data []byte, sender ethcommon.Address, nonce uint64, success bool) {
