@@ -37,3 +37,11 @@ Ankr provides access to both Arbitrum One (Mainnet) and Rinkeby Testnet. After c
 ## BlockVision
 
 BlockVision provides Arbitrum One mainnet and Rinkeby node services. See [BlockVision Dashboard](https://dashboard.blockvision.org/connect).
+
+## [GetBlock](https://getblock.io/)
+
+GetBlock is a service that provides instant API connection to full nodes of many leading blockchain networks, including Arbitrum One (Mainnet) available for shared and dedicated nodes and Rinkeby Testnet available for dedicated nodes.
+
+For detailed steps on how to set up an Arbitrum node, check [GetBlock’s documentation](https://getblock.io/docs/)
+
+GetBlock’s pricing for Arbitrum starts from $6 for 500K requests. Also, GetBlock offers a free plan for testing.
