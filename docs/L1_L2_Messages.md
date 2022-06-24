@@ -105,7 +105,7 @@ Currently, the canonical method for depositing ETH into Arbitrum is to create a 
 
 The Retryable Ticket gets put in the retry buffer and can in theory be redeemed, but redeeming is a no-op.
 
-Beyond the superfluous ticket creation, this is suboptimal in that the base submission fee is deducted from the amount deposited, so the user will see a (slight) discrepancy between the amount sent to be deposited and ultimate amount credited in their L2 address. A special message type Taylor-made for ETH deposits that handles them more cleanly will be exposed soon.
+Beyond the superfluous ticket creation, this is suboptimal in that the base submission fee is deducted from the amount deposited, so the user will see a (slight) discrepancy between the amount sent to be deposited and ultimate amount credited in their L2 address. A special message type tailor-made for ETH deposits that handles them more cleanly will be exposed soon.
 
 ### Address Aliasing
 
@@ -121,7 +121,7 @@ If for some reason you need to compute the L1 address from an L2 alias on chain,
 
 ```sol
     modifier onlyFromMyL1Contract() override {
-        require(AddressAliasHelper.undoL1ToL2Alias(msg.sender) === myL1ContractAddress, "ONLY_COUNTERPART_CONTRACT");
+        require(AddressAliasHelper.undoL1ToL2Alias(msg.sender) == myL1ContractAddress, "ONLY_COUNTERPART_CONTRACT");
         _;
     }
 ```
