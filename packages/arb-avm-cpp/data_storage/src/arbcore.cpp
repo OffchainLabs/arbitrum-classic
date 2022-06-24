@@ -122,6 +122,9 @@ ArbCore::message_status_enum ArbCore::messagesStatus() {
             // value
             current_status = message_data_status.load();
         }
+    } else if (current_status == MESSAGES_EMPTY) {
+        // State was already cleared by previous check
+        return MESSAGES_SUCCESS;
     }
 
     return current_status;
@@ -191,7 +194,8 @@ bool ArbCore::deliverMessages(
     auto status_before = MESSAGES_ERROR;
     while (true) {
         status_before = message_data_status.load();
-        if (status_before != MESSAGES_EMPTY) {
+        if (status_before != MESSAGES_EMPTY &&
+            status_before != MESSAGES_SUCCESS) {
             std::cerr << "unable to deliver messages, status: " << status_before
                       << ", error count: " << error_count << std::endl;
         } else {
@@ -204,7 +208,7 @@ bool ArbCore::deliverMessages(
             }
 
             // Compare_exchange_weak may give false negative
-            if (message_data_status.load() != MESSAGES_EMPTY) {
+            if (message_data_status.load() != status_before) {
                 std::cerr
                     << "before delivering messages the status unexpectedly "
                        "changed to: "
