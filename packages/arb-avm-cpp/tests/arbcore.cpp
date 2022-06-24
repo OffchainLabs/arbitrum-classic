@@ -58,7 +58,8 @@ void waitForDelivery(std::shared_ptr<ArbCore>& arbCore) {
     ArbCore::message_status_enum status;
     while (true) {
         status = arbCore->messagesStatus();
-        if (status != ArbCore::MESSAGES_READY) {
+        if (status == ArbCore::MESSAGES_EMPTY ||
+            status == ArbCore::MESSAGES_ERROR) {
             break;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));

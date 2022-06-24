@@ -184,7 +184,7 @@ bool ArbCore::deliverMessages(
             std::cerr << "unable to deliver messages, status: " << status_before
                       << ", error count: " << error_count << std::endl;
         } else {
-            auto success = message_data_status.compare_exchange_weak(
+            auto success = message_data_status.compare_exchange_strong(
                 status_before, MESSAGES_LOADING);
             if (success) {
                 // Successfully changed status
