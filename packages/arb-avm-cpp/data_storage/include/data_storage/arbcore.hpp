@@ -162,7 +162,6 @@ class ArbCore {
     // reference counts to be decremented and possibly deleted.
     // No mutex required to access Sends or Messages because obsolete entries
     // are not deleted.
-    std::mutex core_reorg_mutex;
     std::shared_ptr<DataStorage> data_storage;
 
     std::unique_ptr<MachineThread> core_machine;
