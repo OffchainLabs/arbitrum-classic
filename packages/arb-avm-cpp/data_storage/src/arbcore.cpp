@@ -207,10 +207,10 @@ bool ArbCore::deliverMessages(
         }
 
         error_count++;
-        if (coreConfig.add_messages_max_failure_count > 0 &&
-            error_count > coreConfig.add_messages_max_failure_count) {
-            std::cerr << "too many errors trying to send messages" << std::endl;
-            message_data_error_string = "Too many add message errors";
+        if (coreConfig.deliver_messages_max_failure_count > 0 &&
+            error_count > coreConfig.deliver_messages_max_failure_count) {
+            std::cerr << "too many deliver messages errors" << std::endl;
+            message_data_error_string = "Too many deliver message errors";
             message_data_status.store(MESSAGES_ERROR);
             return false;
         }
@@ -1572,13 +1572,18 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
             if (!add_status.status.ok()) {
                 thread_data.add_messages_failure_count++;
                 auto error_string = add_status.status.ToString();
-                message_data_error_string = error_string;
-                message_data_status.store(MESSAGES_ERROR);
-                std::cerr << "Exiting after arbCore addMessages failed "
-                          << thread_data.add_messages_failure_count
-                          << " times: " << message_data_error_string << "\n";
+                if (coreConfig.add_messages_max_failure_count > 0 &&
+                    thread_data.add_messages_failure_count >=
+                        coreConfig.add_messages_max_failure_count) {
+                    message_data_error_string = error_string;
+                    message_data_status.store(MESSAGES_ERROR);
+                    std::cerr << "Exiting after arbCore addMessages failed "
+                              << thread_data.add_messages_failure_count
+                              << " times: " << message_data_error_string
+                              << "\n";
 
-                return false;
+                    return false;
+                }
 
                 std::cerr << "ArbCore addMessages non-fatal error number "
                           << thread_data.add_messages_failure_count << ": "

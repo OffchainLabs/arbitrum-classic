@@ -68,25 +68,26 @@ type Database struct {
 }
 
 type Core struct {
-	AddMessagesMaxFailureCount int           `koanf:"add-messages-max-failure-count"`
-	ThreadMaxFailureCount      int           `koanf:"thread-max-failure-count"`
-	Cache                      CoreCache     `koanf:"cache"`
-	CheckpointGasFrequency     int           `koanf:"checkpoint-gas-frequency"`
-	CheckpointLoadGasCost      int           `koanf:"checkpoint-load-gas-cost"`
-	CheckpointLoadGasFactor    int           `koanf:"checkpoint-load-gas-factor"`
-	CheckpointMaxExecutionGas  int           `koanf:"checkpoint-max-execution-gas"`
-	CheckpointMaxToPrune       int           `koanf:"checkpoint-max-to-prune"`
-	CheckpointPruningMode      string        `koanf:"checkpoint-pruning-mode"`
-	CheckpointPruneOnStartup   bool          `koanf:"checkpoint-prune-on-startup"`
-	Database                   Database      `koanf:"database"`
-	Debug                      bool          `koanf:"debug"`
-	DebugTiming                bool          `koanf:"debug-timing"`
-	IdleSleep                  time.Duration `koanf:"idle-sleep"`
-	LazyLoadCoreMachine        bool          `koanf:"lazy-load-core-machine"`
-	LazyLoadArchiveQueries     bool          `koanf:"lazy-load-archive-queries"`
-	MessageProcessCount        int           `koanf:"message-process-count"`
-	Test                       CoreTest      `koanf:"test"`
-	YieldInstructionCount      int           `koanf:"yield-instruction-count"`
+	AddMessagesMaxFailureCount     int           `koanf:"add-messages-max-failure-count"`
+	DeliverMessagesMaxFailureCount int           `koanf:"deliver-messages-max-failure-count"`
+	ThreadMaxFailureCount          int           `koanf:"thread-max-failure-count"`
+	Cache                          CoreCache     `koanf:"cache"`
+	CheckpointGasFrequency         int           `koanf:"checkpoint-gas-frequency"`
+	CheckpointLoadGasCost          int           `koanf:"checkpoint-load-gas-cost"`
+	CheckpointLoadGasFactor        int           `koanf:"checkpoint-load-gas-factor"`
+	CheckpointMaxExecutionGas      int           `koanf:"checkpoint-max-execution-gas"`
+	CheckpointMaxToPrune           int           `koanf:"checkpoint-max-to-prune"`
+	CheckpointPruningMode          string        `koanf:"checkpoint-pruning-mode"`
+	CheckpointPruneOnStartup       bool          `koanf:"checkpoint-prune-on-startup"`
+	Database                       Database      `koanf:"database"`
+	Debug                          bool          `koanf:"debug"`
+	DebugTiming                    bool          `koanf:"debug-timing"`
+	IdleSleep                      time.Duration `koanf:"idle-sleep"`
+	LazyLoadCoreMachine            bool          `koanf:"lazy-load-core-machine"`
+	LazyLoadArchiveQueries         bool          `koanf:"lazy-load-archive-queries"`
+	MessageProcessCount            int           `koanf:"message-process-count"`
+	Test                           CoreTest      `koanf:"test"`
+	YieldInstructionCount          int           `koanf:"yield-instruction-count"`
 }
 
 type CoreCache struct {
@@ -869,7 +870,8 @@ func AddCore(f *flag.FlagSet, maxExecutionGas int) {
 	f.Bool("core.cache.seed-on-startup", false, "seed cache on startup by re-executing timed-expire worth of history")
 	f.Duration("core.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore timed memory cache")
 
-	f.Int("core.add-messages-max-failure-count", 50, "number of add messages failures before exiting program")
+	f.Int("core.add-messages-max-failure-count", 10, "number of add messages failures before exiting program")
+	f.Int("core.deliver-messages-max-failure-count", 50, "number of deliver messages failures before exiting program")
 	f.Int("core.thread-max-failure-count", 2, "number of core thread failures before exiting program")
 	f.Int("core.checkpoint-gas-frequency", 1_000_000_000, "amount of gas between saving checkpoints")
 	f.Int("core.checkpoint-load-gas-cost", 250_000_000, "running machine for given gas takes same amount of time as loading database entry")
