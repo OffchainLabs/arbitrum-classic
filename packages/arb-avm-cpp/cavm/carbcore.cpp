@@ -35,6 +35,12 @@ int arbCoreMessagesStatus(CArbCore* arbcore_ptr) {
     return arb_core->messagesStatus();
 }
 
+char* arbCoreMessagesGetError(CArbCore* arbcore_ptr) {
+    auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
+    auto str = arb_core->messagesGetError();
+    return strdup(str.c_str());
+}
+
 int arbCoreCheckError(CArbCore* arbcore_ptr) {
     auto arb_core = static_cast<ArbCore*>(arbcore_ptr);
     return arb_core->checkError();
@@ -86,13 +92,25 @@ int arbCoreDeliverMessages(CArbCore* arbcore_ptr,
         reorg_message_count = receiveUint256(reorg_message_count_ptr);
     }
 
+    auto item_count = sequencer_batch_items.size();
+    auto delayed_count = delayed_messages.size();
     try {
         auto status = arb_core->deliverMessages(
             previous_message_count, previous_inbox_acc,
             std::move(sequencer_batch_items), std::move(delayed_messages),
             reorg_message_count);
+        if (!status) {
+            std::cerr << "error while delivering messages, previous count: "
+                      << previous_message_count
+                      << ", item count: " << item_count
+                      << ", delayed count: " << delayed_count << std::endl;
+        }
         return status;
     } catch (const std::exception& e) {
+        std::cerr << "exception while delivering messages, previous count: "
+                  << previous_message_count << ", item count: " << item_count
+                  << ", delayed count: " << delayed_count
+                  << ", error: " << e.what() << std::endl;
         return false;
     }
 }
@@ -516,9 +534,6 @@ int arbCoreAdvanceExecutionCursor(CArbCore* arbcore_ptr,
         return false;
     }
 }
-
-uint256_t log_number_begin;
-uint256_t log_number_end;
 
 ByteSliceCountResult arbCoreAdvanceExecutionCursorWithTracing(
     CArbCore* arbcore_ptr,

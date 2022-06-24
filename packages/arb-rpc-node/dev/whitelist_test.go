@@ -17,6 +17,7 @@
 package dev
 
 import (
+	"context"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -33,6 +34,7 @@ import (
 
 func TestWhitelist(t *testing.T) {
 	skipBelowVersion(t, 25)
+	ctx := context.Background()
 	config := protocol.ChainParams{
 		GracePeriod:               common.NewTimeBlocksInt(3),
 		ArbGasSpeedLimitPerSecond: 2000000000000,
@@ -76,7 +78,7 @@ func TestWhitelist(t *testing.T) {
 	test.FailIfError(t, err)
 
 	if doUpgrade {
-		UpgradeTestDevNode(t, backend, srv, ownerAuth)
+		UpgradeTestDevNode(t, ctx, backend, srv, ownerAuth)
 	}
 
 	allowed, err := arbOwner.IsAllowedSender(&bind.CallOpts{}, common.RandAddress().ToEthAddress())

@@ -287,7 +287,7 @@ func initializeChallengeTest(
 	_, err = sequencerBridge.AddSequencerL2BatchFromOrigin(sequencer, nil, nil, batchMetadata, endOfBlockItem.Accumulator)
 	test.FailIfError(t, err)
 
-	err = core.DeliverMessagesAndWait(arbCore, big.NewInt(0), common.Hash{}, []inbox.SequencerBatchItem{delayedItem, endOfBlockItem}, []inbox.DelayedMessage{delayed}, nil)
+	err = core.DeliverMessagesAndWait(ctx, arbCore, big.NewInt(0), common.Hash{}, []inbox.SequencerBatchItem{delayedItem, endOfBlockItem}, []inbox.DelayedMessage{delayed}, nil)
 	test.FailIfError(t, err)
 
 	asserterWalletAddress, _, validatorCon, err := ethbridgecontracts.DeployValidator(asserter, client)
@@ -304,12 +304,12 @@ func initializeChallengeTest(
 
 	asserterAuth, err := transactauth.NewTransactAuth(ctx, client, asserter)
 	test.FailIfError(t, err)
-	asserterWallet, err := ethbridge.NewValidator(&asserterWalletAddress, ethcommon.Address{}, ethcommon.Address{}, client, asserterAuth, 0, nil)
+	asserterWallet, err := ethbridge.NewValidator(&asserterWalletAddress, ethcommon.Address{}, ethcommon.Address{}, client, asserterAuth, 0, 1000, nil)
 	test.FailIfError(t, err)
 
 	challengerAuth, err := transactauth.NewTransactAuth(ctx, client, challenger)
 	test.FailIfError(t, err)
-	challengerWallet, err := ethbridge.NewValidator(&challengerWalletAddress, ethcommon.Address{}, ethcommon.Address{}, client, challengerAuth, 0, nil)
+	challengerWallet, err := ethbridge.NewValidator(&challengerWalletAddress, ethcommon.Address{}, ethcommon.Address{}, client, challengerAuth, 0, 1000, nil)
 	test.FailIfError(t, err)
 
 	startChallenge := func(assertion *core.Assertion) {

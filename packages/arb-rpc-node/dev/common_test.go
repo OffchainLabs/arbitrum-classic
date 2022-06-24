@@ -134,7 +134,7 @@ func NewTestDevNode(
 	initMsg, err := message.NewInitMessage(params, owner, config)
 
 	test.FailIfError(t, err)
-	_, err = backend.AddInboxMessage(initMsg, common.Address{})
+	_, err = backend.AddInboxMessage(ctx, initMsg, common.Address{})
 	test.FailIfError(t, err)
 
 	go func() {
@@ -168,7 +168,7 @@ func NewTestDevNode(
 	return backend, db, srv, closeFunc
 }
 
-func UpgradeTestDevNode(t *testing.T, backend *Backend, srv *aggregator.Server, auth *bind.TransactOpts) {
+func UpgradeTestDevNode(t *testing.T, ctx context.Context, backend *Backend, srv *aggregator.Server, auth *bind.TransactOpts) {
 	arbosDir, err := arbos.Dir()
 	test.FailIfError(t, err)
 
@@ -187,7 +187,7 @@ func UpgradeTestDevNode(t *testing.T, backend *Backend, srv *aggregator.Server, 
 			},
 		}),
 	}
-	if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
+	if _, err := backend.AddInboxMessage(ctx, deposit, common.RandAddress()); err != nil {
 		t.Fatal(err)
 	}
 

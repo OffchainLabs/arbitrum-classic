@@ -17,8 +17,12 @@
 package binding
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -110,7 +114,24 @@ func GenerateBindingFromFile(inputFile, pkg string) (string, error) {
 }
 
 func GenerateBindingFromSolidity(file, pkg string) (string, error) {
-	contracts, err := compiler.CompileSolidity("solc", file)
+	solData, err := os.ReadFile(file)
+	if err != nil {
+		return "", err
+	}
+	generalArgs := []string{
+		"--combined-json", "bin,bin-runtime,srcmap,srcmap-runtime,abi,userdoc,devdoc",
+		"--optimize",
+		"--allow-paths", "., ./, ../",
+	}
+	args := append(generalArgs, "--", file)
+	cmd := exec.Command("solc", args...)
+	var stderr, stdout bytes.Buffer
+	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("error running solidity compiler: %v\n%s", err, stderr.Bytes())
+	}
+	contracts, err := compiler.ParseCombinedJSON(stdout.Bytes(), string(solData), "", "", strings.Join(generalArgs, " "))
 	if err != nil {
 		return "", err
 	}

@@ -1,0 +1,50 @@
+use core::array::array;
+use core::array::array_resize;
+
+var blockNum: uint;
+var acc: bytes32;
+var segments: [][]func();
+
+view write throw func run(update: any) {
+	acc = hash(acc, hash(update));
+	let rand = (uint(acc) & ((1 << 128) - 1)) % (len(segments) + 1);
+	if rand == len(segments) {
+		let codePointBase = asm() any { errcodept };
+		let newCodePoint = asm(0x34, codePointBase) func() { pushinsn };
+		newCodePoint();
+		let segmentInfo = newarray<func()>(1);
+		set segmentInfo[0] = newCodePoint;
+		segments = unsafecast<[][]func()>(array_resize(unsafecast<array>(segments), len(segments)+1, segmentInfo));
+	} else {
+		let info = segments[rand];
+		let rand2 = (uint(acc) >> 128) % len(info);
+		let newCodePoint = asm(0x30, info[rand2]) func() { pushinsn };
+		let hashes = 1000;
+		while (hashes > 1) {
+			newCodePoint = asm(0x20, newCodePoint) func() { pushinsn };
+			hashes = hashes - 1;
+		}
+		newCodePoint = asm(0x20, acc, newCodePoint) func() { pushinsnimm };
+		newCodePoint();
+		info = unsafecast<[]func()>(array_resize(unsafecast<array>(info), len(info)+1, newCodePoint));
+		set segments[rand] = info;
+	}
+}
+
+view write throw func main() {
+	blockNum = 0;
+	run(0);
+	run(0);
+	run(0);
+	run(0);
+	run(0);
+	while true {
+		let msg = asm() any { inbox };
+		run(msg);
+		let rawSideloadMsg = asm(blockNum) any { sideload };
+		if rawSideloadMsg != any(()) {
+			run(rawSideloadMsg);
+		}
+		blockNum = blockNum + 1;
+	}
+}

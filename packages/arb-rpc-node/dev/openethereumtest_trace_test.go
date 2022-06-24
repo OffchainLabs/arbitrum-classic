@@ -75,7 +75,7 @@ func TestTraceOpenEthereum(t *testing.T) {
 
 	// Fund arb
 	deposit := makeDepositMessage(common.NewAddressFromEth(senderAddr))
-	_, err = backend.AddInboxMessage(deposit, common.RandAddress())
+	_, err = backend.AddInboxMessage(ctx, deposit, common.RandAddress())
 	test.FailIfError(t, err)
 
 	// Fund oe

@@ -68,22 +68,25 @@ type Database struct {
 }
 
 type Core struct {
-	Cache                     CoreCache     `koanf:"cache"`
-	CheckpointGasFrequency    int           `koanf:"checkpoint-gas-frequency"`
-	CheckpointLoadGasCost     int           `koanf:"checkpoint-load-gas-cost"`
-	CheckpointLoadGasFactor   int           `koanf:"checkpoint-load-gas-factor"`
-	CheckpointMaxExecutionGas int           `koanf:"checkpoint-max-execution-gas"`
-	CheckpointMaxToPrune      int           `koanf:"checkpoint-max-to-prune"`
-	CheckpointPruningMode     string        `koanf:"checkpoint-pruning-mode"`
-	CheckpointPruneOnStartup  bool          `koanf:"checkpoint-prune-on-startup"`
-	Database                  Database      `koanf:"database"`
-	Debug                     bool          `koanf:"debug"`
-	DebugTiming               bool          `koanf:"debug-timing"`
-	IdleSleep                 time.Duration `koanf:"idle-sleep"`
-	LazyLoadCoreMachine       bool          `koanf:"lazy-load-core-machine"`
-	LazyLoadArchiveQueries    bool          `koanf:"lazy-load-archive-queries"`
-	MessageProcessCount       int           `koanf:"message-process-count"`
-	Test                      CoreTest      `koanf:"test"`
+	AddMessagesMaxFailureCount int           `koanf:"add-messages-max-failure-count"`
+	ThreadMaxFailureCount      int           `koanf:"thread-max-failure-count"`
+	Cache                      CoreCache     `koanf:"cache"`
+	CheckpointGasFrequency     int           `koanf:"checkpoint-gas-frequency"`
+	CheckpointLoadGasCost      int           `koanf:"checkpoint-load-gas-cost"`
+	CheckpointLoadGasFactor    int           `koanf:"checkpoint-load-gas-factor"`
+	CheckpointMaxExecutionGas  int           `koanf:"checkpoint-max-execution-gas"`
+	CheckpointMaxToPrune       int           `koanf:"checkpoint-max-to-prune"`
+	CheckpointPruningMode      string        `koanf:"checkpoint-pruning-mode"`
+	CheckpointPruneOnStartup   bool          `koanf:"checkpoint-prune-on-startup"`
+	Database                   Database      `koanf:"database"`
+	Debug                      bool          `koanf:"debug"`
+	DebugTiming                bool          `koanf:"debug-timing"`
+	IdleSleep                  time.Duration `koanf:"idle-sleep"`
+	LazyLoadCoreMachine        bool          `koanf:"lazy-load-core-machine"`
+	LazyLoadArchiveQueries     bool          `koanf:"lazy-load-archive-queries"`
+	MessageProcessCount        int           `koanf:"message-process-count"`
+	Test                       CoreTest      `koanf:"test"`
+	YieldInstructionCount      int           `koanf:"yield-instruction-count"`
 }
 
 type CoreCache struct {
@@ -123,6 +126,20 @@ type FeedOutput struct {
 	ClientTimeout time.Duration `koanf:"client-timeout"`
 	Queue         int           `koanf:"queue"`
 	Workers       int           `koanf:"workers"`
+	MaxSendQueue  int           `koanf:"max-send-queue"`
+}
+
+func DefaultFeedOutput() *FeedOutput {
+	return &FeedOutput{
+		Addr:          "0.0.0.0",
+		IOTimeout:     5 * time.Second,
+		Port:          "9642",
+		Ping:          5 * time.Second,
+		ClientTimeout: 15 * time.Second,
+		Queue:         1,
+		Workers:       128,
+		MaxSendQueue:  4096,
+	}
 }
 
 type Feed struct {
@@ -273,22 +290,26 @@ type Persistent struct {
 }
 
 type Rollup struct {
-	Address   string `koanf:"address"`
-	FromBlock int64  `koanf:"from-block"`
-	Machine   struct {
+	Address         string `koanf:"address"`
+	FromBlock       int64  `koanf:"from-block"`
+	BlockSearchSize int64  `koanf:"block-search-size"`
+	Machine         struct {
 		Filename string `koanf:"filename"`
 		URL      string `koanf:"url"`
 	} `koanf:"machine"`
 }
 
 type Validator struct {
-	StrategyImpl         string            `koanf:"strategy"`
-	UtilsAddress         string            `koanf:"utils-address"`
-	StakerDelay          time.Duration     `koanf:"staker-delay"`
-	WalletFactoryAddress string            `koanf:"wallet-factory-address"`
-	L1PostingStrategy    L1PostingStrategy `koanf:"l1-posting-strategy"`
-	DontChallenge        bool              `koanf:"dont-challenge"`
-	WithdrawDestination  string            `koanf:"withdraw-destination"`
+	StrategyImpl                  string            `koanf:"strategy"`
+	UtilsAddress                  string            `koanf:"utils-address"`
+	StakerDelay                   time.Duration     `koanf:"staker-delay"`
+	WalletFactoryAddress          string            `koanf:"wallet-factory-address"`
+	L1PostingStrategy             L1PostingStrategy `koanf:"l1-posting-strategy"`
+	DontChallenge                 bool              `koanf:"dont-challenge"`
+	WithdrawDestination           string            `koanf:"withdraw-destination"`
+	OnlyCreateWalletContract      bool              `koanf:"only-create-wallet-contract"`
+	ContractWalletAddress         string            `koanf:"contract-wallet-address"`
+	ContractWalletAddressFilename string            `koanf:"contract-wallet-address-filename"`
 }
 
 type ValidatorStrategy uint8
@@ -421,6 +442,7 @@ func DefaultCoreSettingsNoMaxExecution() *Core {
 		CheckpointMaxExecutionGas: 0,
 		CheckpointPruningMode:     "default",
 		MessageProcessCount:       10,
+		YieldInstructionCount:     1_000_000,
 	}
 }
 
@@ -439,6 +461,7 @@ func DefaultCoreSettingsMaxExecution() *Core {
 		CheckpointMaxExecutionGas: 1_000_000_000,
 		CheckpointPruningMode:     "default",
 		MessageProcessCount:       10,
+		YieldInstructionCount:     1_000_000,
 	}
 }
 
@@ -494,8 +517,7 @@ func ParseDBTool() (*Config, error) {
 	}
 
 	err = resolveDirectoryNames(out, wallet)
-
-	return out, nil
+	return out, err
 }
 
 func AddL1PostingStrategyOptions(f *flag.FlagSet, prefix string) {
@@ -511,7 +533,10 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	AddL1PostingStrategyOptions(f, "node.sequencer.")
 	AddL1PostingStrategyOptions(f, "validator.")
 
-	f.String("validator.strategy", "StakeLatest", "strategy for validator to use")
+	f.Bool("validator.only-create-wallet-contract", false, "only create smart contract wallet contract, then exit")
+	f.String("validator.contract-wallet-address-filename", "chainState.json", "json file that validator smart contract wallet address is stored in")
+	f.String("validator.contract-wallet-address", "", "validator smart contract wallet public address")
+	f.String("validator.strategy", "", "strategy for validator to use")
 	f.String("validator.utils-address", "", "validator utilities address")
 	f.Duration("validator.staker-delay", 60*time.Second, "delay between updating stake")
 	f.String("validator.wallet-factory-address", "", "strategy for validator to use")
@@ -563,7 +588,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Bool("node.sequencer.dangerous.disable-delayed-message-sequencing", false, "disable sequencing delayed messages (DANGEROUS)")
 	f.Bool("node.sequencer.debug-timing", false, "log elapsed time throughout core sequencing loop")
 
-	f.String("node.type", "forwarder", "forwarder, aggregator or sequencer")
+	f.String("node.type", "forwarder", "forwarder, aggregator, sequencer or validator")
 
 	f.String("node.ws.addr", "0.0.0.0", "websocket address")
 	f.Int("node.ws.port", 8548, "websocket port")
@@ -581,6 +606,8 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	f.Uint64("l1.chain-id", 0, "if set other than 0, will be used to validate database and L1 connection")
 
 	f.String("rollup.address", "", "layer 2 rollup contract address")
+	f.Int64("rollup.from-block", 0, "layer 2 rollup contract creation block")
+	f.Int64("rollup.block-search-size", 0, "number of blocks to search at a time when looking for validator smart contract wallet creation, 0 to search all blocks at once")
 	f.String("rollup.machine.filename", "", "file to load machine from")
 
 	f.Bool("wallet.local.only-create-key", false, "create new wallet and exit")
@@ -689,11 +716,6 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		return nil, nil, nil, nil, err
 	}
 
-	if len(out.Rollup.Machine.Filename) == 0 {
-		// Machine not provided, so use default
-		out.Rollup.Machine.Filename = path.Join(out.Persistent.Chain, "arbos.mexe")
-	}
-
 	_, err = os.Stat(out.Rollup.Machine.Filename)
 	if os.IsNotExist(err) && len(out.Rollup.Machine.URL) != 0 {
 		// Machine does not exist, so load it from provided URL
@@ -738,15 +760,11 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		out.Core.CheckpointPruningMode = "off"
 	}
 
-	if (out.Core.CheckpointPruningMode != "on") &&
-		(out.Core.CheckpointPruningMode != "default") {
-		return nil, nil, nil, nil,
-			fmt.Errorf("value '%v' for core.checkpoint-pruning-mode is not 'on', 'off', or 'default'", out.Core.CheckpointPruningMode)
-	}
-
 	if out.Node.Type() == SequencerNodeType && !out.Core.Cache.Last {
 		logger.Info().Msg("enabling last machine cache for sequencer")
 		out.Core.Cache.Last = true
+	} else if out.Node.Type() == ValidatorNodeType && out.Validator.OnlyCreateWalletContract && out.Validator.Strategy() == WatchtowerStrategy {
+		return nil, nil, nil, nil, errors.New("can't create validator wallet contract with watchtower validator strategy")
 	}
 
 	return out, wallet, l1Client, l1ChainId, nil
@@ -784,6 +802,11 @@ func resolveDirectoryNames(out *Config, wallet *Wallet) error {
 		out.Core.Database.SavePath = path.Join(out.Persistent.Chain, out.Core.Database.SavePath)
 	}
 
+	if len(out.Rollup.Machine.Filename) == 0 {
+		// Machine not provided, so use default chain specific machine
+		out.Rollup.Machine.Filename = path.Join(out.Persistent.Chain, "arbos.mexe")
+	}
+
 	// Make machine relative to storage directory if not already absolute
 	if !filepath.IsAbs(out.Rollup.Machine.Filename) {
 		out.Rollup.Machine.Filename = path.Join(out.Persistent.GlobalConfig, out.Rollup.Machine.Filename)
@@ -795,6 +818,11 @@ func resolveDirectoryNames(out *Config, wallet *Wallet) error {
 	}
 	if !filepath.IsAbs(wallet.Fireblocks.FeedSigner.Pathname) {
 		wallet.Fireblocks.FeedSigner.Pathname = path.Join(out.Persistent.Chain, wallet.Fireblocks.FeedSigner.Pathname)
+	}
+
+	// Make validator smart contract wallet address relative to chain directory if not already absolute
+	if !filepath.IsAbs(out.Validator.ContractWalletAddressFilename) {
+		out.Validator.ContractWalletAddressFilename = path.Join(out.Persistent.Chain, out.Validator.ContractWalletAddressFilename)
 	}
 
 	return nil
@@ -821,10 +849,11 @@ func ParseRelay() (*Config, error) {
 func AddFeedOutputOptions(f *flag.FlagSet) {
 	f.String("feed.output.addr", "0.0.0.0", "address to bind the relay feed output to")
 	f.Duration("feed.output.io-timeout", 5*time.Second, "duration to wait before timing out HTTP to WS upgrade")
-	f.Int("feed.output.port", 9642, "port to bind the relay feed output to")
+	f.String("feed.output.port", "9642", "port to bind the relay feed output to")
 	f.Duration("feed.output.ping", 5*time.Second, "duration for ping interval")
-	f.Duration("feed.output.client-timeout", 15*time.Second, "duraction to wait before timing out connections to client")
+	f.Duration("feed.output.client-timeout", 15*time.Second, "duration to wait before timing out connections to client")
 	f.Int("feed.output.workers", 100, "Number of threads to reserve for HTTP to WS upgrade")
+	f.Int("feed.output.max-send-queue", 4096, "Maximum number of messages allowed to accumulate before client is disconnected")
 }
 
 func AddForwarderTarget(f *flag.FlagSet) {
@@ -840,6 +869,8 @@ func AddCore(f *flag.FlagSet, maxExecutionGas int) {
 	f.Bool("core.cache.seed-on-startup", false, "seed cache on startup by re-executing timed-expire worth of history")
 	f.Duration("core.cache.timed-expire", 20*time.Minute, "length of time to hold L2 blocks in arbcore timed memory cache")
 
+	f.Int("core.add-messages-max-failure-count", 10, "number of add messages failures before exiting program")
+	f.Int("core.thread-max-failure-count", 2, "number of core thread failures before exiting program")
 	f.Int("core.checkpoint-gas-frequency", 1_000_000_000, "amount of gas between saving checkpoints")
 	f.Int("core.checkpoint-load-gas-cost", 250_000_000, "running machine for given gas takes same amount of time as loading database entry")
 	f.Int("core.checkpoint-load-gas-factor", 4, "factor to weight difference in database checkpoint vs cache checkpoint")
@@ -872,6 +903,8 @@ func AddCore(f *flag.FlagSet, maxExecutionGas int) {
 	f.Int("core.test.reorg-to.message", 0, "reorg to snapshot with given message or before, zero to disable")
 	f.Bool("core.test.reset-all-except-inbox", false, "remove all database info except for inbox")
 	f.Int("core.test.run-until", 0, "run until gas is reached for profile test, zero to disable")
+
+	f.Int("core.yield-instruction-count", 50_000_000, "number of instructions to for core thread to run between calling yield")
 
 }
 
@@ -1081,7 +1114,9 @@ func endCommonParse(k *koanf.Koanf) (*Config, *Wallet, error) {
 			"wallet.local.password":                     "",
 			"wallet.local.private-key":                  "",
 		}, "."), nil)
-
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "unable overwrite wallet info in config")
+		}
 		c, err := k.Marshal(json.Parser())
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "unable to marshal config file to JSON")

@@ -28,6 +28,8 @@ extern "C" {
 
 typedef struct {
     int32_t message_process_count;
+    int32_t add_messages_max_failure_count;
+    int32_t thread_max_failure_count;
     int32_t checkpoint_load_gas_cost;
     int32_t checkpoint_load_gas_factor;
     int32_t checkpoint_max_execution_gas;
@@ -38,6 +40,7 @@ typedef struct {
     int32_t lru_cache_size;
     int32_t cache_expiration_seconds;
     int32_t idle_sleep_milliseconds;
+    int32_t yield_instruction_count;
     int32_t seed_cache_on_startup;
     int32_t debug;
     int32_t debug_timing;

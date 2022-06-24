@@ -16,7 +16,7 @@ import (
 
 func TestZeroPriceGasEstimationEmpty(t *testing.T) {
 	ctx := context.Background()
-	_, _, client, _, aggAuth, _, _, _, cancel := setupFeeChain(t)
+	_, _, client, _, aggAuth, _, _, _, cancel := setupFeeChain(t, ctx)
 	defer cancel()
 
 	gas, err := client.EstimateGas(ctx, ethereum.CallMsg{
@@ -34,7 +34,7 @@ func TestZeroPriceGasEstimationEmpty(t *testing.T) {
 
 func TestZeroPriceGasEstimationCall(t *testing.T) {
 	ctx := context.Background()
-	backend, _, client, auth, _, _, _, _, cancel := setupFeeChain(t)
+	backend, _, client, auth, _, _, _, _, cancel := setupFeeChain(t, ctx)
 	defer cancel()
 
 	simpleAddr, _, _, err := arbostestcontracts.DeploySimple(auth, client)
@@ -70,7 +70,7 @@ func TestZeroPriceGasEstimationCall(t *testing.T) {
 
 func TestZeroPriceGasEstimationDeploy(t *testing.T) {
 	ctx := context.Background()
-	_, _, client, auth, _, _, _, _, cancel := setupFeeChain(t)
+	_, _, client, auth, _, _, _, _, cancel := setupFeeChain(t, ctx)
 	defer cancel()
 
 	fundedAddr := auth.From

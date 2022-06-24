@@ -248,7 +248,7 @@ TEST_CASE("TimedMachineCache expire") {
 
 TEST_CASE("TimedMachineCache expiredTimestamp") {
     auto timed_expire = 20;
-    auto fake_time = 1000000;
+    auto fake_time = 1'000'000;
     TimedMachineCache cache(timed_expire);
 
     auto expired = cache.expiredTimestamp();

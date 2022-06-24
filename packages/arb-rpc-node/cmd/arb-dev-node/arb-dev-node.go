@@ -221,7 +221,7 @@ func startup() error {
 		if err != nil {
 			return err
 		}
-		if _, err := backend.AddInboxMessage(initMsg, common.Address{}); err != nil {
+		if _, err := backend.AddInboxMessage(ctx, initMsg, common.Address{}); err != nil {
 			return errors.Wrap(err, "error adding init message to inbox")
 		}
 	}
@@ -243,7 +243,7 @@ func startup() error {
 				},
 			}),
 		}
-		if _, err := backend.AddInboxMessage(deposit, common.RandAddress()); err != nil {
+		if _, err := backend.AddInboxMessage(ctx, deposit, common.RandAddress()); err != nil {
 			return err
 		}
 	}
@@ -290,7 +290,7 @@ func startup() error {
 			if err := dev.EnableFees(srv, ownerAuth, agg.ToEthAddress()); err != nil {
 				return err
 			}
-			if _, err := backend.AddInboxMessage(message.NewSafeL2Message(message.HeartbeatMessage{}), common.RandAddress()); err != nil {
+			if _, err := backend.AddInboxMessage(ctx, message.NewSafeL2Message(message.HeartbeatMessage{}), common.RandAddress()); err != nil {
 				return err
 			}
 		}
