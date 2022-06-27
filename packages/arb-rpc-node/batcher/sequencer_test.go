@@ -251,6 +251,7 @@ func TestSequencerBatcher(t *testing.T) {
 		seqMon.Reader,
 		client,
 		seqInbox,
+		seqInboxAddr,
 		auth,
 		dummyDataSigner,
 		nil,

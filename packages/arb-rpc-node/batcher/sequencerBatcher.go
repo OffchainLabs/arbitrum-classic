@@ -63,6 +63,7 @@ type SequencerBatcher struct {
 	client                          ethutils.EthClient
 	delayedMessagesTargetDelay      *big.Int
 	sequencerInbox                  *ethbridgecontracts.SequencerInbox
+	sequencerInboxAddress           common.Address
 	auth                            transactauth.TransactAuth
 	fromAddress                     common.Address
 	chainTimeCheckInterval          time.Duration
@@ -124,6 +125,7 @@ func NewSequencerBatcher(
 	inboxReader *monitor.InboxReader,
 	client ethutils.EthClient,
 	sequencerInbox *ethbridgecontracts.SequencerInbox,
+	sequencerInboxAddress common.Address,
 	auth *bind.TransactOpts,
 	dataSigner func([]byte) ([]byte, error),
 	broadcaster *broadcaster.Broadcaster,
@@ -199,6 +201,7 @@ func NewSequencerBatcher(
 		client:                     client,
 		delayedMessagesTargetDelay: big.NewInt(config.Node.Sequencer.DelayedMessagesTargetDelay),
 		sequencerInbox:             sequencerInbox,
+		sequencerInboxAddress:      sequencerInboxAddress,
 		auth:                       transactAuth,
 		fromAddress:                common.NewAddressFromEth(auth.From),
 		chainTimeCheckInterval:     time.Second,
@@ -930,7 +933,7 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 
 	newMsgCount := new(big.Int).Add(lastSeqNum, big.NewInt(1))
 	logger.Info().Str("prevMsgCount", prevMsgCount.String()).Int("items", len(batchItems)).Str("newMsgCount", newMsgCount.String()).Msg("Creating sequencer batch")
-	arbTx, err := ethbridge.AddSequencerL2BatchFromOriginCustomNonce(ctx, b.sequencerInbox, b.auth, nonce, transactionsData, transactionsLengths, metadata, lastAcc, b.gasRefunderAddress, b.config.Node.Sequencer.GasRefunderExtraGas)
+	arbTx, err := ethbridge.AddSequencerL2BatchFromOriginCustomNonce(ctx, b.client, b.sequencerInboxAddress, b.auth, nonce, transactionsData, transactionsLengths, metadata, lastAcc, b.gasRefunderAddress, b.config.Node.Sequencer.GasRefunderExtraGas)
 	if err != nil {
 		return false, err
 	}
@@ -949,9 +952,9 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	// AddSequencerL2BatchFromOriginCustomNonce will have already updated the nonce
 	prevMsgCount.Set(newMsgCount)
 
-	atomic.StoreInt32(&b.publishingBatchAtomic, 1)
+	atomic.AddInt32(&b.publishingBatchAtomic, 1)
 	go (func() {
-		defer atomic.StoreInt32(&b.publishingBatchAtomic, 0)
+		defer atomic.AddInt32(&b.publishingBatchAtomic, -1)
 		receipt, err := transactauth.WaitForReceiptWithResultsAndReplaceByFee(ctx, b.client, b.fromAddress.ToEthAddress(), arbTx, "addSequencerL2BatchFromOrigin", b.auth, b.auth)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error waiting for batch receipt")
@@ -1245,17 +1248,20 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 			}
 			nonce := new(big.Int).SetUint64(nonceInt)
 			// Updates both prevMsgCount and nonce on success
-			complete, err := b.publishBatch(ctx, dontPublishBlockNum, prevMsgCount, nonce)
-			if err != nil {
-				if common.IsFatalError(err) {
-					logger.Error().Err(err).Msg("aborting sequencer batch thread")
+			for {
+				complete, err := b.publishBatch(ctx, dontPublishBlockNum, prevMsgCount, nonce)
+				if err != nil {
+					if common.IsFatalError(err) {
+						logger.Error().Err(err).Msg("aborting sequencer batch thread")
+						break
+					}
+
+					logger.Error().Err(err).Msg("error creating batch")
+				} else if complete {
+					b.lastCreatedBatchAt = blockNum
+					firstBatchCreation = false
 					break
 				}
-
-				logger.Error().Err(err).Msg("error creating batch")
-			} else if complete {
-				b.lastCreatedBatchAt = blockNum
-				firstBatchCreation = false
 			}
 		}
 	}
