@@ -90,7 +90,7 @@ type SequencerBatcher struct {
 	lastSequencedDelayedAt *big.Int
 	// 1 if we've published a batch to the L1 mempool,
 	// but it hasn't been included in an L1 block yet.
-	publishingBatchAtomic int32
+	publishingBatchesAtomic int32
 	// The total estimate of unpublished transactions' gas usage.
 	// Added to every time something is sequenced, zeroed when batch posted.
 	pendingBatchGasEstimateAtomic int64
@@ -223,7 +223,7 @@ func NewSequencerBatcher(
 		latestChainTime:               chainTime,
 		lastSequencedDelayedAt:        chainTime.BlockNum.AsInt(),
 		lastCreatedBatchAt:            chainTime.BlockNum.AsInt(),
-		publishingBatchAtomic:         0,
+		publishingBatchesAtomic:       0,
 		pendingBatchGasEstimateAtomic: int64(gasCostBase),
 		fb:                            fb,
 	}
@@ -952,9 +952,9 @@ func (b *SequencerBatcher) publishBatch(ctx context.Context, dontPublishBlockNum
 	// AddSequencerL2BatchFromOriginCustomNonce will have already updated the nonce
 	prevMsgCount.Set(newMsgCount)
 
-	atomic.AddInt32(&b.publishingBatchAtomic, 1)
+	atomic.AddInt32(&b.publishingBatchesAtomic, 1)
 	go (func() {
-		defer atomic.AddInt32(&b.publishingBatchAtomic, -1)
+		defer atomic.AddInt32(&b.publishingBatchesAtomic, -1)
 		receipt, err := transactauth.WaitForReceiptWithResultsAndReplaceByFee(ctx, b.client, b.fromAddress.ToEthAddress(), arbTx, "addSequencerL2BatchFromOrigin", b.auth, b.auth)
 		if err != nil {
 			logger.Warn().Err(err).Msg("error waiting for batch receipt")
@@ -1112,6 +1112,8 @@ func (b *SequencerBatcher) getLastSequencedChainTime() (inbox.ChainTime, error) 
 	return inbox.ChainTime{}, nil
 }
 
+var parallelPublishingBatches int32 = 8
+
 func (b *SequencerBatcher) Start(ctx context.Context) {
 	logger.Log().Msg("Starting sequencer batch submission thread")
 	firstBatchCreation := true
@@ -1180,7 +1182,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 			// We don't have the lockout and publishing batches without the lockout is disabled
 			creatingBatch = false
 		}
-		if creatingBatch && atomic.LoadInt32(&b.publishingBatchAtomic) != 0 {
+		if creatingBatch && atomic.LoadInt32(&b.publishingBatchesAtomic) >= parallelPublishingBatches {
 			// The previous batch is still waiting on confirmation; don't attempt to create another yet
 			creatingBatch = false
 		}
@@ -1248,7 +1250,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 			}
 			nonce := new(big.Int).SetUint64(nonceInt)
 			// Updates both prevMsgCount and nonce on success
-			for {
+			for atomic.LoadInt32(&b.publishingBatchesAtomic) < parallelPublishingBatches {
 				complete, err := b.publishBatch(ctx, dontPublishBlockNum, prevMsgCount, nonce)
 				if err != nil {
 					if common.IsFatalError(err) {
