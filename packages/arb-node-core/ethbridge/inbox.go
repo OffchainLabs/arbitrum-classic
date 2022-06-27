@@ -182,7 +182,11 @@ func init() {
 	}
 }
 
-const addSequencerBatchGasLimit uint64 = 5_000_000
+// these values don't include the data gas
+const addSequencerBatchGasLimit uint64 = 2_000_000
+const smallerAddSequencerBatchGasLimit uint64 = 1_000_000
+
+var maxGasChargeWei *big.Int = big.NewInt(175e16) // 1.75 ether
 
 // AddSequencerL2BatchFromOriginCustomNonce is like AddSequencerL2BatchFromOrigin but with a custom nonce that will
 // be incremented on success.  This is to handle the case when a stuck transaction is present on startup.
@@ -211,15 +215,37 @@ func AddSequencerL2BatchFromOriginCustomNonce(
 	}
 	data := append([]byte{}, method.ID...)
 	data = append(data, inputs...)
+	var dataGas uint64
+	for _, b := range data {
+		if b == 0 {
+			dataGas += 4
+		} else {
+			dataGas += 16
+		}
+	}
 	to := seqInboxAddr.ToEthAddress()
+	gasLimit := addSequencerBatchGasLimit + dataGas
 	gasFeeCap := new(big.Int).Mul(latestHeader.BaseFee, big.NewInt(2))
 	gasTipCap := big.NewInt(15e8) // 1.5 gwei
 	gasFeeCap.Add(gasFeeCap, gasTipCap)
+	gasCharge := new(big.Int).Mul(gasFeeCap, new(big.Int).SetUint64(gasLimit))
+	if gasCharge.Cmp(maxGasChargeWei) > 0 {
+		// try to reduce the gas charge by setting the gas fee cap to 3/2 the base fee
+		gasFeeCap.Mul(latestHeader.BaseFee, big.NewInt(3))
+		gasFeeCap.Div(gasFeeCap, big.NewInt(2))
+		gasFeeCap.Add(gasFeeCap, gasTipCap)
+		gasCharge.Mul(gasFeeCap, new(big.Int).SetUint64(gasLimit))
+	}
+	if gasCharge.Cmp(maxGasChargeWei) > 0 {
+		// try to reduce the gas charge by using a lower gas limit
+		gasLimit = smallerAddSequencerBatchGasLimit + dataGas
+		gasCharge.Mul(gasFeeCap, new(big.Int).SetUint64(gasLimit))
+	}
 	tx := types.NewTx(&types.DynamicFeeTx{
 		Nonce:     nonce.Uint64(),
 		GasTipCap: gasTipCap,
 		GasFeeCap: gasFeeCap,
-		Gas:       addSequencerBatchGasLimit,
+		Gas:       gasLimit,
 		To:        &to,
 		Value:     big.NewInt(0),
 		Data:      data,
