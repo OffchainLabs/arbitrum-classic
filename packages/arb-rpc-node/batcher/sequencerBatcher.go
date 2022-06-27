@@ -264,7 +264,7 @@ func txLogsToResults(logs []core.ValueAndInbox) (map[common.Hash]*evm.TxResult, 
 
 const maxTxDataSize int = 100_000
 
-func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.Transaction) error {
+func (b *SequencerBatcher) SendTransaction(startCtx context.Context, startTx *types.Transaction) error {
 	_, err := types.Sender(b.signer, startTx)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error processing user transaction")
@@ -276,7 +276,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 	logger.Info().Str("hash", startTx.Hash().String()).Msg("got user tx")
 
 	startResultChan := make(chan error, 1)
-	b.txQueue <- txQueueItem{tx: startTx, resultChan: startResultChan, ctx: ctx}
+	b.txQueue <- txQueueItem{tx: startTx, resultChan: startResultChan, ctx: startCtx}
 	b.inboxReader.MessageDeliveryMutex.Lock()
 	defer b.inboxReader.MessageDeliveryMutex.Unlock()
 
@@ -301,6 +301,11 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		}
 		return err
 	}
+
+	// We don't want to cancel the whole batch if one user's context got canceled.
+	// Unfortunately, there's no good way to take a union of contexts,
+	// so we just use a background context for this.
+	bgCtx := context.Background()
 
 	for {
 		var batchTxs []*types.Transaction
@@ -402,7 +407,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		if debugTiming {
 			logger.Info().Str("elapsed", time.Since(start).String()).Msg("before deliver messages")
 		}
-		err = core.DeliverMessagesAndWait(ctx, b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{txBatchItem}, []inbox.DelayedMessage{}, nil)
+		err = core.DeliverMessagesAndWait(bgCtx, b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{txBatchItem}, []inbox.DelayedMessage{}, nil)
 		if err != nil {
 			return err
 		}
@@ -454,7 +459,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 				logger.Info().Str("elapsed", time.Since(start).String()).Msg("reorging as tx failed")
 			}
 			// Reorg to before we processed the batch and re-process the messages individually
-			err = core.DeliverMessagesAndWait(ctx, b.db, msgCount, prevAcc, nil, nil, msgCount)
+			err = core.DeliverMessagesAndWait(bgCtx, b.db, msgCount, prevAcc, nil, nil, msgCount)
 			if err != nil {
 				return err
 			}
@@ -487,7 +492,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 				l2Message := message.NewSafeL2Message(batch)
 				seqMsg := message.NewInboxMessage(l2Message, b.fromAddress, new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime.Clone())
 				txBatchItem := inbox.NewSequencerItem(totalDelayedCount, seqMsg, prevAcc)
-				err = core.DeliverMessagesAndWait(ctx, b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{txBatchItem}, []inbox.DelayedMessage{}, nil)
+				err = core.DeliverMessagesAndWait(bgCtx, b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{txBatchItem}, []inbox.DelayedMessage{}, nil)
 				if err != nil {
 					return err
 				}
@@ -506,7 +511,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 				}
 				txResult := newTxResults[txHash]
 				if !shouldIncludeTxResult(txResult) {
-					err = core.DeliverMessagesAndWait(ctx, b.db, msgCount, prevAcc, nil, nil, msgCount)
+					err = core.DeliverMessagesAndWait(bgCtx, b.db, msgCount, prevAcc, nil, nil, msgCount)
 					if err != nil {
 						return err
 					}
@@ -539,7 +544,7 @@ func (b *SequencerBatcher) SendTransaction(ctx context.Context, startTx *types.T
 		if debugTiming {
 			logger.Info().Str("elapsed", time.Since(start).String()).Msg("before deliver new block message")
 		}
-		err = core.DeliverMessagesAndWait(ctx, b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{newBlockBatchItem}, []inbox.DelayedMessage{}, nil)
+		err = core.DeliverMessagesAndWait(bgCtx, b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{newBlockBatchItem}, []inbox.DelayedMessage{}, nil)
 		if err != nil {
 			return err
 		}
