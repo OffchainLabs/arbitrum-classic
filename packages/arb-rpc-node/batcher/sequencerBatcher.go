@@ -1250,8 +1250,8 @@ MainLoop:
 				continue
 			}
 			nonce := new(big.Int).SetUint64(nonceInt)
-			// Updates both prevMsgCount and nonce on success
 			for atomic.LoadInt32(&b.publishingBatchesAtomic) < parallelPublishingBatches {
+				// Updates both prevMsgCount and nonce on success
 				complete, err := b.publishBatch(ctx, dontPublishBlockNum, prevMsgCount, nonce)
 				if err != nil {
 					if common.IsFatalError(err) {
