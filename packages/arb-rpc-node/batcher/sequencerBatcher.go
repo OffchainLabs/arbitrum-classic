@@ -1122,6 +1122,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 	}
 
 	var chainTime inbox.ChainTime
+	batchFullThreshold := b.config.Node.Sequencer.MaxBatchGasCost * 9 / 10
 	for {
 		var err error
 		chainTime, err = b.getLastSequencedChainTime()
@@ -1176,9 +1177,12 @@ MainLoop:
 		// Determine if we should create a batch
 		shouldSequence := b.LockoutManager == nil || b.LockoutManager.ShouldSequence()
 		targetCreateBatch := new(big.Int).Add(b.lastCreatedBatchAt, b.createBatchBlockInterval)
-		creatingBatch := blockNum.Cmp(targetCreateBatch) >= 0 ||
-			atomic.LoadInt64(&b.pendingBatchGasEstimateAtomic) >= b.config.Node.Sequencer.MaxBatchGasCost*9/10 ||
-			firstBatchCreation
+		creatingBatch := blockNum.Cmp(targetCreateBatch) >= 0 || firstBatchCreation
+		onlyCreateFullBatches := false
+		if !creatingBatch && atomic.LoadInt64(&b.pendingBatchGasEstimateAtomic) >= batchFullThreshold {
+			creatingBatch = true
+			onlyCreateFullBatches = true
+		}
 		if creatingBatch && !shouldSequence && !b.config.Node.Sequencer.Dangerous.PublishBatchesWithoutLockout {
 			// We don't have the lockout and publishing batches without the lockout is disabled
 			creatingBatch = false
@@ -1264,6 +1268,9 @@ MainLoop:
 				} else if complete {
 					b.lastCreatedBatchAt = blockNum
 					firstBatchCreation = false
+					break
+				}
+				if onlyCreateFullBatches && atomic.LoadInt64(&b.pendingBatchGasEstimateAtomic) < batchFullThreshold {
 					break
 				}
 			}
