@@ -50,10 +50,9 @@ type CrossDB struct {
 }
 
 func NewCrossDB(
-	txdb *txdb.TxDB,
+	txDB *txdb.TxDB,
 	ethDBPath string,
 ) (*CrossDB, error) {
-
 	freezer := filepath.Join(ethDBPath, "ancient")
 	ethDB, err := rawdb.NewLevelDBDatabaseWithFreezer(ethDBPath, 0, 0, freezer, "", false)
 
@@ -62,7 +61,7 @@ func NewCrossDB(
 	}
 	return &CrossDB{
 		err:               nil,
-		txDB:              txdb,
+		txDB:              txDB,
 		ethDB:             ethDB,
 		targetChangedChan: make(chan struct{}),
 	}, nil
@@ -117,7 +116,7 @@ func (c *CrossDB) importBlock(ctx context.Context, blockNumber uint64) error {
 	}
 	_, err = rawdb.WriteAncientBlocks(c.ethDB, []*types.Block{block}, []types.Receipts{outputReceipts}, big.NewInt(0))
 	receiptsRead := rawdb.ReadReceipts(c.ethDB, blockHash, blockNumber, params.ArbitrumRinkebyDevTestChainConfig())
-	for i, _ := range receiptsRead {
+	for i := range receiptsRead {
 		if !reflect.DeepEqual(receiptsRead[i], outputReceipts[i]) {
 			return errors.New(fmt.Sprintf("stored %v != original %v", receiptsRead[i], outputReceipts[i]))
 		}
