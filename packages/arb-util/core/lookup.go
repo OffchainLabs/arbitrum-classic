@@ -36,8 +36,8 @@ type MessageStatus uint8
 
 const (
 	MessagesEmpty MessageStatus = iota
+	MessagesLoading
 	MessagesReady
-	MessagesSuccess
 	MessagesError
 )
 
@@ -45,10 +45,10 @@ func (ms MessageStatus) String() string {
 	switch ms {
 	case MessagesEmpty:
 		return "empty"
+	case MessagesLoading:
+		return "loading"
 	case MessagesReady:
 		return "ready"
-	case MessagesSuccess:
-		return "success"
 	case MessagesError:
 		return "error"
 	default:
@@ -131,7 +131,7 @@ func DeliverMessagesAndWait(ctx context.Context, db ArbCoreInbox, previousMessag
 	if err != nil {
 		return err
 	}
-	if status != MessagesSuccess {
+	if status != MessagesEmpty {
 		return fmt.Errorf("unexpected waitForMessages status: %s", status.String())
 	}
 	return nil
@@ -163,9 +163,6 @@ func waitForMessages(ctx context.Context, db ArbCoreInbox) (MessageStatus, error
 		}
 
 		if status == MessagesEmpty {
-			return 0, errors.New("should have messages")
-		}
-		if status != MessagesReady {
 			break
 		}
 		duration := time.Since(start)
