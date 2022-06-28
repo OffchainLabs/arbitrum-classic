@@ -1137,6 +1137,7 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 		case <-time.After(time.Second):
 		}
 	}
+MainLoop:
 	for {
 		select {
 		case <-ctx.Done():
@@ -1255,10 +1256,11 @@ func (b *SequencerBatcher) Start(ctx context.Context) {
 				if err != nil {
 					if common.IsFatalError(err) {
 						logger.Error().Err(err).Msg("aborting sequencer batch thread")
-						break
+						break MainLoop
 					}
 
 					logger.Error().Err(err).Msg("error creating batch")
+					break
 				} else if complete {
 					b.lastCreatedBatchAt = blockNum
 					firstBatchCreation = false
