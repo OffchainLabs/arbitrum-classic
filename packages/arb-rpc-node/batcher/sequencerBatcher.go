@@ -398,6 +398,8 @@ func (b *SequencerBatcher) SendTransaction(startCtx context.Context, startTx *ty
 		if err != nil {
 			return err
 		}
+		// Add an end of block
+		batch.Transactions = append(batch.Transactions, []byte{})
 		l2Message := message.NewSafeL2Message(batch)
 		seqMsg := message.NewInboxMessage(l2Message, b.fromAddress, new(big.Int).Set(msgCount), big.NewInt(0), b.latestChainTime.Clone())
 
@@ -532,26 +534,26 @@ func (b *SequencerBatcher) SendTransaction(startCtx context.Context, startTx *ty
 			if debugTiming {
 				logger.Info().Str("elapsed", time.Since(start).String()).Msg("after individually processing txs")
 			}
-		}
 
-		newBlockMessage := message.NewInboxMessage(
-			message.EndBlockMessage{},
-			b.fromAddress,
-			new(big.Int).Set(msgCount),
-			big.NewInt(0),
-			b.latestChainTime.Clone(),
-		)
+			newBlockMessage := message.NewInboxMessage(
+				message.EndBlockMessage{},
+				b.fromAddress,
+				new(big.Int).Set(msgCount),
+				big.NewInt(0),
+				b.latestChainTime.Clone(),
+			)
 
-		newBlockBatchItem := inbox.NewSequencerItem(totalDelayedCount, newBlockMessage, prevAcc)
-		sequencedBatchItems = append(sequencedBatchItems, newBlockBatchItem)
-		if debugTiming {
-			logger.Info().Str("elapsed", time.Since(start).String()).Msg("before deliver new block message")
+			newBlockBatchItem := inbox.NewSequencerItem(totalDelayedCount, newBlockMessage, prevAcc)
+			sequencedBatchItems = append(sequencedBatchItems, newBlockBatchItem)
+			if debugTiming {
+				logger.Info().Str("elapsed", time.Since(start).String()).Msg("before deliver new block message")
+			}
+			err = core.DeliverMessagesAndWait(bgCtx, b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{newBlockBatchItem}, []inbox.DelayedMessage{}, nil)
+			if err != nil {
+				return err
+			}
+			atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(gasCostPerMessage))
 		}
-		err = core.DeliverMessagesAndWait(bgCtx, b.db, msgCount, prevAcc, []inbox.SequencerBatchItem{newBlockBatchItem}, []inbox.DelayedMessage{}, nil)
-		if err != nil {
-			return err
-		}
-		atomic.AddInt64(&b.pendingBatchGasEstimateAtomic, int64(gasCostPerMessage))
 
 		if b.feedBroadcaster != nil {
 			err = b.feedBroadcaster.Broadcast(originalAcc, sequencedBatchItems, b.dataSigner)
