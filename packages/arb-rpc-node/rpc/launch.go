@@ -160,6 +160,7 @@ func SetupBatcher(
 			batcherMode.InboxReader,
 			client,
 			seqInbox,
+			common.NewAddressFromEth(seqInboxAddr),
 			batcherMode.Auth,
 			dataSigner,
 			feedBroadcaster,
