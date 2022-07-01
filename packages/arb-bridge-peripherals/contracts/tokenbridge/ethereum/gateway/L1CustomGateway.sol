@@ -40,6 +40,45 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
     // whitelist not used anymore
     address public whitelist;
 
+    // start of inline reentrancy guard
+    // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.4.2/contracts/utils/ReentrancyGuard.sol
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+    uint256 private _status;
+
+    modifier nonReentrant() {
+        // On the first call to nonReentrant, _notEntered will be true
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+        // Any calls to nonReentrant after this point will fail
+        _status = _ENTERED;
+        _;
+        _status = _NOT_ENTERED;
+    }
+
+    // end of inline reentrancy guard
+
+    function outboundTransfer(
+        address _l1Token,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) public payable override nonReentrant returns (bytes memory res) {
+        return super.outboundTransfer(_l1Token, _to, _amount, _maxGas, _gasPriceBid, _data);
+    }
+
+    function finalizeInboundTransfer(
+        address _token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes calldata _data
+    ) public payable virtual override nonReentrant {
+        // the superclass checks onlyCounterpartGateway
+        super.finalizeInboundTransfer(_token, _from, _to, _amount, _data);
+    }
+
     function initialize(
         address _l1Counterpart,
         address _l1Router,
@@ -50,6 +89,8 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         owner = _owner;
         // disable whitelist by default
         whitelist = address(0);
+        // reentrancy guard
+        _status = _NOT_ENTERED;
     }
 
     /**
@@ -90,14 +131,12 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
      * return Retryable ticket ID
      */
     function registerTokenToL2(
-        address, /* _l2Address */
-        uint256, /* _maxGas */
-        uint256, /* _gasPriceBid */
-        uint256, /* _maxSubmissionCost */
-        address /* _creditBackAddress */
+        address _l2Address,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        uint256 _maxSubmissionCost,
+        address _creditBackAddress
     ) public payable returns (uint256) {
-        revert("SELF_REGISTRATION_DISABLED");
-        /*
         require(
             ArbitrumEnabledToken(msg.sender).isArbitrumEnabled() == uint8(0xa4b1),
             "NOT_ARB_ENABLED"
@@ -118,12 +157,11 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
 
         emit TokenSet(l1Addresses[0], l2Addresses[0]);
 
-        bytes memory _data =
-            abi.encodeWithSelector(
-                L2CustomGateway.registerTokenFromL1.selector,
-                l1Addresses,
-                l2Addresses
-            );
+        bytes memory _data = abi.encodeWithSelector(
+            L2CustomGateway.registerTokenFromL1.selector,
+            l1Addresses,
+            l2Addresses
+        );
 
         return
             sendTxToL2(
@@ -137,7 +175,6 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
                 _gasPriceBid,
                 _data
             );
-        */
     }
 
     /**

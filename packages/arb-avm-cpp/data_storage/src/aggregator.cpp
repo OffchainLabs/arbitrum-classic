@@ -27,8 +27,6 @@
 
 #include <sstream>
 
-constexpr auto logs_processed_key = std::array<char, 1>{-51};
-
 constexpr auto block_key = std::array<char, 1>{-52};
 
 constexpr auto request_key_prefix = std::array<char, 1>{-54};
@@ -112,17 +110,6 @@ uint64_t blockCountImpl(const ReadTransaction& tx) {
     auto it = value.begin();
     return extractUint64(it);
 }
-
-void updateLogsProcessedCountImpl(ReadWriteTransaction& tx,
-                                  const uint256_t& count) {
-    std::vector<unsigned char> value;
-    marshal_uint256_t(count, value);
-    auto s =
-        tx.aggregatorPut(vecToSlice(logs_processed_key), vecToSlice(value));
-    if (!s.ok()) {
-        throw std::runtime_error("filed to save processed count");
-    }
-}
 }  // namespace
 
 std::array<char, block_key.size() + sizeof(uint64_t)> blockEntryKey(
@@ -156,7 +143,6 @@ AggregatorStore::AggregatorStore(std::shared_ptr<DataStorage> data_storage_)
     auto s = tx.aggregatorGet(vecToSlice(block_key), &value);
     if (s.IsNotFound()) {
         saveBlockCount(tx, 0);
-        updateLogsProcessedCountImpl(tx, 0);
     }
     commitTx(tx);
 }
@@ -167,15 +153,15 @@ std::optional<uint64_t> AggregatorStore::getPossibleRequestInfo(
     return returnIndex(tx, requestKey(request_id));
 }
 
+uint64_t AggregatorStore::blockCount() const {
+    ReadTransaction tx(data_storage);
+    return blockCountImpl(tx);
+}
+
 std::optional<uint64_t> AggregatorStore::getPossibleBlock(
     const uint256_t& block_hash) const {
     ReadTransaction tx(data_storage);
     return returnIndex(tx, blockHashKey(block_hash));
-}
-
-uint64_t AggregatorStore::blockCount() const {
-    ReadTransaction tx(data_storage);
-    return blockCountImpl(tx);
 }
 
 void AggregatorStore::saveMessageBatch(const uint256_t& batchNum,
@@ -259,16 +245,5 @@ std::vector<char> AggregatorStore::getBlock(uint64_t height) const {
 void AggregatorStore::reorg(uint64_t block_height) {
     ReadWriteTransaction tx(data_storage);
     saveBlockCount(tx, block_height);
-    commitTx(tx);
-}
-
-ValueResult<uint256_t> AggregatorStore::logsProcessedCount() const {
-    ReadTransaction tx(data_storage);
-    return tx.aggregatorGetUint256(vecToSlice(logs_processed_key));
-}
-
-void AggregatorStore::updateLogsProcessedCount(const uint256_t& count) {
-    ReadWriteTransaction tx(data_storage);
-    updateLogsProcessedCountImpl(tx, count);
     commitTx(tx);
 }

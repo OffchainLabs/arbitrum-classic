@@ -9,10 +9,10 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/pkg/errors"
 
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/challenge"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arbtransaction"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
@@ -97,9 +97,10 @@ func (v *Validator) removeOldStakers(ctx context.Context, dontRemoveSelf bool) (
 	if err != nil {
 		return nil, err
 	}
-	if dontRemoveSelf {
+	walletAddr := v.wallet.Address()
+	if dontRemoveSelf && walletAddr != nil {
 		for i, staker := range stakersToEliminate {
-			if staker == v.wallet.Address() {
+			if staker.ToEthAddress() == *walletAddr {
 				stakersToEliminate[i] = stakersToEliminate[len(stakersToEliminate)-1]
 				stakersToEliminate = stakersToEliminate[:len(stakersToEliminate)-1]
 				break
@@ -137,12 +138,13 @@ func (v *Validator) resolveNextNode(ctx context.Context, info *ethbridge.StakerI
 	}
 	switch confirmType {
 	case ethbridge.CONFIRM_TYPE_INVALID:
-		if info == nil || info.LatestStakedNode.Cmp(unresolvedNodeIndex) <= 0 {
+		addr := v.wallet.Address()
+		if info == nil || addr == nil || info.LatestStakedNode.Cmp(unresolvedNodeIndex) <= 0 {
 			// We aren't an example of someone staked on a competitor
 			return nil
 		}
 		logger.Info().Int("node", int(unresolvedNodeIndex.Int64())).Msg("Rejecting node")
-		return v.rollup.RejectNextNode(ctx, v.wallet.Address())
+		return v.rollup.RejectNextNode(ctx, *addr)
 	case ethbridge.CONFIRM_TYPE_VALID:
 		nodeInfo, err := v.rollup.RollupWatcher.LookupNode(ctx, unresolvedNodeIndex)
 		if err != nil {
@@ -195,7 +197,9 @@ type OurStakerInfo struct {
 	*ethbridge.StakerInfo
 }
 
-func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStakerInfo, strategy Strategy, fromBlock int64) (nodeAction, bool, error) {
+var maxAssertionSendCount *big.Int = big.NewInt(100) // From MAX_SEND_COUNT in RollupCore.sol
+
+func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStakerInfo, strategy configuration.ValidatorStrategy, fromBlock int64) (nodeAction, bool, error) {
 	startState, err := lookupNodeStartState(ctx, v.rollup.RollupWatcher, stakerInfo.LatestStakedNode, stakerInfo.LatestStakedNodeHash)
 	if err != nil {
 		return nil, false, err
@@ -228,12 +232,12 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 
 	cursor := stakerInfo.latestExecutionCursor
 	if cursor == nil || startState.TotalGasConsumed.Cmp(cursor.TotalGasConsumed()) < 0 {
-		cursor, err = v.lookup.GetExecutionCursor(startState.TotalGasConsumed)
+		cursor, err = v.lookup.GetExecutionCursor(startState.TotalGasConsumed, true)
 		if err != nil {
 			return nil, false, err
 		}
 	} else {
-		err = v.lookup.AdvanceExecutionCursor(cursor, new(big.Int).Sub(startState.TotalGasConsumed, cursor.TotalGasConsumed()), false)
+		err = v.lookup.AdvanceExecutionCursor(cursor, new(big.Int).Sub(startState.TotalGasConsumed, cursor.TotalGasConsumed()), false, true)
 		if err != nil {
 			return nil, false, err
 		}
@@ -271,7 +275,8 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		}
 	}
 
-	gasesUsed := make([]*big.Int, 0, len(successorNodes)+1)
+	gasesUsed := make([]*big.Int, 0, len(successorNodes)+2)
+	gasesUsed = append(gasesUsed, startState.TotalGasConsumed)
 	for _, nd := range successorNodes {
 		gasesUsed = append(gasesUsed, nd.Assertion.After.TotalGasConsumed)
 	}
@@ -284,17 +289,18 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 	minimumGasToConsume := new(big.Int).Mul(timeSinceProposed, arbGasSpeedLimitPerBlock)
 	maximumGasTarget := new(big.Int).Mul(minimumGasToConsume, big.NewInt(4))
 	maximumGasTarget = maximumGasTarget.Add(maximumGasTarget, startState.TotalGasConsumed)
+	maxTotalSendCount := new(big.Int).Add(startState.TotalSendCount, maxAssertionSendCount)
 
-	if strategy > WatchtowerStrategy {
+	if strategy.IsActive() || strategy == configuration.DefensiveStrategy {
 		gasesUsed = append(gasesUsed, maximumGasTarget)
 	}
 
-	execTracker := core.NewExecutionTrackerWithInitialCursor(v.lookup, false, gasesUsed, cursor, false)
+	execTracker := core.NewExecutionTrackerWithInitialCursor(v.lookup, false, gasesUsed, cursor, true)
 
 	var correctNode nodeAction
 	wrongNodesExist := false
 	if len(successorNodes) > 0 {
-		logger.Info().Int("count", len(successorNodes)).Msg("Examining existing potential successors")
+		logger.Info().Int("count", len(successorNodes)).Msg("examining existing potential successors")
 	}
 	for nodeI, nd := range successorNodes {
 		if correctNode != nil && wrongNodesExist {
@@ -322,12 +328,12 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 				return nil, false, err
 			}
 			if valid {
-				logger.Info().Int("node", int((*big.Int)(nd.NodeNum).Int64())).Msg("Found correct node")
+				logger.Info().Int("node", int((*big.Int)(nd.NodeNum).Int64())).Msg("found correct node")
 				correctNode = existingNodeAction{
 					number: nd.NodeNum,
 					hash:   nd.NodeHash,
 				}
-				stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(nd.AfterState().TotalGasConsumed)
+				stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(nd.AfterState().TotalGasConsumed, true)
 				if err != nil {
 					return nil, false, err
 				}
@@ -337,24 +343,56 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 				}
 				continue
 			} else {
-				logger.Warn().Int("node", int((*big.Int)(nd.NodeNum).Int64())).Msg("Found node with incorrect assertion")
+				logger.Warn().Int("node", int((*big.Int)(nd.NodeNum).Int64())).Msg("found node with incorrect assertion")
 			}
 		} else {
-			logger.Warn().Int("node", int((*big.Int)(nd.NodeNum).Int64())).Msg("Found younger sibling to correct node")
+			logger.Warn().Int("node", int((*big.Int)(nd.NodeNum).Int64())).Msg("found younger sibling to correct node")
 		}
 		// If we've hit this point, the node is "wrong"
 		wrongNodesExist = true
 	}
 
-	if strategy == WatchtowerStrategy || correctNode != nil || (strategy < MakeNodesStrategy && !wrongNodesExist) {
+	if strategy == configuration.WatchtowerStrategy || correctNode != nil || (strategy != configuration.MakeNodesStrategy && !wrongNodesExist) {
 		return correctNode, wrongNodesExist, nil
 	}
 
-	execState, _, err := execTracker.GetExecutionState(maximumGasTarget)
-	if err != nil {
-		return nil, false, err
+	for i := len(gasesUsed) - 1; i >= 0; i-- {
+		requestingGas := gasesUsed[i]
+		if requestingGas.Cmp(maximumGasTarget) > 0 {
+			continue
+		}
+		cursor, err = execTracker.GetExecutionCursor(requestingGas, true)
+		if err != nil {
+			return nil, false, err
+		}
+		if cursor.TotalSendCount().Cmp(maxTotalSendCount) > 0 {
+			maximumGasTarget = new(big.Int).Sub(cursor.TotalGasConsumed(), big.NewInt(1))
+			continue
+		}
+		// Binary search to find the maximum gas target that doesn't exceed the maxTotalSendCount
+		for cursor.TotalGasConsumed().Cmp(maximumGasTarget) < 0 {
+			advance := new(big.Int).Sub(maximumGasTarget, cursor.TotalGasConsumed())
+			advance.Add(advance, big.NewInt(1))
+			advance.Div(advance, big.NewInt(2))
+			// At this point, advance = (maximumGasTarget - cursor.TotalGasConsumed() + 1) / 2
+			// In other words, half the distance from cursor.TotalGasConsumed() to maximumGasTarget, rounding up.
+			newCursor := cursor.Clone()
+			v.lookup.AdvanceExecutionCursor(newCursor, advance, false, true)
+			if cursor.TotalGasConsumed().Cmp(newCursor.TotalGasConsumed()) == 0 {
+				// We've binary searched down to one instruction. This is good enough.
+				break
+			}
+			if newCursor.TotalSendCount().Cmp(maxTotalSendCount) > 0 {
+				maximumGasTarget = new(big.Int).Sub(newCursor.TotalGasConsumed(), big.NewInt(1))
+			} else {
+				cursor = newCursor
+			}
+		}
+		break
 	}
-	stakerInfo.latestExecutionCursor, err = execTracker.GetExecutionCursor(maximumGasTarget)
+
+	stakerInfo.latestExecutionCursor = cursor
+	execState, err := core.NewExecutionState(cursor)
 	if err != nil {
 		return nil, false, err
 	}
@@ -379,18 +417,34 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		After:  execState,
 	}
 
-	executionHash := assertion.ExecutionHash()
-	newNodeHash := hashing.SoliditySHA3(hasSiblingByte[:], lastHash[:], executionHash[:], inboxAcc[:])
-
 	var seqBatchProof []byte
+	var batchEndAcc common.Hash
 	if execState.TotalMessagesRead.Cmp(big.NewInt(0)) > 0 {
-		batch, err := challenge.LookupBatchContaining(ctx, v.lookup, v.sequencerInbox, new(big.Int).Sub(execState.TotalMessagesRead, big.NewInt(1)))
+		lastMessageRead := new(big.Int).Sub(execState.TotalMessagesRead, big.NewInt(1))
+		batch, err := v.sequencerInbox.LookupBatchContaining(ctx, v.lookup, lastMessageRead)
 		if err != nil {
 			return nil, false, err
 		}
 		if batch == nil {
 			return nil, false, errors.New("Failed to lookup batch containing message")
 		}
+
+		batchEndAcc = batch.GetAfterAcc()
+		if execState.TotalMessagesRead.Cmp(batch.GetAfterCount()) == 0 {
+			if inboxAcc != batchEndAcc {
+				return nil, false, errors.New("Assertion inbox accumulator doesn't match on-chain accumulator (reorg?)")
+			}
+		} else {
+			lastBatchMessage := new(big.Int).Sub(batch.GetAfterCount(), big.NewInt(1))
+			haveInboxAcc, haveBatchEndAcc, err := v.lookup.GetInboxAccPair(lastMessageRead, lastBatchMessage)
+			if err != nil {
+				return nil, false, err
+			}
+			if haveInboxAcc != inboxAcc || haveBatchEndAcc != batchEndAcc {
+				return nil, false, errors.New("Reorg while producing assertion")
+			}
+		}
+
 		seqBatchProof = append(seqBatchProof, math.U256Bytes(batch.GetBatchIndex())...)
 		proofPart, err := v.generateBatchEndProof(batch.GetBeforeCount())
 		if err != nil {
@@ -403,6 +457,9 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		}
 		seqBatchProof = append(seqBatchProof, proofPart...)
 	}
+
+	executionHash := assertion.ExecutionHash()
+	newNodeHash := hashing.SoliditySHA3(hasSiblingByte[:], lastHash[:], executionHash[:], batchEndAcc[:])
 
 	action := createNodeAction{
 		assertion:           assertion,
@@ -479,7 +536,7 @@ func lookupNodeStartState(ctx context.Context, rollup *ethbridge.RollupWatcher, 
 		return nil, err
 	}
 	if node.NodeHash != nodeHash {
-		return nil, errors.New("Looked up starting node but found wrong hash")
+		return nil, errors.New("looked up starting node but found wrong hash")
 	}
 	return node.AfterState(), nil
 }

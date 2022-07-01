@@ -23,7 +23,9 @@ import { TransactionReceipt } from '@ethersproject/providers'
 import { expect, assert } from 'chai'
 import {
   Bridge,
-  IOneStepProof,
+  OneStepProof,
+  OneStepProof2,
+  OneStepProofHash,
   OneStepProofTester,
   SequencerInbox,
 } from '../build/types'
@@ -54,7 +56,7 @@ interface Proof {
 }
 
 let ospTester: OneStepProofTester
-let executors: IOneStepProof[]
+let executors: (OneStepProof | OneStepProof2 | OneStepProofHash)[]
 let bridge: Bridge
 let sequencerInbox: SequencerInbox
 
@@ -77,15 +79,15 @@ describe('OneStepProof', function () {
     await ospTester.deployed()
 
     const OneStepProof = await ethers.getContractFactory('OneStepProof')
-    const osp1 = (await OneStepProof.deploy()) as IOneStepProof
+    const osp1 = await OneStepProof.deploy()
     await osp1.deployed()
 
     const OneStepProof2 = await ethers.getContractFactory('OneStepProof2')
-    const osp2 = (await OneStepProof2.deploy()) as IOneStepProof
+    const osp2 = await OneStepProof2.deploy()
     await osp2.deployed()
 
     const OneStepProofHash = await ethers.getContractFactory('OneStepProofHash')
-    const osp3 = (await OneStepProofHash.deploy()) as IOneStepProof
+    const osp3 = await OneStepProofHash.deploy()
     await osp3.deployed()
 
     executors = [osp1, osp2, osp3]

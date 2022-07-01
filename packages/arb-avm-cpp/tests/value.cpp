@@ -29,8 +29,8 @@
 
 std::vector<char> hexStringToBytes(const std::string& hexstr) {
     std::vector<char> bytes;
-    bytes.reserve(hexstr.size() / 2);
-    boost::algorithm::unhex(hexstr.begin(), hexstr.end(), bytes.begin());
+    boost::algorithm::unhex(hexstr.begin(), hexstr.end(),
+                            std::back_inserter(bytes));
     return bytes;
 }
 
@@ -72,12 +72,56 @@ TEST_CASE("Value marshaling") {
             auto valRaw = reinterpret_cast<const char*>(valBytes.data());
             auto val = deserialize_value(valRaw);
             std::vector<unsigned char> buf;
-            marshal_value(val, buf);
+            marshal_value(val, buf, nullptr);
             auto valptr = (const char*)&buf[0];
             auto newval = deserialize_value(valptr);
-            auto valsEqual = val == newval;
-            REQUIRE(valsEqual);
-            // REQUIRE(val == newval); junit output broken with map::at error
+            REQUIRE(values_equal(val, newval));
         }
     }
+}
+
+TEST_CASE("UnloadedValue equality") {
+    Tuple tup;
+    UnloadedValue uv(BigUnloadedValue{TUPLE, ::hash(tup), tup.getSize()});
+    REQUIRE(values_equal(Value(tup), Value(uv)));
+}
+
+#define CHECK_UV_EQUALITY(uv, big)                  \
+    {                                               \
+        REQUIRE(uv.hash() == big.hash);             \
+        REQUIRE(uv.value_size() == big.value_size); \
+        REQUIRE(uv.type() == big.type);             \
+        REQUIRE(uv.isHeaped() == shouldHeap);       \
+    }
+
+void checkUvIntegrity(BigUnloadedValue big, bool shouldHeap) {
+    UnloadedValue uv(big);
+    CHECK_UV_EQUALITY(uv, big);
+
+    UnloadedValue copy(uv);
+    CHECK_UV_EQUALITY(copy, big);
+
+    UnloadedValue move(std::move(copy));
+    CHECK_UV_EQUALITY(move, big);
+
+    UnloadedValue copy_assign(BigUnloadedValue{ValueTypes::NUM, 0, 1});
+    copy_assign = uv;
+    CHECK_UV_EQUALITY(copy_assign, big);
+
+    UnloadedValue move_assign(BigUnloadedValue{ValueTypes::NUM, 0, 1});
+    move_assign = std::move(copy_assign);
+    CHECK_UV_EQUALITY(move_assign, big);
+
+    // Make sure uv isn't moved (though C++ probably wouldn't allow that
+    // anyways)
+    REQUIRE(uv.hash() == big.hash);
+}
+
+#undef CHYECK_UV_EQUALITY
+
+TEST_CASE("UnloadedValue inlining") {
+    Tuple tup;
+    checkUvIntegrity({TUPLE, ::hash(tup), 8}, false);
+    checkUvIntegrity({HASH_PRE_IMAGE, ::hash(tup), 1}, true);
+    checkUvIntegrity({HASH_PRE_IMAGE, ::hash(tup), uint256_t(1) << 128}, true);
 }

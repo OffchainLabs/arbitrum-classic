@@ -27,7 +27,7 @@ value parseFuzzInputValue(const uint8_t*& buf,
                           const uint8_t* bufEnd,
                           const std::shared_ptr<Code>& code) {
     value output;
-    std::vector<value*> slots;
+    std::vector<Value*> slots;
     slots.push_back(&output);
     while (!slots.empty()) {
         auto slot = slots.back();

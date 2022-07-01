@@ -76,9 +76,10 @@ func CheckProof(checkerIndex C.int, dataPtr unsafe.Pointer, length C.int) C.int 
 	if len(proofErrors) > 0 {
 		retByte = 1
 		fmt.Fprintln(os.Stderr, "Error verifying proof:")
-	}
-	for _, err := range proofErrors {
-		fmt.Fprintln(os.Stderr, err)
+
+		for _, err := range proofErrors {
+			fmt.Fprintln(os.Stderr, err)
+		}
 	}
 	return retByte
 }

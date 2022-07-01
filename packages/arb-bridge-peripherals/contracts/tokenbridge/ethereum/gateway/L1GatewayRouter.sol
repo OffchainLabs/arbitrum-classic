@@ -108,7 +108,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
             l1TokenToGateway[_token[i]] = _gateway[i];
             emit GatewaySet(_token[i], _gateway[i]);
             // overwrite memory so the L2 router receives the L2 address of each gateway
-            if (_gateway[i] != address(0)) {
+            if (_gateway[i] != address(0) && _gateway[i] != DISABLED) {
                 // if we are assigning a gateway to the token, the address oracle of the gateway
                 // must return something other than the 0 address
                 // this check helps avoid misconfiguring gateways
@@ -170,23 +170,21 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
      * return Retryable ticket ID
      */
     function setGateway(
-        address, /* _gateway */
-        uint256, /* _maxGas */
-        uint256, /* _gasPriceBid */
-        uint256, /* _maxSubmissionCost */
-        address /* _creditBackAddress */
+        address _gateway,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        uint256 _maxSubmissionCost,
+        address _creditBackAddress
     ) public payable returns (uint256) {
-        revert("SELF_REGISTRATION_DISABLED");
-        /*
         require(
             ArbitrumEnabledToken(msg.sender).isArbitrumEnabled() == uint8(0xa4b1),
             "NOT_ARB_ENABLED"
         );
         require(_gateway.isContract(), "NOT_TO_CONTRACT");
 
-        address currGateway = l1TokenToGateway[msg.sender];
-        if (currGateway != address(0)) {
-            // if gateway is already set, don't allow it to set a different gateway
+        address currGateway = getGateway(msg.sender);
+        if (currGateway != address(0) && currGateway != defaultGateway) {
+            // if gateway is already set to a non-default gateway, don't allow it to set a different gateway
             require(currGateway == _gateway, "NO_UPDATE_TO_DIFFERENT_ADDR");
         }
 
@@ -205,7 +203,6 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
                 _maxSubmissionCost,
                 _creditBackAddress
             );
-        */
     }
 
     function setGateways(
@@ -229,6 +226,17 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable override onlyWhitelisted returns (bytes memory) {
+        // when sending a L1 to L2 transaction, we expect the user to send
+        // eth in flight in order to pay for L2 gas costs
+        // this check prevents users from misconfiguring the msg.value
+        (uint256 _maxSubmissionCost, ) = abi.decode(_data, (uint256, bytes));
+
+        // here we don't use SafeMath since this validation is to prevent users
+        // from shooting themselves on the foot.
+        uint256 expectedEth = _maxSubmissionCost + (_maxGas * _gasPriceBid);
+        require(_maxSubmissionCost > 0, "NO_SUBMISSION_COST");
+        require(msg.value == expectedEth, "WRONG_ETH_VALUE");
+
         // will revert if msg.sender is not whitelisted
         return super.outboundTransfer(_token, _to, _amount, _maxGas, _gasPriceBid, _data);
     }

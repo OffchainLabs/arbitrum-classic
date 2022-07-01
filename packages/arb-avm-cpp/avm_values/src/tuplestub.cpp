@@ -20,6 +20,7 @@
 
 #include <ethash/keccak.hpp>
 
+#include <atomic>
 #include <iostream>
 
 uint256_t HashPreImage::hash() const {
@@ -30,6 +31,40 @@ uint256_t HashPreImage::hash() const {
 
     iter = std::copy(firstHash.begin(), firstHash.end(), iter);
     to_big_endian(valueSize, iter);
+
+    auto hash_val = ethash::keccak256(tupData2.data(), tupData2.size());
+    return intx::be::load<uint256_t>(hash_val.bytes);
+}
+
+// Note: not atomic in reads from source, and writes to dest are not
+// all-or-nothing. If `memcpyAtomic` is invoked concurrently with the same
+// destination, it's assumed they're writing the same source value.
+void memcpyAtomic(uint8_t* dest, const uint8_t* source, size_t length) {
+    for (size_t i = 0; i < length; i++) {
+        auto b = reinterpret_cast<std::atomic<uint8_t>*>(&dest[i]);
+        uint8_t oldValue = b->load(std::memory_order_relaxed);
+        uint8_t newValue = source[i];
+        if (oldValue != newValue) {
+            b->compare_exchange_strong(oldValue, newValue,
+                                       std::memory_order_relaxed);
+        }
+    }
+}
+
+void HashPreImage::writeAtomic(const HashPreImage& other) {
+    memcpyAtomic(firstHash.begin(), other.firstHash.begin(), 32);
+    memcpyAtomic(reinterpret_cast<uint8_t*>(&valueSize),
+                 reinterpret_cast<const uint8_t*>(&other.valueSize), 32);
+}
+
+uint256_t HashPreImage::secretHash(
+    const std::vector<unsigned char>& seed) const {
+    std::vector<unsigned char> tupData2;
+    tupData2.push_back(TUPLE);
+    tupData2.insert(tupData2.end(), seed.begin(), seed.end());
+
+    tupData2.insert(tupData2.end(), firstHash.begin(), firstHash.end());
+    marshal_uint256_t(valueSize, tupData2);
 
     auto hash_val = ethash::keccak256(tupData2.data(), tupData2.size());
     return intx::be::load<uint256_t>(hash_val.bytes);

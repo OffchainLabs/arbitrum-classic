@@ -264,6 +264,10 @@ func (r *RollupWatcher) StakerInfo(ctx context.Context, staker common.Address) (
 	return stakerInfo, nil
 }
 
+func (r *RollupWatcher) WithdrawableFunds(ctx context.Context, staker common.Address) (*big.Int, error) {
+	return r.con.WithdrawableFunds(r.getCallOpts(ctx), staker.ToEthAddress())
+}
+
 func (r *RollupWatcher) MinimumAssertionPeriod(ctx context.Context) (*big.Int, error) {
 	blocks, err := r.con.MinimumAssertionPeriod(r.getCallOpts(ctx))
 	return blocks, errors.WithStack(err)

@@ -167,7 +167,12 @@ func TestTransactionCount(t *testing.T) {
 		Payment:     big.NewInt(0),
 		Data:        generateFib(t, big.NewInt(20)),
 	}
-	resultCodes = append(resultCodes, evm.InsufficientGasFundsCode)
+	if arbosVersion < 42 {
+		resultCodes = append(resultCodes, evm.InsufficientGasFundsCode)
+	} else {
+		// Newer ArbOS versions don't require that you have enough funds for GasPriceBid
+		resultCodes = append(resultCodes, evm.ReturnCode)
+	}
 
 	txes := []message.Message{
 		deposit,
@@ -255,11 +260,10 @@ func TestTransactionCount(t *testing.T) {
 	}
 	checkTxCountResult(t, results[16])
 
-	// Tx call with insufficient gas funds doesn't affect the count
-	//if arbosVersion >= 16 {
-	//	incrSeqNum()
-	//}
-
+	// Tx call with insufficient gas funds doesn't affect the count when checked
+	if arbosVersion >= 42 {
+		incrSeqNum()
+	}
 	checkTxCountResult(t, results[18])
 
 	t.Log(crypto.CreateAddress(ethcommon.HexToAddress("0x3fab184622dc19b6109349b94811493bf2a45362"), 0).Hex())

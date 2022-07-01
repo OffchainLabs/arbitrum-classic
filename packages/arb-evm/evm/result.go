@@ -272,6 +272,33 @@ func (r *TxResult) CalcGasUsed() *big.Int {
 	}
 }
 
+func (r *TxResult) IsContractCreation() bool {
+	if r.IncomingRequest.Kind == message.L2Type || r.IncomingRequest.Kind == message.EthDepositTxType {
+		msg, err := message.L2Message{Data: r.IncomingRequest.Data}.AbstractMessage()
+		if err == nil {
+			if msg, ok := msg.(message.AbstractTransaction); ok {
+				if msg.Destination() == (common.Address{}) {
+					if r.GasUsed.BitLen() > 0 {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
+func (r *TxResult) GetCreatedContractAddress() (ethcommon.Address, bool) {
+	contractAddress := ethcommon.Address{}
+	if len(r.ReturnData) == 32 {
+		copy(contractAddress[:], r.ReturnData[12:])
+		return contractAddress, true
+	} else {
+		logger.Warn().Str("txresult", r.String()).Msg("incorrect returndata size in ToEthReceipt")
+		return contractAddress, false
+	}
+}
+
 func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 	contractAddress := ethcommon.Address{}
 	if r.IncomingRequest.Kind == message.L2Type && r.ResultCode == ReturnCode {
@@ -289,7 +316,6 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 			}
 		}
 	}
-
 	status := uint64(0)
 	if r.ResultCode == ReturnCode {
 		status = 1

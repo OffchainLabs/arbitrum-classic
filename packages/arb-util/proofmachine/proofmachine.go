@@ -122,19 +122,19 @@ func (p *ProofChecker) CheckProof(proof *ProofData) []error {
 		errorList = append(errorList, err)
 	}
 	if machineData.AfterMessagesRead.Cmp(proof.Assertion.After.TotalMessagesRead) != 0 {
-		err = errors.New("wrong total messages read")
+		err = errors.Errorf("wrong total messages read %v %v", machineData.AfterMessagesRead, proof.Assertion.After.TotalMessagesRead)
 		errorList = append(errorList, err)
 	}
 	if machineData.Fields[0] != proof.Assertion.Before.MachineHash {
-		err = errors.New("wrong before machine")
+		err = errors.Errorf("wrong before machine 0x%x 0x%x", machineData.Fields[0][:], proof.Assertion.After.MachineHash[:])
 		errorList = append(errorList, err)
 	}
 	if machineData.Fields[2] != proof.Assertion.After.SendAcc {
-		err = errors.New("wrong send acc")
+		err = errors.Errorf("wrong send acc 0x%x 0x%x", machineData.Fields[2][:], proof.Assertion.After.SendAcc[:])
 		errorList = append(errorList, err)
 	}
 	if machineData.Fields[3] != proof.Assertion.After.LogAcc {
-		err = errors.New("wrong log acc")
+		err = errors.Errorf("wrong log acc 0x%x 0x%x", machineData.Fields[3][:], proof.Assertion.After.LogAcc[:])
 		errorList = append(errorList, err)
 	}
 	if machineData.Fields[1] != proof.Assertion.After.MachineHash {

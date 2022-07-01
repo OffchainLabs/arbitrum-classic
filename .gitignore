@@ -14,6 +14,7 @@ validator-states
 docker-compose.yml
 packages/arb-avm-cpp/tests/config.hpp
 packages/arb-avm-cpp/rocksdb
+packages/arb-avm-cpp/tsan
 packages/arb-avm-cpp/cmachine/flags.go.in2
 packages/arb-avm-cpp/cmachine/flags.go
 bridge_eth_addresses.json
@@ -24,11 +25,12 @@ arbitrum_flat.sol
 vconan
 gasReporterOutput.json
 rollups
-/packages/arb-node-core/arb-validator
 /packages/arb-node-core/proof_test_server
 /packages/arb-rpc-node/arb-node
 /packages/arb-rpc-node/cmd/arb-dev-node/arb-dev-node
 /packages/arb-rpc-node/cmd/arb-dev-node/arbitrum*
+compile_commands.json
+.envrc
 
 # Logs
 logs
@@ -293,10 +295,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-packages/arb-validator/cmd/rollupServer/rollupServer
-packages/arb-validator/cmd/evilRollupServer/evilRollupServer
-packages/arb-validator/cmd/evilRollupServer/evilRollupServer
-packages/arb-validator/cmd/evilRollupServer/evilRollupServer
 
 # geth setup
 packages/arb-bridge-eth/data/
@@ -304,4 +302,4 @@ packages/arb-bridge-eth/password.txt
 
 # GitHub CI
 packages/issues
-packages/*/issues
+packages/**/issues

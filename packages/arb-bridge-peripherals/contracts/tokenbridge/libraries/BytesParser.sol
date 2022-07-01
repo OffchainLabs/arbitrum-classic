@@ -19,32 +19,53 @@
 pragma solidity ^0.6.11;
 
 import "arb-bridge-eth/contracts/libraries/BytesLib.sol";
-import "arb-bridge-eth/contracts/libraries/DebugPrint.sol";
 
-library BytesParserWithDefault {
+library BytesParser {
     using BytesLib for bytes;
 
-    function toUint8(bytes memory input, uint8 defaultValue) internal pure returns (uint8) {
-        if (input.length == 0) {
-            return defaultValue;
-        } else {
-            // TODO: try catch to handle error
-            return abi.decode(input, (uint8));
+    function toUint8(bytes memory input) internal pure returns (bool success, uint8 res) {
+        if (input.length != 32) {
+            return (false, 0);
         }
+        // TODO: try catch to handle error
+        uint256 inputNum = abi.decode(input, (uint256));
+        if (inputNum > type(uint8).max) {
+            return (false, 0);
+        }
+        res = uint8(inputNum);
+        success = true;
     }
 
-    function toString(bytes memory input, string memory defaultValue)
-        internal
-        pure
-        returns (string memory)
-    {
+    function toString(bytes memory input) internal pure returns (bool success, string memory res) {
         if (input.length == 0) {
-            return defaultValue;
+            success = false;
+            // return default value of string
         } else if (input.length == 32) {
-            return DebugPrint.bytes32string(input.toBytes32(0));
+            // TODO: can validate anything other than length and being null terminated?
+            if (input[31] != bytes1(0x00)) return (false, res);
+            else success = true;
+
+            // here we assume its a null terminated Bytes32 string
+            // https://github.com/ethereum/solidity/blob/5852972ec148bc041909400affc778dee66d384d/test/libsolidity/semanticTests/externalContracts/_stringutils/stringutils.sol#L89
+            // https://github.com/Arachnid/solidity-stringutils
+            uint256 len = 32;
+            while (len > 0 && input[len - 1] == bytes1(0x00)) {
+                len--;
+            }
+
+            bytes memory inputTruncated = new bytes(len);
+            for (uint8 i = 0; i < len; i++) {
+                inputTruncated[i] = input[i];
+            }
+            // we can't just do `res := input` because of the null values in the end
+            // TODO: can we instead use a bitwise AND? build it dynamically with the length
+            assembly {
+                res := inputTruncated
+            }
         } else {
             // TODO: try catch to handle error
-            return abi.decode(input, (string));
+            success = true;
+            res = abi.decode(input, (string));
         }
     }
 }

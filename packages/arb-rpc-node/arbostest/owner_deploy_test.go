@@ -1,7 +1,24 @@
+/*
+* Copyright 2021, Offchain Labs, Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*    http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+ */
+
 package arbostest
 
 import (
 	"bytes"
+	"context"
 	"math/big"
 	"strings"
 	"testing"
@@ -21,6 +38,7 @@ import (
 )
 
 func TestOwnerDeployCorrectCode(t *testing.T) {
+	ctx := context.Background()
 	privkey, err := crypto.GenerateKey()
 	test.FailIfError(t, err)
 	txSender := crypto.PubkeyToAddress(privkey.PublicKey)
@@ -72,9 +90,9 @@ func TestOwnerDeployCorrectCode(t *testing.T) {
 		return snap
 	}()
 
-	code1, err := snap1.GetCode(common.NewAddressFromEth(connAddress))
+	code1, err := snap1.GetCode(ctx, common.NewAddressFromEth(connAddress))
 	test.FailIfError(t, err)
-	code2, err := snap2.GetCode(common.NewAddressFromEth(connAddress))
+	code2, err := snap2.GetCode(ctx, common.NewAddressFromEth(connAddress))
 	test.FailIfError(t, err)
 	if !bytes.Equal(code1, code2) {
 		t.Error("code not deployed correctly")
@@ -82,6 +100,7 @@ func TestOwnerDeployCorrectCode(t *testing.T) {
 }
 
 func TestOwnerDeployCorrectDeploy(t *testing.T) {
+	ctx := context.Background()
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
@@ -93,7 +112,7 @@ func TestOwnerDeployCorrectDeploy(t *testing.T) {
 	nonce := uint64(342)
 	ownerTx := message.Transaction{
 		MaxGas:      big.NewInt(100000000),
-		GasPriceBid: big.NewInt(0),
+		GasPriceBid: big.NewInt(0), // fees are off
 		SequenceNum: big.NewInt(0),
 		DestAddress: common.NewAddressFromEth(arbos.ARB_OWNER_ADDRESS),
 		Payment:     big.NewInt(100),
@@ -102,7 +121,7 @@ func TestOwnerDeployCorrectDeploy(t *testing.T) {
 
 	ib := &InboxBuilder{}
 	ib.AddMessage(initMsg(t, nil), common.Address{}, big.NewInt(0), chainTime)
-	ib.AddMessage(makeEthDeposit(owner, big.NewInt(1000)), sender, big.NewInt(0), chainTime)
+	ib.AddMessage(makeEthDeposit(message.L2RemapAccount(owner), big.NewInt(1000)), sender, big.NewInt(0), chainTime)
 	ib.AddMessage(message.NewSafeL2Message(ownerTx), owner, big.NewInt(0), chainTime)
 	results, snap := runTxAssertion(t, ib.Messages)
 	correctConnAddress := crypto.CreateAddress(sender.ToEthAddress(), nonce)
@@ -116,12 +135,20 @@ func TestOwnerDeployCorrectDeploy(t *testing.T) {
 	if evmLog.Topics[0].ToEthHash() != simple.Events["TestEvent"].ID {
 		t.Fatal("wrong topic")
 	}
-	if new(big.Int).SetBytes(evmLog.Data).Cmp(ownerTx.Payment) != 0 {
-		t.Error("wrong event data/payment")
+	if new(big.Int).SetBytes(evmLog.Data[:32]).Cmp(ownerTx.Payment) != 0 {
+		t.Error("wrong event value data")
 	}
-	ownerBalance, err := snap.GetBalance(owner)
+	// The sender check has been disabled, as right now it's incorrectly set to the ArbSys precompile address
+
+	var senderInLog common.Address
+	copy(senderInLog[:], evmLog.Data[32+(32-20):])
+	if senderInLog != sender {
+		t.Error("wrong event sender data")
+	}
+
+	ownerBalance, err := snap.GetBalance(ctx, message.L2RemapAccount(owner))
 	test.FailIfError(t, err)
-	conBalance, err := snap.GetBalance(common.NewAddressFromEth(correctConnAddress))
+	conBalance, err := snap.GetBalance(ctx, common.NewAddressFromEth(correctConnAddress))
 	test.FailIfError(t, err)
 	if ownerBalance.Cmp(big.NewInt(900)) != 0 {
 		t.Error("wrong owner balance")
