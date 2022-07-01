@@ -220,7 +220,7 @@ func TestSequencerBatcher(t *testing.T) {
 	}
 	time.Sleep(time.Second)
 
-	_, err = seqMon.StartInboxReader(
+	_, _, err = seqMon.StartInboxReader(
 		ctx,
 		client,
 		common.NewAddressFromEth(rollupAddr),
@@ -232,7 +232,7 @@ func TestSequencerBatcher(t *testing.T) {
 	)
 	test.FailIfError(t, err)
 
-	_, err = otherMon.StartInboxReader(
+	_, _, err = otherMon.StartInboxReader(
 		ctx,
 		client,
 		common.NewAddressFromEth(rollupAddr),
@@ -251,6 +251,7 @@ func TestSequencerBatcher(t *testing.T) {
 		seqMon.Reader,
 		client,
 		seqInbox,
+		seqInboxAddr,
 		auth,
 		dummyDataSigner,
 		nil,

@@ -20,7 +20,6 @@ import (
 	"context"
 	"math/big"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -108,7 +107,7 @@ func (s *Staker) RunInBackground(ctx context.Context, stakerDelay time.Duration)
 			if err == nil && arbTx != nil {
 				// Note: methodName isn't accurate, it's just used for logging
 				_, err = transactauth.WaitForReceiptWithResultsAndReplaceByFee(ctx, s.client, s.wallet.From().ToEthAddress(), arbTx, "for staking", s.auth, s.auth)
-				if err != nil && strings.Contains(err.Error(), "arbcore thread aborted") {
+				if err != nil && common.IsFatalError(err) {
 					logger.Error().Err(err).Msg("aborting staker background thread")
 					break
 				}

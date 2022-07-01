@@ -17,7 +17,7 @@ Using [Homebrew](https://brew.sh/):
 
 ```bash
 brew install python3 docker docker-compose
-brew cask install docker
+brew install --cask docker
 open -a Docker
 ```
 
