@@ -33,21 +33,20 @@ pragma solidity ^0.6.11;
 contract NitroMigrator is Ownable {
     uint8 internal constant L1MessageType_shutdownForNitro = 128;
 
-    Inbox public immutable inbox;
-    SequencerInbox public immutable sequencerInbox;
-    Bridge public immutable bridge;
-    RollupEventBridge public immutable rollupEventBridge;
-    OldOutbox public immutable outboxV1;
-    Outbox public immutable outboxV2;
+    Inbox public inbox;
+    SequencerInbox public sequencerInbox;
+    Bridge public bridge;
+    RollupEventBridge public rollupEventBridge;
+    OldOutbox public outboxV1;
+    Outbox public outboxV2;
     // assumed this contract is now the rollup admin
-    RollupAdminFacet public immutable rollup;
+    RollupAdminFacet public rollup;
 
-    address public immutable nitroBridge;
-    address public immutable nitroOutbox;
-    address public immutable nitroSequencerInbox;
-    address public immutable nitroInboxLogic;
+    address public nitroBridge;
 
     /// @dev The nitro migration includes various steps.
+    ///
+    /// > Uninitialized is before the rollup contract addresses have been set.
     ///
     /// > Step0 is setup with contract deployments and integrity checks
     ///
@@ -65,6 +64,7 @@ contract NitroMigrator is Ownable {
     ///
     /// > Step3 is enabling the nitro chain from the state settled in Step1 and Step2.
     enum NitroMigrationSteps {
+        Uninitialized,
         Step0,
         Step1,
         Step2,
@@ -72,7 +72,11 @@ contract NitroMigrator is Ownable {
     }
     NitroMigrationSteps public latestCompleteStep;
 
-    constructor(
+    constructor() public Ownable() {
+        latestCompleteStep = NitroMigrationSteps.Uninitialized;
+    }
+
+    function configureDeployment(
         Inbox _inbox,
         SequencerInbox _sequencerInbox,
         Bridge _bridge,
@@ -80,11 +84,10 @@ contract NitroMigrator is Ownable {
         OldOutbox _outboxV1,
         Outbox _outboxV2,
         RollupAdminFacet _rollup,
-        address _nitroBridge,
-        address _nitroOutbox,
-        address _nitroSequencerInbox,
-        address _nitroInboxLogic
-    ) public Ownable() {
+        address _nitroBridge
+    ) external onlyOwner {
+        require(latestCompleteStep == NitroMigrationSteps.Uninitialized, "WRONG_STEP");
+
         inbox = _inbox;
         sequencerInbox = _sequencerInbox;
         bridge = _bridge;
@@ -110,14 +113,8 @@ contract NitroMigrator is Ownable {
 
         // we check that the new contracts that will receive permissions are actually contracts
         require(Address.isContract(_nitroBridge), "NITRO_BRIDGE_NOT_CONTRACT");
-        require(Address.isContract(_nitroOutbox), "NITRO_OUTBOX_NOT_CONTRACT");
-        require(Address.isContract(_nitroSequencerInbox), "NITRO_SEQINBOX_NOT_CONTRACT");
-        require(Address.isContract(_nitroInboxLogic), "NITRO_INBOX_NOT_CONTRACT");
 
         nitroBridge = _nitroBridge;
-        nitroOutbox = _nitroOutbox;
-        nitroSequencerInbox = _nitroSequencerInbox;
-        nitroInboxLogic = _nitroInboxLogic;
 
         latestCompleteStep = NitroMigrationSteps.Step0;
     }
@@ -213,5 +210,13 @@ contract NitroMigrator is Ownable {
                 revert(ptr, size)
             }
         }
+    }
+
+    function transferOtherContractOwnership(Ownable ownable, address newOwner)
+        external
+        payable
+        onlyOwner
+    {
+        ownable.transferOwnership(newOwner);
     }
 }

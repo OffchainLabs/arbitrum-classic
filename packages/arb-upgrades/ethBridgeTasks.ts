@@ -146,3 +146,29 @@ task('set-outbox', 'deploy and set a new outbox')
     console.log('Outbox set', setRollupRec)
     console.log('all set 👍')
   })
+
+task('configure-migration', 'configure nitro migrator contract')
+  .addParam('migrator', '')
+  .addParam('oldoutboxproxy', '')
+  .addParam('nitrobridgeproxy', '')
+
+  .setAction(async (args, hre) => {
+    const { getDeployments } = initUpgrades(hre, process.cwd())
+    const { data } = await getDeployments()
+
+    const Migrator = (await hre.ethers.getContractFactory('NitroMigrator'))
+      .attach(args.migrator)
+      .connect(hre.ethers.provider)
+    const initializeRes = await Migrator.configureDeployment(
+      data.contracts.Inbox.proxyAddress,
+      data.contracts.SequencerInbox.proxyAddress,
+      data.contracts.Bridge.proxyAddress,
+      data.contracts.RollupEventBridge.proxyAddress,
+      args.oldoutboxproxy,
+      data.contracts.Outbox.proxyAddress,
+      data.contracts.Rollup.proxyAddress,
+      args.nitrobridgeproxy,
+    )
+    const initializeRec = await initializeRes.wait()
+    console.log('Nitro migrator configured', initializeRec)
+  })
