@@ -435,18 +435,18 @@ func (t *Trace) block(ctx context.Context, blockNum rpc.BlockNumberOrHash, trace
 	res := make([]*rawTxTrace, 0, len(txResults))
 	for i := uint64(0); i < blockLog.BlockStats.TxCount.Uint64(); i++ {
 		txRes := txResults[i]
-		failMsg := logger.
-			Warn().
-			Uint64("block", blockInfo.Header.Number.Uint64()).
-			Str("txhash", txRes.IncomingRequest.MessageID.String()).
-			Err(err)
 		txTrace, err := t.traceTransaction(ctx, cursor, txRes, logIndex, traceDestroyed)
+		logIndex.Add(logIndex, big.NewInt(1))
 		if err != nil {
-			failMsg.Msg("error getting trace for transaction")
+			logger.
+				Warn().
+				Uint64("block", blockInfo.Header.Number.Uint64()).
+				Str("txhash", txRes.IncomingRequest.MessageID.String()).
+				Err(err).
+				Msg("error getting trace for transaction")
 			continue
 		}
 		res = append(res, txTrace)
-		logIndex.Add(logIndex, big.NewInt(1))
 	}
 	return res, blockInfo, cursor, nil
 }

@@ -83,7 +83,7 @@ func (ac *ArbCore) MessagesStatus() (core.MessageStatus, error) {
 	statusRaw := C.arbCoreMessagesStatus(ac.c)
 	status := core.MessageStatus(int(statusRaw))
 	if status == core.MessagesError {
-		cStr := C.arbCoreMessagesClearError(ac.c)
+		cStr := C.arbCoreMessagesGetError(ac.c)
 		defer C.free(unsafe.Pointer(cStr))
 		return core.MessagesError, errors.New(C.GoString(cStr))
 	}
@@ -148,7 +148,7 @@ func (ac *ArbCore) GetMessageCount() (*big.Int, error) {
 	defer runtime.KeepAlive(ac)
 	result := C.arbCoreGetMessageCount(ac.c)
 	if result.found == 0 {
-		return nil, errors.New("failed to load send count")
+		return nil, errors.New("failed to load message count")
 	}
 
 	return receiveBigInt(result.value), nil
@@ -158,7 +158,7 @@ func (ac *ArbCore) GetDelayedMessageCount() (*big.Int, error) {
 	defer runtime.KeepAlive(ac)
 	result := C.arbCoreGetDelayedMessageCount(ac.c)
 	if result.found == 0 {
-		return nil, errors.New("failed to load send count")
+		return nil, errors.New("failed to load delayed message count")
 	}
 
 	return receiveBigInt(result.value), nil
@@ -168,7 +168,7 @@ func (ac *ArbCore) GetTotalDelayedMessagesSequenced() (*big.Int, error) {
 	defer runtime.KeepAlive(ac)
 	result := C.arbCoreGetTotalDelayedMessagesSequenced(ac.c)
 	if result.found == 0 {
-		return nil, errors.New("failed to load send count")
+		return nil, errors.New("failed to load total delayed messages sequenced")
 	}
 
 	return receiveBigInt(result.value), nil

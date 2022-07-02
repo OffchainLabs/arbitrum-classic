@@ -18,6 +18,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -35,10 +36,25 @@ type MessageStatus uint8
 
 const (
 	MessagesEmpty MessageStatus = iota
+	MessagesLoading
 	MessagesReady
-	MessagesSuccess
 	MessagesError
 )
+
+func (ms MessageStatus) String() string {
+	switch ms {
+	case MessagesEmpty:
+		return "empty"
+	case MessagesLoading:
+		return "loading"
+	case MessagesReady:
+		return "ready"
+	case MessagesError:
+		return "error"
+	default:
+		return "unknown"
+	}
+}
 
 type MachineEmission struct {
 	Value    value.Value
@@ -115,24 +131,14 @@ func DeliverMessagesAndWait(ctx context.Context, db ArbCoreInbox, previousMessag
 	if err != nil {
 		return err
 	}
-	if status != MessagesSuccess {
-		return errors.New("Unexpected status")
+	if status != MessagesEmpty {
+		return fmt.Errorf("unexpected waitForMessages status: %s", status.String())
 	}
 	return nil
 }
 
 func ReorgAndWait(ctx context.Context, db ArbCoreInbox, reorgMessageCount *big.Int) error {
-	if !db.DeliverMessages(big.NewInt(0), common.Hash{}, nil, nil, reorgMessageCount) {
-		return errors.New("unable to deliver messages")
-	}
-	status, err := waitForMessages(ctx, db)
-	if err != nil {
-		return err
-	}
-	if status == MessagesSuccess {
-		return nil
-	}
-	return errors.New("Unexpected status")
+	return DeliverMessagesAndWait(ctx, db, big.NewInt(0), common.Hash{}, nil, nil, reorgMessageCount)
 }
 
 func WaitForMachineIdle(db ArbCore) {
@@ -157,9 +163,6 @@ func waitForMessages(ctx context.Context, db ArbCoreInbox) (MessageStatus, error
 		}
 
 		if status == MessagesEmpty {
-			return 0, errors.New("should have messages")
-		}
-		if status != MessagesReady {
 			break
 		}
 		duration := time.Since(start)

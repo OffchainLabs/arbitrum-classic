@@ -4,6 +4,8 @@ title: Running full node for Arbitrum One
 sidebar_label: Running a Node
 ---
 
+Note: If you’re interested in accessing the Arbitrum network but you don’t want to setup your own node, see our [Node Providers](https://developer.offchainlabs.com/docs/node_providers) to get RPC access to fully-managed nodes hosted by one of our partners!
+
 ### Required Artifacts
 
 - Latest Docker Image: offchainlabs/arb-node:v1.4.0-f4bbe91

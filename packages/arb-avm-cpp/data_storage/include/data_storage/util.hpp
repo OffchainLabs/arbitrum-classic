@@ -28,6 +28,9 @@ struct ArbCoreConfig {
     // Number of consecutive addMessages failures before thread exits
     uint32_t add_messages_max_failure_count{0};
 
+    // Number of consecutive deliverMessages failures before thread exits
+    uint32_t deliver_messages_max_failure_count{0};
+
     // Number of consecutive core thread failures before thread exits
     uint32_t thread_max_failure_count{0};
 

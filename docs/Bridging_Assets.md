@@ -77,7 +77,7 @@ For any given gateway pairing, we require that calls be initiated through the `G
 
 By default, any ERC20 token on L1 that isn't registered to a Gateway can be permissionlessly bridged to the Standard ERC20 Gateway.
 
-You can use [this script](https://github.com/OffchainLabs/arbitrum/tree/master/packages/arb-ts#bridge-a-standard-token) to a bridge a token to L2.
+You can use the bridge UI or [this script](https://github.com/OffchainLabs/arbitrum-sdk/blob/master/scripts/deployStandard.ts) to a bridge a token to L2.
 
 #### Example: Standard Arb-ERC20 Deposit/Withdraw
 
@@ -105,7 +105,7 @@ Note that arbSomeERC20Token is an instance of StandardArbERC20, which includes `
 
 ### The Arbitrum Generic Custom Gateway
 
-Just because a token has requirements beyond what are offered via the StandardERC20 gateway, that doesn't necessarily mean that a unique Gateway needs to be taylor-made for the token in question. Our Generic-Custom Gateway is designed to be flexible enough to be suitable for most (but not necessarily all) custom fungible token needs. As a general rule:
+Just because a token has requirements beyond what are offered via the StandardERC20 gateway, that doesn't necessarily mean that a unique Gateway needs to be tailor-made for the token in question. Our Generic-Custom Gateway is designed to be flexible enough to be suitable for most (but not necessarily all) custom fungible token needs. As a general rule:
 
 **If your custom token has the ability to increase its supply (i.e, mint) directly on the L2, and you want the L2-minted tokens be withdrawable back to L1 and recognized by the L1 contract, it will probably require its own special gateway. Otherwise, the Generic-Custom Gateway is likely the right solution for you!**
 
@@ -147,7 +147,7 @@ No matter the complexity of a particular token's bridging needs, a gateway can i
 
 ### Demos
 
-See [token-deposit](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token-deposit) and [token-withdraw](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token-withdraw) for demos of interacting with the bridge architecture via [arb-ts](https://arb-ts-docs.netlify.app/).
+See [token-deposit](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token-deposit) and [token-withdraw](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/token-withdraw) for demos of interacting with the bridge architecture via the [Arbitrum SDK](https://github.com/OffchainLabs/arbitrum-sdk).
 
 #### A Word of Caution on Bridges (aka, "I've Got a Bridge To Sell You")
 
