@@ -27,8 +27,25 @@ import "../rollup/RollupLib.sol";
 import "../libraries/NitroReadyQuery.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 
 pragma solidity ^0.6.11;
+
+interface INitroBridge is IBridge {
+    function acceptFundsFromOldBridge() external payable;
+}
+
+interface INitroInbox is IInbox {
+    function postUpgradeInit(INitroBridge) external;
+}
+
+interface INitroRollup {
+    function bridge() external view returns (INitroBridge);
+
+    function inbox() external view returns (INitroInbox);
+
+    function setInbox(IInbox newInbox) external;
+}
 
 contract NitroMigrator is Ownable {
     uint8 internal constant L1MessageType_shutdownForNitro = 128;
@@ -42,7 +59,7 @@ contract NitroMigrator is Ownable {
     // assumed this contract is now the rollup admin
     RollupAdminFacet public rollup;
 
-    address public nitroBridge;
+    INitroBridge public nitroBridge;
 
     /// @dev The nitro migration includes various steps.
     ///
@@ -84,7 +101,8 @@ contract NitroMigrator is Ownable {
         OldOutbox _outboxV1,
         Outbox _outboxV2,
         RollupAdminFacet _rollup,
-        address _nitroBridge
+        INitroRollup nitroRollup,
+        ProxyAdmin proxyAdmin
     ) external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Uninitialized, "WRONG_STEP");
 
@@ -95,6 +113,8 @@ contract NitroMigrator is Ownable {
         rollup = _rollup;
         outboxV1 = _outboxV1;
         outboxV2 = _outboxV2;
+
+        nitroBridge = nitroRollup.bridge();
 
         {
             // this contract is the rollup admin, and we want to check if the user facet is upgraded
@@ -112,9 +132,21 @@ contract NitroMigrator is Ownable {
         require(_sequencerInbox.isNitroReady() == uint8(0xa4b1), "SEQINBOX_NOT_UPGRADED");
 
         // we check that the new contracts that will receive permissions are actually contracts
-        require(Address.isContract(_nitroBridge), "NITRO_BRIDGE_NOT_CONTRACT");
+        require(Address.isContract(address(nitroBridge)), "NITRO_BRIDGE_NOT_CONTRACT");
 
-        nitroBridge = _nitroBridge;
+        // Upgrade the classic inbox to the nitro inbox's impl,
+        // and configure nitro to use the classic inbox's address.
+        INitroInbox oldNitroInbox = nitroRollup.inbox();
+        address nitroInboxImpl = proxyAdmin.getProxyImplementation(
+            TransparentUpgradeableProxy(payable(address(oldNitroInbox)))
+        );
+        nitroBridge.setInbox(address(oldNitroInbox), false);
+        proxyAdmin.upgradeAndCall(
+            TransparentUpgradeableProxy(payable(address(inbox))),
+            nitroInboxImpl,
+            abi.encodeWithSelector(INitroInbox.postUpgradeInit.selector, nitroBridge)
+        );
+        nitroRollup.setInbox(inbox);
 
         latestCompleteStep = NitroMigrationSteps.Step0;
     }
@@ -141,7 +173,11 @@ contract NitroMigrator is Ownable {
 
         {
             uint256 bal = address(bridge).balance;
-            (bool success, ) = bridge.executeCall(nitroBridge, bal, "");
+            (bool success, ) = bridge.executeCall(
+                address(nitroBridge),
+                bal,
+                abi.encodeWithSelector(INitroBridge.acceptFundsFromOldBridge.selector)
+            );
             require(success, "ESCROW_TRANSFER_FAIL");
         }
 
@@ -172,6 +208,7 @@ contract NitroMigrator is Ownable {
     ) external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Step1, "WRONG_STEP");
         rollup.shutdownForNitro(finalNodeNum, destroyAlternatives, destroyChallenges);
+        bridge.setInbox(address(rollupEventBridge), false);
         latestCompleteStep = NitroMigrationSteps.Step2;
     }
 
@@ -181,11 +218,10 @@ contract NitroMigrator is Ownable {
             rollup.latestConfirmed() == rollup.latestNodeCreated(),
             "ROLLUP_SHUTDOWN_NOT_COMPLETE"
         );
-        bridge.setInbox(address(rollupEventBridge), false);
 
-        // enable new Bridge with funds (ie set old outboxes)
-        // TODO: enable new elements of nitro chain (ie bridge, inbox, outbox, rollup, etc)
-        // TODO: trigger inbox upgrade to new logic
+        nitroBridge.setInbox(address(inbox), true);
+        nitroBridge.setOutbox(address(outboxV1), true);
+        nitroBridge.setOutbox(address(outboxV2), true);
 
         latestCompleteStep = NitroMigrationSteps.Step3;
     }

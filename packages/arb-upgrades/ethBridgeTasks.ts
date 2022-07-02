@@ -150,7 +150,7 @@ task('set-outbox', 'deploy and set a new outbox')
 task('configure-migration', 'configure nitro migrator contract')
   .addParam('migrator', '')
   .addParam('oldoutboxproxy', '')
-  .addParam('nitrobridgeproxy', '')
+  .addParam('nitrorollupproxy', '')
 
   .setAction(async (args, hre) => {
     const { getDeployments } = initUpgrades(hre, process.cwd())
@@ -167,7 +167,7 @@ task('configure-migration', 'configure nitro migrator contract')
       args.oldoutboxproxy,
       data.contracts.Outbox.proxyAddress,
       data.contracts.Rollup.proxyAddress,
-      args.nitrobridgeproxy,
+      args.nitrorollupproxy,
     )
     const initializeRec = await initializeRes.wait()
     console.log('Nitro migrator configured', initializeRec)
