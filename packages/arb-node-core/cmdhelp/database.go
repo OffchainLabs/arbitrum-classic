@@ -11,8 +11,14 @@ import (
 
 func UpdatePrunePoint(parentCtx context.Context, rollup *ethbridge.RollupWatcher, lookup core.ArbCoreLookup, lookupTimeout time.Duration) error {
 	// Prune any stale database entries while we wait
-	ctx, cancelFunc := context.WithTimeout(parentCtx, lookupTimeout)
-	defer cancelFunc()
+	var ctx context.Context
+	var cancelFunc context.CancelFunc
+	if lookupTimeout > 0 {
+		ctx, cancelFunc = context.WithTimeout(parentCtx, lookupTimeout)
+		defer cancelFunc()
+	} else {
+		ctx = parentCtx
+	}
 	latestNode, err := rollup.LatestConfirmedNode(ctx)
 	if err != nil {
 		return errors.Wrap(err, "couldn't get latest confirmed node")
