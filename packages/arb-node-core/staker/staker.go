@@ -95,7 +95,7 @@ func NewStaker(
 	}, val.delayedBridge, nil
 }
 
-func (s *Staker) RunInBackground(ctx context.Context, stakerDelay time.Duration) chan bool {
+func (s *Staker) RunInBackground(ctx context.Context, stakerDelay time.Duration, lookupTimeout time.Duration) chan bool {
 	done := make(chan bool)
 	go func() {
 		defer func() {
@@ -132,7 +132,7 @@ func (s *Staker) RunInBackground(ctx context.Context, stakerDelay time.Duration)
 			}
 			delay := time.After(stakerDelay)
 			// Prune any stale database entries while we wait
-			err = cmdhelp.UpdatePrunePoint(ctx, s.rollup.RollupWatcher, s.lookup)
+			err = cmdhelp.UpdatePrunePoint(ctx, s.rollup.RollupWatcher, s.lookup, lookupTimeout)
 			if err != nil {
 				logger.Error().Err(err).Msg("error pruning database")
 			}

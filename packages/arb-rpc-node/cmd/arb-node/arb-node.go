@@ -330,7 +330,7 @@ func startup() error {
 		}
 	}
 
-	if err := cmdhelp.UpdatePrunePoint(ctx, rollup, mon.Core); err != nil {
+	if err := cmdhelp.UpdatePrunePoint(ctx, rollup, mon.Core, config.Core.PruneNodeLookupTimeout); err != nil {
 		logger.Error().Err(err).Msg("error pruning database")
 	}
 
@@ -523,7 +523,7 @@ func startup() error {
 		go func() {
 			defer ticker.Stop()
 			for {
-				if err := cmdhelp.UpdatePrunePoint(ctx, rollup, mon.Core); err != nil {
+				if err := cmdhelp.UpdatePrunePoint(ctx, rollup, mon.Core, config.Core.PruneNodeLookupTimeout); err != nil {
 					logger.Error().Err(err).Msg("error pruning database")
 				}
 				select {
@@ -537,7 +537,7 @@ func startup() error {
 
 	var stakerDone chan bool
 	if stakerManager != nil {
-		stakerDone = stakerManager.RunInBackground(ctx, config.Validator.StakerDelay)
+		stakerDone = stakerManager.RunInBackground(ctx, config.Validator.StakerDelay, config.Core.PruneNodeLookupTimeout)
 	} else {
 		stakerDone = make(chan bool)
 	}

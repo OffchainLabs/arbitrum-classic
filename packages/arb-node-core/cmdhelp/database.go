@@ -6,10 +6,13 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/core"
 	"github.com/pkg/errors"
 	"math/big"
+	"time"
 )
 
-func UpdatePrunePoint(ctx context.Context, rollup *ethbridge.RollupWatcher, lookup core.ArbCoreLookup) error {
+func UpdatePrunePoint(parentCtx context.Context, rollup *ethbridge.RollupWatcher, lookup core.ArbCoreLookup, lookupTimeout time.Duration) error {
 	// Prune any stale database entries while we wait
+	ctx, cancelFunc := context.WithTimeout(parentCtx, lookupTimeout)
+	defer cancelFunc()
 	latestNode, err := rollup.LatestConfirmedNode(ctx)
 	if err != nil {
 		return errors.Wrap(err, "couldn't get latest confirmed node")
@@ -24,7 +27,8 @@ func UpdatePrunePoint(ctx context.Context, rollup *ethbridge.RollupWatcher, look
 	previousConfirmedNode := new(big.Int).Sub(latestNode, big.NewInt(1))
 	previousNodeInfo, err := rollup.LookupNode(ctx, previousConfirmedNode)
 	if err != nil {
-		return errors.Wrap(err, "couldn't lookup previous confirmed node "+previousConfirmedNode.String())
+		logger.Warn().Err(err).Str("previousConfirmedNode", previousConfirmedNode.String()).Msg("couldn't lookup previous confirmed node")
+		return nil
 	}
 
 	confirmedGas := previousNodeInfo.AfterState().TotalGasConsumed

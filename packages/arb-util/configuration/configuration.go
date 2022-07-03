@@ -80,6 +80,7 @@ type Core struct {
 	CheckpointMaxToPrune           int           `koanf:"checkpoint-max-to-prune"`
 	CheckpointPruningMode          string        `koanf:"checkpoint-pruning-mode"`
 	CheckpointPruneOnStartup       bool          `koanf:"checkpoint-prune-on-startup"`
+	PruneNodeLookupTimeout         time.Duration `koanf:"prune-node-lookup-timeout"`
 	Database                       Database      `koanf:"database"`
 	Debug                          bool          `koanf:"debug"`
 	DebugTiming                    bool          `koanf:"debug-timing"`
@@ -889,6 +890,7 @@ func AddCore(f *flag.FlagSet, maxExecutionGas int) {
 	f.Int("core.checkpoint-max-execution-gas", maxExecutionGas, "maximum amount of gas any given checkpoint is allowed to execute")
 	f.Int("core.checkpoint-max-to-prune", 2, "number of checkpoints to delete at a time, 0 for no limit")
 	f.Bool("core.checkpoint-prune-on-startup", false, "perform full database pruning on startup")
+	f.Duration("core.prune-node-lookup-timeout", time.Second*15, "how long to wait for confirmed node lookup")
 	f.String("core.checkpoint-pruning-mode", "default", "Prune old checkpoints: 'on', 'off', or 'default'")
 
 	f.Bool("core.database.compact", false, "perform database compaction")
