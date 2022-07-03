@@ -132,6 +132,8 @@ func startup() error {
 		return nil
 	}
 
+	logger.Info().Str("database", config.GetDatabasePath()).Send()
+
 	if config.Core.Database.Metadata {
 		return cmdhelp.PrintDatabaseMetadata(config.GetDatabasePath(), &config.Core)
 	}
