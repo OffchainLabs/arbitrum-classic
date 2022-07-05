@@ -1,1 +1,2 @@
 contracts/validator/GasRefunder.sol
+contracts/test_only/Solc8Tester.sol
