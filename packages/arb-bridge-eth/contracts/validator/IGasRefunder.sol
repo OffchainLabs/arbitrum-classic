@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-pragma solidity >=0.6.11 <0.7.0 || >=0.8.7 <0.9.0;
+// solhint-disable-next-line compiler-version
+pragma solidity >=0.4.21 <0.9.0;
 
 interface IGasRefunder {
     function onGasSpent(

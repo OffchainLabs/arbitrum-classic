@@ -20,7 +20,9 @@
  * @title Minimum expected interface for L2 token that interacts with the L2 token bridge (this is the interface necessary
  * for a custom token that interacts with the bridge, see TestArbCustomToken.sol for an example implementation).
  */
-pragma solidity ^0.6.11;
+
+// solhint-disable-next-line compiler-version
+pragma solidity >=0.4.21 <0.9.0;
 
 interface IArbToken {
     /**
