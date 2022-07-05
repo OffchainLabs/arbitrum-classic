@@ -76,7 +76,7 @@ void printMachineOutputInfo(const std::string& msg,
               << std::put_time(
                      localtime((time_t*)&machine_output.last_inbox_timestamp),
                      "%c")
-              << "\n";
+              << std::endl;
 }
 
 void printCheckpointResult(
@@ -113,12 +113,7 @@ bool ArbCore::machineIdle() {
 }
 
 ArbCore::message_status_enum ArbCore::messagesStatus() {
-    auto current_status = message_data_status.load();
-    if (current_status == MESSAGES_SUCCESS) {
-        message_data_status = MESSAGES_EMPTY;
-    }
-
-    return current_status;
+    return message_data_status.load();
 }
 
 std::string ArbCore::messagesGetError() {
@@ -181,11 +176,47 @@ bool ArbCore::deliverMessages(
     std::vector<std::vector<unsigned char>> sequencer_batch_items,
     std::vector<std::vector<unsigned char>> delayed_messages,
     const std::optional<uint256_t>& reorg_batch_items) {
-    auto status = message_data_status.load();
-    if (status != MESSAGES_EMPTY) {
-        std::cerr << "unable to deliver messages, status: " << status
-                  << std::endl;
-        return false;
+    uint32_t error_count = 0;
+    auto status_before = MESSAGES_ERROR;
+    while (true) {
+        status_before = message_data_status.load();
+        if (status_before != MESSAGES_EMPTY) {
+            std::cerr << "unable to deliver messages, status: " << status_before
+                      << ", error count: " << error_count << std::endl;
+        } else {
+            auto success = message_data_status.compare_exchange_strong(
+                status_before, MESSAGES_LOADING);
+            if (success) {
+                // Successfully changed status
+                status_before = message_data_status.load();
+                break;
+            }
+
+            // Compare_exchange_weak may give false negative
+            if (message_data_status.load() != status_before) {
+                std::cerr
+                    << "before delivering messages the status unexpectedly "
+                       "changed to: "
+                    << status_before << ", error count: " << error_count
+                    << std::endl;
+            }
+        }
+
+        if (status_before == MESSAGES_ERROR) {
+            return false;
+        }
+
+        error_count++;
+        if (coreConfig.deliver_messages_max_failure_count > 0 &&
+            error_count > coreConfig.deliver_messages_max_failure_count) {
+            std::cerr << "too many deliver messages errors" << std::endl;
+            message_data_error_string = "Too many deliver message errors";
+            message_data_status.store(MESSAGES_ERROR);
+            return false;
+        }
+        // Try again after a short wait
+        auto wait_time = std::chrono::milliseconds(10) * error_count;
+        std::this_thread::sleep_for(wait_time);
     }
 
     message_data.previous_message_count = previous_message_count;
@@ -194,7 +225,16 @@ bool ArbCore::deliverMessages(
     message_data.delayed_messages = std::move(delayed_messages);
     message_data.reorg_batch_items = reorg_batch_items;
 
-    message_data_status = MESSAGES_READY;
+    auto success = message_data_status.compare_exchange_strong(status_before,
+                                                               MESSAGES_READY);
+    if (!success) {
+        auto status_after = message_data_status.load();
+        std::cerr << "while delivering messages the status: " << status_before
+                  << " unexpectedly changed to: " << status_after << std::endl;
+        message_data_error_string = "Error finalizing add messages";
+        message_data_status.store(MESSAGES_ERROR);
+        return false;
+    }
 
     return true;
 }
@@ -967,6 +1007,7 @@ ArbCore::reorgToLastMatchingCheckpoint(
     bool output_checkpoint = true;
 
     // Delete each checkpoint until check_output() is satisfied
+    uint64_t deleted_checkpoint_count = 0;
     while (checkpoint_it->Valid()) {
         // Deserialize checkpoint
         std::vector<unsigned char> checkpoint_vector(
@@ -990,15 +1031,33 @@ ArbCore::reorgToLastMatchingCheckpoint(
                 return checkpoint_variant;
             } else {
                 std::cerr << "Unexpectedly invalid checkpoint inbox at "
-                             "message count "
+                             "message count: "
                           << machine_output.fully_processed_inbox.count
+                          << ", timestamp: "
+                          << std::put_time(localtime((time_t*)&machine_output
+                                                         .last_inbox_timestamp),
+                                           "%c")
                           << std::endl;
                 assert(false);
             }
         }
 
+        deleted_checkpoint_count++;
+        if (deleted_checkpoint_count % 100 == 1) {
+            std::cerr << "Deleted " << deleted_checkpoint_count
+                      << " checkpoints, current timestamp: "
+                      << std::put_time(
+                             localtime(
+                                 (time_t*)&machine_output.last_inbox_timestamp),
+                             "%c")
+                      << std::endl;
+        }
         deleteCheckpoint(tx, checkpoint_variant);
         checkpoint_it->Prev();
+    }
+    if (deleted_checkpoint_count > 0) {
+        std::cerr << "Deleted a total of " << deleted_checkpoint_count
+                  << "checkpoints" << std::endl;
     }
 
     auto status = checkpoint_it->status();
@@ -1536,7 +1595,7 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
                     thread_data.add_messages_failure_count >=
                         coreConfig.add_messages_max_failure_count) {
                     message_data_error_string = error_string;
-                    message_data_status = MESSAGES_ERROR;
+                    message_data_status.store(MESSAGES_ERROR);
                     std::cerr << "Exiting after arbCore addMessages failed "
                               << thread_data.add_messages_failure_count
                               << " times: " << message_data_error_string
@@ -1551,7 +1610,7 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
             } else {
                 thread_data.add_messages_failure_count = 0;
                 machine_idle = false;
-                message_data_status = MESSAGES_SUCCESS;
+                message_data_status.store(MESSAGES_EMPTY);
                 if (add_status.data.has_value()) {
                     thread_data.next_checkpoint_gas =
                         add_status.data.value() +
@@ -1563,7 +1622,7 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
         } catch (const std::exception& e) {
             setCoreError(e.what());
             message_data_error_string = e.what();
-            message_data_status = MESSAGES_ERROR;
+            message_data_status.store(MESSAGES_ERROR);
             std::cerr << "ArbCore addMessages exception: "
                       << message_data_error_string << "\n";
             return false;
