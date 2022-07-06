@@ -1,2 +1,1 @@
 contracts/validator/GasRefunder.sol
-contracts/test_only/InterfaceCompatibilityTester.sol
