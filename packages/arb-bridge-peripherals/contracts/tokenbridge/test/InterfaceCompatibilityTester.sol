@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+// solhint-disable-next-line compiler-version
 pragma solidity >=0.6.9 <0.9.0;
 
 import "arb-bridge-eth/contracts/arch/IOneStepProof.sol";
