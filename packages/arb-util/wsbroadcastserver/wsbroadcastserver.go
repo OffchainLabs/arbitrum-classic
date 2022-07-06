@@ -162,7 +162,8 @@ func (s *WSBroadcastServer) Start(ctx context.Context) (chan error, error) {
 	}
 	s.acceptDesc = acceptDesc
 
-	broadcasterErrChan := make(chan error, 1)
+	broadcasterErrChan := make(chan error, 10)
+	acceptErrChan := make(chan error, 10)
 
 	// Subscribe to events about listener.
 	err = s.poller.Start(acceptDesc, func(e netpoll.Event) {
@@ -176,7 +177,6 @@ func (s *WSBroadcastServer) Start(ctx context.Context) (chan error, error) {
 		// busy. So if there are no free goroutines during 1ms we want to
 		// cooldown the server and do not receive connection for some short
 		// time.
-		acceptErrChan := make(chan error, 1)
 		err := clientManager.pool.ScheduleTimeout(time.Millisecond, func() {
 			conn, err := ln.Accept()
 			if err != nil {
@@ -192,16 +192,12 @@ func (s *WSBroadcastServer) Start(ctx context.Context) (chan error, error) {
 		}
 		if err != nil {
 			if err == gopool.ErrScheduleTimeout {
-				netError, ok := err.(net.Error)
-				if !ok || !netError.Timeout() {
-					logger.Error().Err(err).Msg("error in poller.Start")
-					broadcasterErrChan <- err
-					return
-				}
+				var netError net.Error
+				isNetError := errors.As(err, &netError)
 				if strings.Contains(err.Error(), "file descriptor was not registered") {
-					logger.Info().Err(err).Msg("poller exiting")
-					broadcasterErrChan <- err
-					return
+					logger.Error().Err(err).Msg("broadcast poller unable to register file descriptor")
+				} else if !isNetError || !netError.Timeout() {
+					logger.Error().Err(err).Msg("broadcast poller error")
 				}
 			}
 

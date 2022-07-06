@@ -291,8 +291,9 @@ func startup() error {
 
 	// InboxReader may fail to start if sequencer isn't up yet, so keep retrying
 	var inboxReader *monitor.InboxReader
+	var inboxReaderDone chan bool
 	for {
-		inboxReader, err = mon.StartInboxReader(
+		inboxReader, inboxReaderDone, err = mon.StartInboxReader(
 			ctx,
 			l1Client,
 			common.HexToAddress(config.Rollup.Address),
@@ -421,7 +422,7 @@ func startup() error {
 			go batch.Start(ctx)
 			break
 		}
-		if strings.Contains(err.Error(), "arbcore thread aborted") {
+		if common.IsFatalError(err) {
 			logger.Error().Err(err).Msg("aborting inbox reader start")
 			break
 		}
@@ -527,6 +528,8 @@ func startup() error {
 	case err := <-errChan:
 		return err
 	case <-stakerDone:
+		return nil
+	case <-inboxReaderDone:
 		return nil
 	case <-cancelChan:
 		return nil
@@ -640,7 +643,7 @@ func startValidator(
 	} else if config.Validator.OnlyCreateWalletContract {
 		logger.Info().Msg("only creating validator smart contract and exiting")
 	} else {
-		logger.Info().Msg("validator smart contract wallet creation delayed until needed")
+		return nil, errors.New("validator smart contract wallet not present, add --validator.only-create-wallet-contract to create")
 	}
 
 	onValidatorWalletCreated := func(addr ethcommon.Address) {}
