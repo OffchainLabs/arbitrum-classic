@@ -164,10 +164,6 @@ contract NitroMigrator is Ownable {
         // check that ownership of the bridge and rollup has been transferred
         require(rollup.owner() == address(this), "ROLLUP_OWNER_NOT_SET");
         require(bridge.owner() == address(this), "BRIDGE_OWNER_NOT_SET");
-        // we can only check whether the admin contract is ready when we are the owner of it,
-        // which is why we do it here rather than in the constructor like the other checks.
-        // this returns a different magic value so we can differentiate the user and admin facets
-        require(rollup.isNitroReady() == uint8(0xa4b2), "ADMIN_ROLLUP_NOT_NITRO_READY");
 
         uint256 delayedMessageCount = inbox.shutdownForNitro();
 
@@ -186,6 +182,7 @@ contract NitroMigrator is Ownable {
 
         {
             uint256 bal = address(bridge).balance;
+            // TODO: import nitro contracts and use interface
             (bool success, ) = bridge.executeCall(
                 address(nitroBridge),
                 bal,
