@@ -28,7 +28,7 @@ The core advantage of AnyTrust is that in the normal case, transactions are much
 
 A useful shorthand is to talk about an AnyTrust chain as making, say, a 2-of-20 honest assumption. That means there is a committee of size 20 and security relies on at least 2 of the committee members being honest. In general, different AnyTrust chains could have different values of K and N.
 
-If K-of-N are honest, then it follows that anything that is vouched for by a “quorum” of N+1-K committee members must be correct. I.e., For 2-of-20, a quorum is any 19 of the 20 members, and anything that 19 members vouch more must be correct. The logic here is that there can’t be more than 18 dishonest committee members, so any quorum of 19 must have an honest party; if a quorum says that something is true, an honest party must be saying that thing is true, so that thing must be true.
+If K-of-N are honest, then it follows that anything that is vouched for by a “quorum” of N+1-K committee members must be correct. I.e., For 2-of-20, a quorum is any 19 of the 20 members, and anything that 19 members vouch for must be correct. The logic here is that there can’t be more than 18 dishonest committee members, so any quorum of 19 must have an honest party; if a quorum says that something is true, an honest party must be saying that thing is true, so that thing must be true.
 
 The security downside of AnyTrust is that if there is a quorum that is entirely evil, it can destroy the security of the chain. So if a chain assumes that 2-of-20 are honest, but actually only one is honest, then there are 19 malicious committee who can form an evil quorum and steal everything. That’s why we choose K to be a small number like 2.
 
