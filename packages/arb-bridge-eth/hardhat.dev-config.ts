@@ -18,21 +18,6 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, bre) => {
   }
 })
 
-if (process.env['INTERFACE_TESTER_SOLC_VERSION']) {
-  baseConfig.solidity.compilers.push({
-    version: process.env['INTERFACE_TESTER_SOLC_VERSION'],
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 100,
-      },
-    },
-  })
-  baseConfig.solidity.overrides[
-    'contracts/test_only/InterfaceCompatibilityTester.sol'
-  ].version = process.env['INTERFACE_TESTER_SOLC_VERSION']
-}
-
 const config = {
   ...baseConfig,
   networks: {

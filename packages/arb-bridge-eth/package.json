@@ -20,10 +20,6 @@
   ],
   "scripts": {
     "build": "./scripts/build.bash",
-    "build:0.6": "INTERFACE_TESTER_SOLC_VERSION=0.6.9 yarn run build",
-    "build:0.7": "INTERFACE_TESTER_SOLC_VERSION=0.7.0 yarn run build",
-    "build:0.8": "INTERFACE_TESTER_SOLC_VERSION=0.8.15 yarn run build",
-    "test:compatibility": "yarn run build:0.6 && yarn run build:0.7 && yarn run build:0.8",
     "test": "yarn run hardhat test test/*.spec.ts",
     "test:ci": "CI=true $npm_execpath run test",
     "test:gas": "REPORT_GAS=true $npm_execpath run test",

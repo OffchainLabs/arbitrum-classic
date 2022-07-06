@@ -101,11 +101,6 @@ jobs:
             yarn install --cache-folder ~/.cache/yarn
           working_directory: /home/user/project
       - run:
-          name: test interface compatibility
-          command: |
-            yarn test:compatibility
-          working_directory: /home/user/project/packages/arb-bridge-eth
-      - run:
           name: test arb-bridge-eth
           command: |
             yarn typechain
@@ -350,6 +345,11 @@ jobs:
           command: |
             yarn install --cache-folder ~/.cache/yarn
           working_directory: /home/user/project
+      - run:
+          name: test interface compatibility
+          command: |
+            yarn test:compatibility
+          working_directory: /home/user/project/packages/arb-bridge-peripherals
       - run:
           name: test arb-bridge-peripherals l1
           command: |
