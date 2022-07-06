@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.8.7;
+pragma solidity >=0.6.9 <0.9.0;
 
 import "../arch/IOneStepProof.sol";
 import "../bridge/interfaces/IBridge.sol";
