@@ -28,21 +28,15 @@ import "../libraries/NitroReadyQuery.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
+import "@arbitrum/nitro-contracts/src/bridge/IBridgeNoErrors.sol" as INitroBridge;
+import "@arbitrum/nitro-contracts/src/bridge/IInboxNoErrors.sol" as INitroInbox;
 
 pragma solidity ^0.6.11;
 
-interface INitroBridge is IBridge {
-    function acceptFundsFromOldBridge() external payable;
-}
-
-interface INitroInbox is IInbox {
-    function postUpgradeInit(INitroBridge) external;
-}
-
 interface INitroRollup {
-    function bridge() external view returns (INitroBridge);
+    function bridge() external view returns (INitroBridge.IBridge);
 
-    function inbox() external view returns (INitroInbox);
+    function inbox() external view returns (INitroInbox.IInbox);
 
     function setInbox(IInbox newInbox) external;
 }
@@ -59,7 +53,7 @@ contract NitroMigrator is Ownable {
     // assumed this contract is now the rollup admin
     RollupAdminFacet public rollup;
 
-    INitroBridge public nitroBridge;
+    INitroBridge.IBridge public nitroBridge;
 
     /// @dev The nitro migration includes various steps.
     ///
@@ -135,15 +129,16 @@ contract NitroMigrator is Ownable {
 
         // Upgrade the classic inbox to the nitro inbox's impl,
         // and configure nitro to use the classic inbox's address.
-        INitroInbox oldNitroInbox = nitroRollup.inbox();
+        INitroInbox.IInbox oldNitroInbox = nitroRollup.inbox();
         address nitroInboxImpl = proxyAdmin.getProxyImplementation(
             TransparentUpgradeableProxy(payable(address(oldNitroInbox)))
         );
-        nitroBridge.setInbox(address(oldNitroInbox), false);
+        // TODO: shouldn't this already be set to false by default?
+        nitroBridge.setDelayedInbox(address(oldNitroInbox), false);
         proxyAdmin.upgradeAndCall(
             TransparentUpgradeableProxy(payable(address(inbox))),
             nitroInboxImpl,
-            abi.encodeWithSelector(INitroInbox.postUpgradeInit.selector, nitroBridge)
+            abi.encodeWithSelector(INitroInbox.IInbox.postUpgradeInit.selector, nitroBridge)
         );
         nitroRollup.setInbox(inbox);
 
@@ -155,10 +150,7 @@ contract NitroMigrator is Ownable {
     /// it is assumed that at this point the sequencer has stopped receiving txs and has posted its final batch on-chain
     /// Before this step the ownership of the Rollup and Bridge  must have been transferred to this contract
     // CHRIS: TODO: remove bridge data
-    function nitroStep1(address[] calldata seqAddresses, bytes calldata bridgeData)
-        external
-        onlyOwner
-    {
+    function nitroStep1(address[] calldata seqAddresses) external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Step0, "WRONG_STEP");
 
         // check that ownership of the bridge and rollup has been transferred
@@ -186,7 +178,7 @@ contract NitroMigrator is Ownable {
             (bool success, ) = bridge.executeCall(
                 address(nitroBridge),
                 bal,
-                abi.encodeWithSelector(INitroBridge.acceptFundsFromOldBridge.selector)
+                abi.encodeWithSelector(INitroBridge.IBridge.acceptFundsFromOldBridge.selector)
             );
             require(success, "ESCROW_TRANSFER_FAIL");
         }
@@ -230,7 +222,9 @@ contract NitroMigrator is Ownable {
             "ROLLUP_SHUTDOWN_NOT_COMPLETE"
         );
 
-        nitroBridge.setInbox(address(inbox), true);
+        // TODO: enable sequencer inbox in nitro bridge
+        // TODO: will there be a rollup event bridge for nitro?
+        nitroBridge.setDelayedInbox(address(inbox), true);
         nitroBridge.setOutbox(address(outboxV1), true);
         nitroBridge.setOutbox(address(outboxV2), true);
 
