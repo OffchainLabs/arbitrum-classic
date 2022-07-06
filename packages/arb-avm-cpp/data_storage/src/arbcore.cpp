@@ -76,7 +76,7 @@ void printMachineOutputInfo(const std::string& msg,
               << std::put_time(
                      localtime((time_t*)&machine_output.last_inbox_timestamp),
                      "%c")
-              << "\n";
+              << std::endl;
 }
 
 void printCheckpointResult(
@@ -1007,6 +1007,7 @@ ArbCore::reorgToLastMatchingCheckpoint(
     bool output_checkpoint = true;
 
     // Delete each checkpoint until check_output() is satisfied
+    uint64_t deleted_checkpoint_count = 0;
     while (checkpoint_it->Valid()) {
         // Deserialize checkpoint
         std::vector<unsigned char> checkpoint_vector(
@@ -1030,15 +1031,33 @@ ArbCore::reorgToLastMatchingCheckpoint(
                 return checkpoint_variant;
             } else {
                 std::cerr << "Unexpectedly invalid checkpoint inbox at "
-                             "message count "
+                             "message count: "
                           << machine_output.fully_processed_inbox.count
+                          << ", timestamp: "
+                          << std::put_time(localtime((time_t*)&machine_output
+                                                         .last_inbox_timestamp),
+                                           "%c")
                           << std::endl;
                 assert(false);
             }
         }
 
+        deleted_checkpoint_count++;
+        if (deleted_checkpoint_count % 100 == 1) {
+            std::cerr << "Deleted " << deleted_checkpoint_count
+                      << " checkpoints, current timestamp: "
+                      << std::put_time(
+                             localtime(
+                                 (time_t*)&machine_output.last_inbox_timestamp),
+                             "%c")
+                      << std::endl;
+        }
         deleteCheckpoint(tx, checkpoint_variant);
         checkpoint_it->Prev();
+    }
+    if (deleted_checkpoint_count > 0) {
+        std::cerr << "Deleted a total of " << deleted_checkpoint_count
+                  << "checkpoints" << std::endl;
     }
 
     auto status = checkpoint_it->status();
