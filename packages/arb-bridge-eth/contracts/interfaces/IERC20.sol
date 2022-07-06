@@ -3,7 +3,7 @@
 // Taken from @openzeppelin with MIT License
 
 // solhint-disable-next-line compiler-version
-pragma solidity >=0.4.21 <0.9.0;
+pragma solidity >=0.6.9 <0.9.0;
 
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP. Does not include
