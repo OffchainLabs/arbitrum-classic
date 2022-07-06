@@ -695,7 +695,7 @@ The price will rise above the minimum if the chain is starting to get congested.
 
 The automatic adjustment mechanism depends on an “ArbGas pool” that is tracked by ArbOS. The ArbGas pool has a maximum capacity that is equal to 12 minutes of full-speed computation at the chain’s speed limit. ArbGas used by transactions is subtracted from the gas pool, and at the beginning of each new Ethereum block, ArbGas is added to the pool corresponding to full-speed execution for the number of timestamp seconds since the last block (subject to the maximum pool capacity).
 
-After adding the new gas to the pool, if the new gas pool size is G, the current ArbGas price is multiplied by (16200S - G) / (14400S) where S is the ArbGas speed limit of the chain. This quantity will be 7/8 when G = 720S (the maximum gas pool size) and it will be 9/8 when G = 0.
+After adding the new gas to the pool, if the new gas pool size is G, the current ArbGas price is multiplied by (3240S - G) / (2880S) where S is the ArbGas speed limit of the chain. This quantity will be 7/8 when G = 720S (the maximum gas pool size) and it will be 9/8 when G = 0.
 
 ### The congestion limit
 
