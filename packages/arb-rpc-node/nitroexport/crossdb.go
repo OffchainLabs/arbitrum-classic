@@ -79,7 +79,7 @@ func (c *CrossDB) importBlock(ctx context.Context, blockNumber uint64) error {
 	if err != nil {
 		return err
 	}
-	_, txResults, err := c.txDB.GetBlockResults(machineBlockInfo)
+	blockInfo, txResults, err := c.txDB.GetBlockResults(machineBlockInfo)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (c *CrossDB) importBlock(ctx context.Context, blockNumber uint64) error {
 
 		txHash := txRes.IncomingRequest.MessageID.ToEthHash()
 		effectiveGasPrice := txRes.FeeStats.Price.L2Computation.Uint64()
-		tx, err := types.NewArbitrumLegacyTx(processedTx.Tx, txHash, effectiveGasPrice, blockNumber)
+		tx, err := types.NewArbitrumLegacyTx(processedTx.Tx, txHash, effectiveGasPrice, blockInfo.L1BlockNum.Uint64())
 		if err != nil {
 			return err
 		}
