@@ -11,10 +11,11 @@ if (process.env['INTERFACE_TESTER_SOLC_VERSION']) {
       },
     },
   })
-  ;(config.solidity.overrides as any)[
-    'contracts/tokenbridge/test/InterfaceCompatibilityTester.sol'
-  ] = {
-    version: process.env['INTERFACE_TESTER_SOLC_VERSION'],
+  config.solidity.overrides = {
+    ...config.solidity.overrides,
+    'contracts/tokenbridge/test/InterfaceCompatibilityTester.sol': {
+        version: process.env['INTERFACE_TESTER_SOLC_VERSION'],
+    }
   }
 }
 
