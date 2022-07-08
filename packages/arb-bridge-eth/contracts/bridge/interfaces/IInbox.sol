@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.6.11;
+// solhint-disable-next-line compiler-version
+pragma solidity >=0.6.9 <0.9.0;
 
 import "./IBridge.sol";
 import "./IMessageProvider.sol";
@@ -57,6 +58,17 @@ interface IInbox is IMessageProvider {
     ) external payable returns (uint256);
 
     function createRetryableTicket(
+        address destAddr,
+        uint256 arbTxCallValue,
+        uint256 maxSubmissionCost,
+        address submissionRefundAddress,
+        address valueRefundAddress,
+        uint256 maxGas,
+        uint256 gasPriceBid,
+        bytes calldata data
+    ) external payable returns (uint256);
+
+    function unsafeCreateRetryableTicket(
         address destAddr,
         uint256 arbTxCallValue,
         uint256 maxSubmissionCost,
