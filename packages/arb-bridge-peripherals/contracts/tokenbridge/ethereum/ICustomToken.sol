@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.6.11;
+// solhint-disable-next-line compiler-version
+pragma solidity >=0.6.9 <0.9.0;
 
 interface ArbitrumEnabledToken {
     /// @notice should return `0xa4b1` if token is enabled for arbitrum gateways
