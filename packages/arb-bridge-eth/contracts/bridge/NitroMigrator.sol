@@ -132,7 +132,7 @@ contract NitroMigrator is Ownable {
         INitroInbox.IInbox oldNitroInbox = nitroRollup.inbox();
         // The nitro deployment script already configured a delayed inbox, so we disable it here
         nitroBridge.setDelayedInbox(address(oldNitroInbox), false);
-        // TODO: we want to initialise this to a paused state
+        // the nitro inbox is initialised to a paused state so users can't post txs
         address nitroInboxImpl = proxyAdmin.getProxyImplementation(
             TransparentUpgradeableProxy(payable(address(oldNitroInbox)))
         );
