@@ -94,8 +94,9 @@ contract NitroMigrator is Ownable {
         OldOutbox _outboxV1,
         Outbox _outboxV2,
         RollupAdminFacet _rollup,
+        ProxyAdmin oldProxyAdmin,
         INitroRollup nitroRollup,
-        ProxyAdmin proxyAdmin
+        ProxyAdmin newProxyAdmin
     ) external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Uninitialized, "WRONG_STEP");
 
@@ -133,10 +134,10 @@ contract NitroMigrator is Ownable {
         // The nitro deployment script already configured a delayed inbox, so we disable it here
         nitroBridge.setDelayedInbox(address(oldNitroInbox), false);
         // the nitro inbox is initialised to a paused state so users can't post txs
-        address nitroInboxImpl = proxyAdmin.getProxyImplementation(
+        address nitroInboxImpl = newProxyAdmin.getProxyImplementation(
             TransparentUpgradeableProxy(payable(address(oldNitroInbox)))
         );
-        proxyAdmin.upgradeAndCall(
+        oldProxyAdmin.upgradeAndCall(
             TransparentUpgradeableProxy(payable(address(inbox))),
             nitroInboxImpl,
             abi.encodeWithSelector(INitroInbox.IInbox.postUpgradeInit.selector, nitroBridge)

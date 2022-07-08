@@ -156,17 +156,49 @@ task('configure-migration', 'configure nitro migrator contract')
     const { getDeployments } = initUpgrades(hre, process.cwd())
     const { data } = await getDeployments()
 
-    const proxyAdmin = await getAdminFromProxyStorage(hre, data.contracts.Inbox.proxyAddress)
-    const newProxyAdmin = await getAdminFromProxyStorage(hre, args.nitrorollupproxy.proxyAddress)
-    if (proxyAdmin != newProxyAdmin) {
-      throw new Error(
-        'Classic proxy admin ' + proxyAdmin + ' differs from nitro proxy admin ' + newProxyAdmin
-      )
-    }
+    const NewRollupUser = (await hre.ethers.getContractAt('INitroRollupCore', args.nitrorollupproxy))
+      .connect('0x1111111111111111111111111111111111111111');
+    const replacingInbox = await NewRollupUser.inbox();
+
+    const oldProxyAdmin = await getAdminFromProxyStorage(hre, data.contracts.Inbox.proxyAddress)
+    const newProxyAdmin = await getAdminFromProxyStorage(hre, replacingInbox)
+
+    const NewProxyAdmin = (await hre.ethers.getContractFactory('ProxyAdmin'))
+      .attach(newProxyAdmin)
+      .connect(hre.ethers.provider)
+    const owner = await NewProxyAdmin.owner();
 
     const Migrator = (await hre.ethers.getContractFactory('NitroMigrator'))
       .attach(args.migrator)
-      .connect(hre.ethers.provider)
+      .connect(hre.ethers.provider.getSigner(owner))
+    const migratorOwner = await Migrator.owner()
+    if (migratorOwner != owner) {
+      throw new Error('Migrator has wrong owner. Expected ' + owner + ' but got ' + migratorOwner)
+    }
+
+    const OldProxyAdmin = (await hre.ethers.getContractFactory('ProxyAdmin'))
+      .attach(oldProxyAdmin)
+      .connect(hre.ethers.provider.getSigner(owner))
+    const OldRollup = (await hre.ethers.getContractFactory('RollupAdminFacet'))
+      .attach(data.contracts.Rollup.proxyAddress)
+      .connect(hre.ethers.provider.getSigner(owner))
+    const NewRollup = (await hre.ethers.getContractFactory('RollupAdminFacet'))
+      .attach(args.nitrorollupproxy)
+      .connect(hre.ethers.provider.getSigner(owner))
+    if (await OldProxyAdmin.owner() != Migrator.address) {
+      console.log('Transferring ownership of old proxy admin')
+      await (await OldProxyAdmin.transferOwnership(args.migrator)).wait()
+    }
+    if (await OldRollup.owner() != Migrator.address) {
+      console.log('Transferring ownership of classic rollup')
+      await (await OldRollup.setOwner(args.migrator)).wait()
+    }
+    if (await NewRollupUser.owner() != Migrator.address) {
+      console.log('Transferring ownership of nitro rollup')
+      await (await NewRollup.setOwner(args.migrator)).wait()
+    }
+
+    console.log('Configuring deployment on nitro migrator')
     const initializeRes = await Migrator.configureDeployment(
       data.contracts.Inbox.proxyAddress,
       data.contracts.SequencerInbox.proxyAddress,
@@ -175,8 +207,9 @@ task('configure-migration', 'configure nitro migrator contract')
       args.oldoutboxproxy,
       data.contracts.Outbox.proxyAddress,
       data.contracts.Rollup.proxyAddress,
+      oldProxyAdmin,
       args.nitrorollupproxy,
-      proxyAdmin,
+      newProxyAdmin,
     )
     const initializeRec = await initializeRes.wait()
     console.log('Nitro migrator configured', initializeRec)
