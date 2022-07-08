@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.11;
+// solhint-disable-next-line compiler-version
+pragma solidity >=0.6.9 <0.9.0;
 
 /// @title ERC-721 Non-Fungible Token Standard
 /// @dev See https://eips.ethereum.org/EIPS/eip-721
