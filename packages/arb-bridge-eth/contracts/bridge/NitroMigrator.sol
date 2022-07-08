@@ -130,11 +130,12 @@ contract NitroMigrator is Ownable {
         // Upgrade the classic inbox to the nitro inbox's impl,
         // and configure nitro to use the classic inbox's address.
         INitroInbox.IInbox oldNitroInbox = nitroRollup.inbox();
+        // The nitro deployment script already configured a delayed inbox, so we disable it here
+        nitroBridge.setDelayedInbox(address(oldNitroInbox), false);
+        // TODO: we want to initialise this to a paused state
         address nitroInboxImpl = proxyAdmin.getProxyImplementation(
             TransparentUpgradeableProxy(payable(address(oldNitroInbox)))
         );
-        // TODO: shouldn't this already be set to false by default?
-        nitroBridge.setDelayedInbox(address(oldNitroInbox), false);
         proxyAdmin.upgradeAndCall(
             TransparentUpgradeableProxy(payable(address(inbox))),
             nitroInboxImpl,
@@ -149,7 +150,6 @@ contract NitroMigrator is Ownable {
     /// this will create the final input in the inbox, but there won't be the final assertion available yet.
     /// it is assumed that at this point the sequencer has stopped receiving txs and has posted its final batch on-chain
     /// Before this step the ownership of the Rollup and Bridge  must have been transferred to this contract
-    // CHRIS: TODO: remove bridge data
     function nitroStep1(address[] calldata seqAddresses) external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Step0, "WRONG_STEP");
 
@@ -198,7 +198,7 @@ contract NitroMigrator is Ownable {
         // this speeds up the process allowing validators to post assertions more frequently
         rollup.setMinimumAssertionPeriod(4);
 
-        // TODO: remove permissions from gas refunder to current sequencer inbox
+        // we don't remove permissions from gas refunder to current sequencer inbox as that can be handled independently from the upgrade
         latestCompleteStep = NitroMigrationSteps.Step1;
     }
 
@@ -222,8 +222,7 @@ contract NitroMigrator is Ownable {
             "ROLLUP_SHUTDOWN_NOT_COMPLETE"
         );
 
-        // TODO: enable sequencer inbox in nitro bridge
-        // TODO: will there be a rollup event bridge for nitro?
+        // we don't enable sequencer inbox and the rollup event bridge in nitro bridge as they are already configured in the deployment
         nitroBridge.setDelayedInbox(address(inbox), true);
         nitroBridge.setOutbox(address(outboxV1), true);
         nitroBridge.setOutbox(address(outboxV2), true);
