@@ -71,7 +71,7 @@
     "dotenv": "^10.0.0",
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-mocha": "^9.0.0",
+    "eslint-plugin-mocha": "^10.0.5",
     "eslint-plugin-prettier": "^4.0.0",
     "ethereum-waffle": "^3.2.0",
     "ethers": "^5.4.0",
