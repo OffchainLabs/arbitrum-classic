@@ -9,7 +9,7 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/knadh/koanf v1.4.0
 	github.com/mailru/easygo v0.0.0-20190618140210-3c14a0dc985f
-	github.com/mitchellh/mapstructure v1.4.3
+	github.com/mitchellh/mapstructure v1.5.0
 	github.com/offchainlabs/go-solidity-sha3 v0.1.3-0.20220601192706-5a29bf66bcad
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.26.1
