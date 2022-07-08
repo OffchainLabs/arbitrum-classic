@@ -3,7 +3,7 @@ module github.com/offchainlabs/arbitrum/packages/arb-util
 go 1.13
 
 require (
-	github.com/ethereum/go-ethereum v1.10.18
+	github.com/ethereum/go-ethereum v1.10.20
 	github.com/gobwas/ws v1.1.0
 	github.com/gobwas/ws-examples v0.0.0-20190625122829-a9e8908d9484
 	github.com/golang-jwt/jwt v3.2.2+incompatible
