@@ -20,6 +20,7 @@ import "./Bridge.sol";
 import "./Outbox.sol";
 import "./Inbox.sol";
 import "./SequencerInbox.sol";
+import "./NonDelegatingProxy.sol";
 import "./Old_Outbox/OldOutbox.sol";
 import "../rollup/facets/RollupAdmin.sol";
 import "../rollup/RollupEventBridge.sol";
@@ -52,6 +53,7 @@ contract NitroMigrator is Ownable {
     Outbox public outboxV2;
     // assumed this contract is now the rollup admin
     RollupAdminFacet public rollup;
+    ProxyAdmin public classicProxyAdmin;
 
     INitroBridge.IBridge public nitroBridge;
 
@@ -94,7 +96,7 @@ contract NitroMigrator is Ownable {
         OldOutbox _outboxV1,
         Outbox _outboxV2,
         RollupAdminFacet _rollup,
-        ProxyAdmin oldProxyAdmin,
+        ProxyAdmin _classicProxyAdmin,
         INitroRollup nitroRollup,
         ProxyAdmin newProxyAdmin
     ) external onlyOwner {
@@ -107,6 +109,7 @@ contract NitroMigrator is Ownable {
         rollup = _rollup;
         outboxV1 = _outboxV1;
         outboxV2 = _outboxV2;
+        classicProxyAdmin = _classicProxyAdmin;
 
         nitroBridge = nitroRollup.bridge();
 
@@ -137,7 +140,7 @@ contract NitroMigrator is Ownable {
         address nitroInboxImpl = newProxyAdmin.getProxyImplementation(
             TransparentUpgradeableProxy(payable(address(oldNitroInbox)))
         );
-        oldProxyAdmin.upgradeAndCall(
+        classicProxyAdmin.upgradeAndCall(
             TransparentUpgradeableProxy(payable(address(inbox))),
             nitroInboxImpl,
             abi.encodeWithSelector(INitroInbox.IInbox.postUpgradeInit.selector, nitroBridge)
@@ -156,7 +159,9 @@ contract NitroMigrator is Ownable {
 
         // check that ownership of the bridge and rollup has been transferred
         require(rollup.owner() == address(this), "ROLLUP_OWNER_NOT_SET");
-        require(bridge.owner() == address(this), "BRIDGE_OWNER_NOT_SET");
+        if (bridge.owner() == address(rollup)) {
+            rollup.transferOwnership(Ownable(address(bridge)), address(this));
+        }
 
         uint256 delayedMessageCount = inbox.shutdownForNitro();
 
@@ -227,6 +232,13 @@ contract NitroMigrator is Ownable {
         nitroBridge.setDelayedInbox(address(inbox), true);
         nitroBridge.setOutbox(address(outboxV1), true);
         nitroBridge.setOutbox(address(outboxV2), true);
+
+        // set the classic bridge to proxy view only calls to the nitro bridge
+        classicProxyAdmin.upgradeAndCall(
+            TransparentUpgradeableProxy(payable(address(bridge))),
+            address(new NonDelegatingProxy()),
+            abi.encodeWithSelector(NonDelegatingProxy.postUpgradeInit.selector, nitroBridge)
+        );
 
         latestCompleteStep = NitroMigrationSteps.Step3;
     }

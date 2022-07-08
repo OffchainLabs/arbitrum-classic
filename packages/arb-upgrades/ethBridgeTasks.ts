@@ -212,5 +212,24 @@ task('configure-migration', 'configure nitro migrator contract')
       newProxyAdmin,
     )
     const initializeRec = await initializeRes.wait()
-    console.log('Nitro migrator configured', initializeRec)
+    console.log('Nitro migrator configured:', initializeRec)
+  })
+
+task('migration-step-1', 'run migration step 1')
+  .addParam('migrator', '')
+  .addVariadicPositionalParam('sequenceraddresses')
+
+  .setAction(async (args, hre) => {
+    const { getDeployments } = initUpgrades(hre, process.cwd())
+    const { data } = await getDeployments()
+
+    let Migrator = (await hre.ethers.getContractFactory('NitroMigrator'))
+      .attach(args.migrator)
+      .connect(hre.ethers.provider)
+    const owner = await Migrator.owner()
+    Migrator = Migrator.connect(hre.ethers.provider.getSigner(owner))
+
+    console.log('Running migration stage 1')
+    const receipt = await (await Migrator.nitroStep1(args.sequenceraddresses)).wait()
+    console.log('Ran migration stage 1:', receipt)
   })
