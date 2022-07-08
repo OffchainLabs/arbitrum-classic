@@ -143,13 +143,8 @@ func (ir *InboxReader) Stop() {
 
 // WaitToCatchUp may only be called once
 func (ir *InboxReader) WaitToCatchUp(ctx context.Context) {
-	select {
-	case <-ir.caughtUpChan:
-		return
-	case <-ctx.Done():
-		return
-	}
-
+	logger.Warn().Msg("for testing, not actually waiting to catch up")
+	return
 }
 
 func (ir *InboxReader) GetSequencerInboxWatcher() *ethbridge.SequencerInboxWatcher {
