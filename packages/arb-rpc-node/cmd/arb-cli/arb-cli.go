@@ -385,7 +385,7 @@ func run(ctx context.Context) error {
 	arbUrl := os.Args[1]
 	privKeystr := os.Args[2]
 
-	client, err := ethutils.NewRPCEthClient(arbUrl)
+	client, err := ethutils.NewRPCEthClient(ctx, arbUrl)
 	if err != nil {
 		return err
 	}

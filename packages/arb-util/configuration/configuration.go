@@ -403,6 +403,13 @@ type Metrics struct {
 	Port string `koanf:"port"`
 }
 
+type L1Conf struct {
+	ChainID               int           `koanf:"chain-id"`
+	MaxIdleConnections    int           `koanf:"max-idle-connections"`
+	IdleConnectionTimeout time.Duration `koanf:"idle-connection-timeout"`
+	URL                   string        `koanf:"url"`
+}
+
 type Config struct {
 	BridgeUtilsAddress string      `koanf:"bridge-utils-address"`
 	Conf               Conf        `koanf:"conf"`
@@ -410,18 +417,15 @@ type Config struct {
 	Feed               Feed        `koanf:"feed"`
 	GasPrice           float64     `koanf:"gas-price"`
 	Healthcheck        Healthcheck `koanf:"healthcheck"`
-	L1                 struct {
-		ChainID int    `koanf:"chain-id"`
-		URL     string `koanf:"url"`
-	} `koanf:"l1"`
-	Log           Log        `koanf:"log"`
-	Node          Node       `koanf:"node"`
-	Persistent    Persistent `koanf:"persistent"`
-	PProfEnable   bool       `koanf:"pprof-enable"`
-	Rollup        Rollup     `koanf:"rollup"`
-	Validator     Validator  `koanf:"validator"`
-	WaitToCatchUp bool       `koanf:"wait-to-catch-up"`
-	Wallet        Wallet     `koanf:"wallet"`
+	L1                 L1Conf      `koanf:"l1"`
+	Log                Log         `koanf:"log"`
+	Node               Node        `koanf:"node"`
+	Persistent         Persistent  `koanf:"persistent"`
+	PProfEnable        bool        `koanf:"pprof-enable"`
+	Rollup             Rollup      `koanf:"rollup"`
+	Validator          Validator   `koanf:"validator"`
+	WaitToCatchUp      bool        `koanf:"wait-to-catch-up"`
+	Wallet             Wallet      `koanf:"wallet"`
 
 	// The following field needs to be top level for compatibility with the underlying go-ethereum lib
 	Metrics       bool    `koanf:"metrics"`
@@ -603,8 +607,10 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 
 	f.Float64("gas-price", 0, "float of gas price to use in gwei (0 = use L1 node's recommended value)")
 
-	f.String("l1.url", "", "layer 1 ethereum node RPC URL")
 	f.Uint64("l1.chain-id", 0, "if set other than 0, will be used to validate database and L1 connection")
+	f.Uint64("l1.max-idle-connections", 5, "maximum number of idle L1 connections")
+	f.Duration("l1.idle-connection-timeout", time.Minute*5, "how long until idle L1 connections are closed")
+	f.String("l1.url", "", "layer 1 ethereum node RPC URL")
 
 	f.String("rollup.address", "", "layer 2 rollup contract address")
 	f.Int64("rollup.from-block", 0, "layer 2 rollup contract creation block")
@@ -636,7 +642,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		return nil, nil, nil, nil, errors.New("required parameter --l1.url is missing")
 	}
 
-	l1Client, err := ethutils.NewRPCEthClient(l1URL)
+	l1Client, err := ethutils.NewRPCEthClient(ctx, l1URL)
 	if err != nil {
 		return nil, nil, nil, nil, errors.Wrapf(err, "error connecting to ethereum L1 node: %s", l1URL)
 	}
@@ -766,6 +772,12 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		out.Core.Cache.Last = true
 	} else if out.Node.Type() == ValidatorNodeType && out.Validator.OnlyCreateWalletContract && out.Validator.Strategy() == WatchtowerStrategy {
 		return nil, nil, nil, nil, errors.New("can't create validator wallet contract with watchtower validator strategy")
+	}
+
+	// Recreate l1Client with configured transport parameters
+	l1Client, err = ethutils.NewRPCEthClientCreateTransport(ctx, out.L1.URL, out.L1.MaxIdleConnections, out.L1.MaxIdleConnections, out.L1.IdleConnectionTimeout)
+	if err != nil {
+		return nil, nil, nil, nil, errors.Wrap(err, "unable to create L1 client on startup")
 	}
 
 	return out, wallet, l1Client, l1ChainId, nil

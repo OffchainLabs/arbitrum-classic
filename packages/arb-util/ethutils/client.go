@@ -19,9 +19,14 @@ package ethutils
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math/big"
+	"net"
+	"net/http"
+	"net/url"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -64,7 +69,9 @@ type EthClient interface {
 type RPCEthClient struct {
 	sync.RWMutex
 
-	url      string
+	url       string
+	transport *http.Transport
+
 	eth      *ethclient.Client
 	rpc      *rpc.Client
 	errCount uint64
@@ -77,20 +84,56 @@ type BlockInfo struct {
 	Number     *hexutil.Big   `json:"number"`
 }
 
-func NewRPCEthClient(url string) (*RPCEthClient, error) {
-	r := &RPCEthClient{url: url}
-	err := r.reconnect()
-	return r, err
+func NewRPCEthClient(ctx context.Context, url string) (*RPCEthClient, error) {
+	return NewRPCEthClientWithTransport(ctx, url, nil)
 }
 
-func (r *RPCEthClient) reconnect() error {
+func NewRPCEthClientCreateTransport(ctx context.Context, url string, maxIdleConns int, maxIdleConnsPerHost int, idleConnTimeout time.Duration) (*RPCEthClient, error) {
+	t := &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout:   5 * time.Second,
+			KeepAlive: 2 * time.Second,
+		}).DialContext,
+		MaxIdleConns:          maxIdleConns,
+		MaxIdleConnsPerHost:   maxIdleConnsPerHost,
+		IdleConnTimeout:       idleConnTimeout,
+		TLSHandshakeTimeout:   5 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
+	return NewRPCEthClientWithTransport(ctx, url, t)
+}
+
+func NewRPCEthClientWithTransport(ctx context.Context, url string, transport *http.Transport) (*RPCEthClient, error) {
+	r := &RPCEthClient{
+		url:       url,
+		transport: transport,
+	}
+	err := r.reconnect(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return r, nil
+}
+
+func (r *RPCEthClient) Clone(ctx context.Context) (*RPCEthClient, error) {
+	return NewRPCEthClientWithTransport(ctx, r.url, r.transport)
+}
+
+func (r *RPCEthClient) reconnect(ctx context.Context) error {
 	r.Lock()
 	defer r.Unlock()
 	if atomic.LoadUint64(&r.errCount) < maxErrCount && r.eth != nil {
 		// We must have already reconnected
 		return nil
 	}
-	rpccl, err := rpc.Dial(r.url)
+	if r.rpc != nil {
+		r.rpc.Close()
+	}
+	if r.transport != nil {
+		r.transport.CloseIdleConnections()
+	}
+	rpccl, err := r.newRPCClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -100,7 +143,7 @@ func (r *RPCEthClient) reconnect() error {
 	return nil
 }
 
-func (r *RPCEthClient) handleCallErr(err error) error {
+func (r *RPCEthClient) handleCallErr(ctx context.Context, err error) error {
 	if err == nil {
 		// Reset err count if any call is working since we're looking for a connection error
 		atomic.StoreUint64(&r.errCount, 0)
@@ -115,7 +158,7 @@ func (r *RPCEthClient) handleCallErr(err error) error {
 			Str("url", r.url).
 			Msg("Reconnecting to client endpoint after repeated errors")
 
-		if err := r.reconnect(); err != nil {
+		if err := r.reconnect(ctx); err != nil {
 			return err
 		}
 	}
@@ -124,7 +167,7 @@ func (r *RPCEthClient) handleCallErr(err error) error {
 
 func (r *RPCEthClient) BlockInfoByNumber(ctx context.Context, number *big.Int) (*BlockInfo, error) {
 	info, err := r.blockInfoByNumberImpl(ctx, number)
-	return info, r.handleCallErr(err)
+	return info, r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) blockInfoByNumberImpl(ctx context.Context, number *big.Int) (*BlockInfo, error) {
@@ -155,140 +198,168 @@ func (r *RPCEthClient) ChainID(ctx context.Context) (*big.Int, error) {
 	r.RLock()
 	val, err := r.eth.ChainID(ctx)
 	r.RUnlock()
-	return val, r.handleCallErr(err)
+	return val, r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) {
 	r.RLock()
 	val, err := r.eth.CodeAt(ctx, account, blockNumber)
 	r.RUnlock()
-	return val, r.handleCallErr(err)
+	return val, r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
 	r.RLock()
 	val, err := r.eth.BalanceAt(ctx, account, blockNumber)
 	r.RUnlock()
-	return val, r.handleCallErr(err)
+	return val, r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) CallContract(ctx context.Context, msg ethereum.CallMsg, blockNumber *big.Int) ([]byte, error) {
 	r.RLock()
 	val, err := r.eth.CallContract(ctx, msg, blockNumber)
 	r.RUnlock()
-	return val, r.handleCallErr(err)
+	return val, r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
 	r.RLock()
 	val, err := r.eth.HeaderByNumber(ctx, number)
 	r.RUnlock()
-	return val, r.handleCallErr(err)
+	return val, r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) PendingCodeAt(ctx context.Context, account common.Address) ([]byte, error) {
 	r.RLock()
 	val, err := r.eth.PendingCodeAt(ctx, account)
 	r.RUnlock()
-	return val, r.handleCallErr(err)
+	return val, r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
 	r.RLock()
 	val, err := r.eth.PendingNonceAt(ctx, account)
 	r.RUnlock()
-	return val, r.handleCallErr(err)
+	return val, r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) PendingCallContract(ctx context.Context, msg ethereum.CallMsg) ([]byte, error) {
 	r.RLock()
 	val, err := r.eth.PendingCallContract(ctx, msg)
 	r.RUnlock()
-	return val, r.handleCallErr(err)
+	return val, r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
 	r.RLock()
 	val, err := r.eth.SuggestGasPrice(ctx)
 	r.RUnlock()
-	return val, r.handleCallErr(err)
+	return val, r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) SuggestGasTipCap(ctx context.Context) (*big.Int, error) {
 	r.RLock()
 	val, err := r.eth.SuggestGasTipCap(ctx)
 	r.RUnlock()
-	return val, r.handleCallErr(err)
+	return val, r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) EstimateGas(ctx context.Context, msg ethereum.CallMsg) (uint64, error) {
 	r.RLock()
 	val, err := r.eth.EstimateGas(ctx, msg)
 	r.RUnlock()
-	return val, r.handleCallErr(err)
+	return val, r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) SendTransaction(ctx context.Context, tx *types.Transaction) error {
 	r.RLock()
 	err := r.eth.SendTransaction(ctx, tx)
 	r.RUnlock()
-	return r.handleCallErr(err)
+	return r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error) {
 	r.RLock()
 	val, err := r.eth.FilterLogs(ctx, q)
 	r.RUnlock()
-	return val, r.handleCallErr(err)
+	return val, r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) SubscribeFilterLogs(ctx context.Context, q ethereum.FilterQuery, ch chan<- types.Log) (ethereum.Subscription, error) {
 	r.RLock()
 	val, err := r.eth.SubscribeFilterLogs(ctx, q, ch)
 	r.RUnlock()
-	return val, r.handleCallErr(err)
+	return val, r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
 	r.RLock()
 	val, err := r.eth.TransactionReceipt(ctx, txHash)
 	r.RUnlock()
-	return val, r.handleCallErr(err)
+	return val, r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error) {
 	r.RLock()
 	val, err := r.eth.NonceAt(ctx, account, blockNumber)
 	r.RUnlock()
-	return val, r.handleCallErr(err)
+	return val, r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
 	r.RLock()
 	val, err := r.eth.HeaderByHash(ctx, hash)
 	r.RUnlock()
-	return val, r.handleCallErr(err)
+	return val, r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
 	r.RLock()
 	val, err := r.eth.BlockByHash(ctx, hash)
 	r.RUnlock()
-	return val, r.handleCallErr(err)
+	return val, r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) TransactionByHash(ctx context.Context, hash common.Hash) (tx *types.Transaction, isPending bool, err error) {
 	r.RLock()
 	tx, isPending, err = r.eth.TransactionByHash(ctx, hash)
 	r.RUnlock()
-	return tx, isPending, r.handleCallErr(err)
+	return tx, isPending, r.handleCallErr(ctx, err)
 }
 
 func (r *RPCEthClient) TransactionInBlock(ctx context.Context, blockHash common.Hash, index uint) (*types.Transaction, error) {
 	r.RLock()
 	val, err := r.eth.TransactionInBlock(ctx, blockHash, index)
 	r.RUnlock()
-	return val, r.handleCallErr(err)
+	return val, r.handleCallErr(ctx, err)
+}
+
+func (r *RPCEthClient) newRPCClient(ctx context.Context) (*rpc.Client, error) {
+	if r.transport == nil {
+		return rpc.Dial(r.url)
+	}
+
+	u, err := url.Parse(r.url)
+	if err != nil {
+		return nil, err
+	}
+
+	var rpcClient *rpc.Client
+	switch u.Scheme {
+	case "http", "https":
+		client := &http.Client{
+			Transport: r.transport,
+		}
+		rpcClient, err = rpc.DialHTTPWithClient(r.url, client)
+	case "ws", "wss":
+		rpcClient, err = rpc.DialWebsocket(ctx, r.url, "")
+	default:
+		return nil, fmt.Errorf("no known transport for scheme %q in URL %s", u.Scheme, r.url)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return rpcClient, nil
 }
 
 type SimulatedEthClient struct {

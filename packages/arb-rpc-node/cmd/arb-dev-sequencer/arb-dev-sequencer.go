@@ -137,7 +137,7 @@ func startup() error {
 	rollupCreator := common.HexToAddress(rollupCreatorAddresssString)
 	bridgeUtilsAddress := common.HexToAddress(bridgeUtilsAddressString)
 
-	ethclint, err := ethutils.NewRPCEthClient(ethURL)
+	ethclint, err := ethutils.NewRPCEthClient(ctx, ethURL)
 	if err != nil {
 		return errors.Wrap(err, "error running NewRPcEthClient")
 	}
