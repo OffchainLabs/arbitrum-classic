@@ -55,7 +55,9 @@ contract NitroMigrator is Ownable {
     RollupAdminFacet public rollup;
     ProxyAdmin public classicProxyAdmin;
 
+    INitroRollup public nitroRollup;
     INitroBridge.IBridge public nitroBridge;
+    ProxyAdmin public nitroProxyAdmin;
 
     /// @dev The nitro migration includes various steps.
     ///
@@ -97,8 +99,8 @@ contract NitroMigrator is Ownable {
         Outbox _outboxV2,
         RollupAdminFacet _rollup,
         ProxyAdmin _classicProxyAdmin,
-        INitroRollup nitroRollup,
-        ProxyAdmin newProxyAdmin
+        INitroRollup _nitroRollup,
+        ProxyAdmin _nitroProxyAdmin
     ) external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Uninitialized, "WRONG_STEP");
 
@@ -111,7 +113,9 @@ contract NitroMigrator is Ownable {
         outboxV2 = _outboxV2;
         classicProxyAdmin = _classicProxyAdmin;
 
+        nitroRollup = _nitroRollup;
         nitroBridge = nitroRollup.bridge();
+        nitroProxyAdmin = _nitroProxyAdmin;
 
         {
             // this contract is the rollup admin, and we want to check if the user facet is upgraded
@@ -131,21 +135,9 @@ contract NitroMigrator is Ownable {
         // we check that the new contracts that will receive permissions are actually contracts
         require(Address.isContract(address(nitroBridge)), "NITRO_BRIDGE_NOT_CONTRACT");
 
-        // Upgrade the classic inbox to the nitro inbox's impl,
-        // and configure nitro to use the classic inbox's address.
-        INitroInbox.IInbox oldNitroInbox = nitroRollup.inbox();
         // The nitro deployment script already configured a delayed inbox, so we disable it here
+        INitroInbox.IInbox oldNitroInbox = nitroRollup.inbox();
         nitroBridge.setDelayedInbox(address(oldNitroInbox), false);
-        // the nitro inbox is initialised to a paused state so users can't post txs
-        address nitroInboxImpl = newProxyAdmin.getProxyImplementation(
-            TransparentUpgradeableProxy(payable(address(oldNitroInbox)))
-        );
-        classicProxyAdmin.upgradeAndCall(
-            TransparentUpgradeableProxy(payable(address(inbox))),
-            nitroInboxImpl,
-            abi.encodeWithSelector(INitroInbox.IInbox.postUpgradeInit.selector, nitroBridge)
-        );
-        nitroRollup.setInbox(inbox);
 
         latestCompleteStep = NitroMigrationSteps.Step0;
     }
@@ -159,7 +151,7 @@ contract NitroMigrator is Ownable {
 
         // check that ownership of the bridge and rollup has been transferred
         require(rollup.owner() == address(this), "ROLLUP_OWNER_NOT_SET");
-        if (bridge.owner() == address(rollup)) {
+        if (bridge.owner() != address(this)) {
             rollup.transferOwnership(Ownable(address(bridge)), address(this));
         }
 
@@ -175,6 +167,20 @@ contract NitroMigrator is Ownable {
         // we disable the rollupEventBridge later since its needed in order to create/confirm assertions
         // the rollup event bridge will still add messages to the Bridge's accumulator, but these will never be included into the sequencer inbox
         // it is not a problem that these messages will be lost, as long as classic shutdown and nitro boot are deterministic
+
+        // Upgrade the classic inbox to the nitro inbox's impl,
+        // and configure nitro to use the classic inbox's address.
+        // Right now the inbox isn't authorized on the nitro bridge, so users can't post txs.
+        INitroInbox.IInbox oldNitroInbox = nitroRollup.inbox();
+        address nitroInboxImpl = nitroProxyAdmin.getProxyImplementation(
+            TransparentUpgradeableProxy(payable(address(oldNitroInbox)))
+        );
+        classicProxyAdmin.upgradeAndCall(
+            TransparentUpgradeableProxy(payable(address(inbox))),
+            nitroInboxImpl,
+            abi.encodeWithSelector(INitroInbox.IInbox.postUpgradeInit.selector, nitroBridge)
+        );
+        nitroRollup.setInbox(inbox);
 
         bridge.setOutbox(address(this), true);
 

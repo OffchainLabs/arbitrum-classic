@@ -48,6 +48,7 @@ export enum ContractNames {
   Bridge = 'Bridge',
   SequencerInbox = 'SequencerInbox',
   Outbox = 'Outbox',
+  OldOutbox = 'OldOutbox',
   OutboxEntry = 'OutboxEntry',
 }
 

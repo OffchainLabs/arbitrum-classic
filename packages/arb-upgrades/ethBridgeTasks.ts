@@ -149,7 +149,6 @@ task('set-outbox', 'deploy and set a new outbox')
 
 task('configure-migration', 'configure nitro migrator contract')
   .addParam('migrator', '')
-  .addParam('oldoutboxproxy', '')
   .addParam('nitrorollupproxy', '')
 
   .setAction(async (args, hre) => {
@@ -204,7 +203,7 @@ task('configure-migration', 'configure nitro migrator contract')
       data.contracts.SequencerInbox.proxyAddress,
       data.contracts.Bridge.proxyAddress,
       data.contracts.RollupEventBridge.proxyAddress,
-      args.oldoutboxproxy,
+      data.contracts.OldOutbox.proxyAddress,
       data.contracts.Outbox.proxyAddress,
       data.contracts.Rollup.proxyAddress,
       oldProxyAdmin,
@@ -220,9 +219,6 @@ task('migration-step-1', 'run migration step 1')
   .addVariadicPositionalParam('sequenceraddresses')
 
   .setAction(async (args, hre) => {
-    const { getDeployments } = initUpgrades(hre, process.cwd())
-    const { data } = await getDeployments()
-
     let Migrator = (await hre.ethers.getContractFactory('NitroMigrator'))
       .attach(args.migrator)
       .connect(hre.ethers.provider)
