@@ -2178,31 +2178,33 @@ ValueResult<uint256_t> ArbCore::getSequencerBlockNumberAt(
     uint256_t sequence_number) const {
     ReadTransaction tx(data_storage);
 
-    std::vector<unsigned char> key_vec;
-    marshal_uint256_t(sequence_number, key_vec);
-    auto data = tx.sequencerBatchItemGetVector(vecToSlice(key_vec));
-    if (!data.status.ok()) {
-        return {data.status, 0};
-    }
-    auto data_it = data.data.begin();
-    auto batch_item = deserializeSequencerBatchItem(sequence_number, data_it,
-                                                    data.data.end());
-    if (batch_item.sequencer_message) {
-        // Extract the block number from the sequencer message
-        auto message_it = batch_item.sequencer_message->begin();
-        auto block_num = extractInboxMessageBlockNumber(message_it);
-        return {rocksdb::Status::OK(), block_num};
-    } else {
-        // Extract the block number from the last delayed message
-        auto delayed_sequence_number = batch_item.total_delayed_count - 1;
-        marshal_uint256_t(delayed_sequence_number, key_vec);
-        data = tx.delayedMessageGetVector(vecToSlice(key_vec));
-        if (!data.status.ok()) {
-            return {data.status, 0};
+    std::vector<unsigned char> first_key_vec;
+    marshal_uint256_t(sequence_number, first_key_vec);
+    auto first_key_slice = vecToSlice(first_key_vec);
+    auto it = tx.sequencerBatchItemGetIterator(&first_key_slice);
+    it->Seek(first_key_slice);
+
+    while (it->Valid()) {
+        auto key_ptr = reinterpret_cast<const unsigned char*>(it->key().data());
+        auto value_ptr =
+            reinterpret_cast<const unsigned char*>(it->value().data());
+        auto value_end_ptr = value_ptr + it->value().size();
+
+        auto seq_batch_item = deserializeSequencerBatchItem(
+            extractUint256(key_ptr), value_ptr, value_end_ptr);
+        if (seq_batch_item.sequencer_message) {
+            auto message_it = seq_batch_item.sequencer_message->begin();
+            auto block_num = extractInboxMessageBlockNumber(message_it);
+            return {rocksdb::Status::OK(), block_num};
         }
-        auto data_it = data.data.begin();
-        auto block_num = deserializeDelayedMessageBlockNumber(data_it);
-        return {rocksdb::Status::OK(), block_num};
+
+        it->Next();
+    }
+
+    if (it->status().ok()) {
+        return {rocksdb::Status::NotFound(), 0};
+    } else {
+        return {it->status(), 0};
     }
 }
 
