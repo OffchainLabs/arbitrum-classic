@@ -225,7 +225,52 @@ task('migration-step-1', 'run migration step 1')
     const owner = await Migrator.owner()
     Migrator = Migrator.connect(hre.ethers.provider.getSigner(owner))
 
-    console.log('Running migration stage 1')
+    console.log('Running migration step 1')
     const receipt = await (await Migrator.nitroStep1(args.sequenceraddresses)).wait()
-    console.log('Ran migration stage 1:', receipt)
+    console.log('Ran migration step 1:', receipt)
+  })
+
+task('migration-step-2', 'run migration step 2')
+  .addParam('migrator', '')
+  .addOptionalParam('finalNodeNum')
+  .addFlag('destroyAlternatives')
+  .addFlag('destroyChallenges')
+
+  .setAction(async (args, hre) => {
+    const { getDeployments } = initUpgrades(hre, process.cwd())
+    const { data } = await getDeployments()
+
+    let Migrator = (await hre.ethers.getContractFactory('NitroMigrator'))
+      .attach(args.migrator)
+      .connect(hre.ethers.provider)
+    const owner = await Migrator.owner()
+    Migrator = Migrator.connect(hre.ethers.provider.getSigner(owner))
+
+    let finalNodeNum: any = parseInt(args.finalNodeNum)
+    if (!finalNodeNum) {
+      const Rollup = (await hre.ethers.getContractFactory('RollupUserFacet'))
+        .attach(data.contracts.Rollup.proxyAddress)
+        .connect(hre.ethers.provider)
+      finalNodeNum = await Rollup.latestNodeCreated();
+      console.log('Resolved final node number', finalNodeNum)
+    }
+
+    console.log('Running migration step 2')
+    const receipt = await (await Migrator.nitroStep2(finalNodeNum, args.destroyAlternatives, args.destroyChallenges)).wait()
+    console.log('Ran migration step 2:', receipt)
+  })
+
+task('migration-step-3', 'run migration step 3')
+  .addParam('migrator', '')
+
+  .setAction(async (args, hre) => {
+    let Migrator = (await hre.ethers.getContractFactory('NitroMigrator'))
+      .attach(args.migrator)
+      .connect(hre.ethers.provider)
+    const owner = await Migrator.owner()
+    Migrator = Migrator.connect(hre.ethers.provider.getSigner(owner))
+
+    console.log('Running migration step 3')
+    const receipt = await (await Migrator.nitroStep3()).wait()
+    console.log('Ran migration step 3:', receipt)
   })
