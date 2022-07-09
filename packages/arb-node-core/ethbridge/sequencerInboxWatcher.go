@@ -18,6 +18,7 @@ package ethbridge
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"strings"
 
@@ -427,15 +428,18 @@ func (r *SequencerInboxWatcher) GetMaxDelayBlocks(ctx context.Context) (*big.Int
 }
 
 func (r *SequencerInboxWatcher) LookupBatchContaining(ctx context.Context, lookup core.ArbCoreLookup, seqNum *big.Int) (SequencerBatchRef, error) {
+	fmt.Printf("LookupBatchContaining: seqNum %v\n", seqNum)
 	fromBlock, err := lookup.GetSequencerBlockNumberAt(seqNum)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("LookupBatchContaining: fromBlock %v\n", fromBlock)
 	maxDelay, err := r.GetMaxDelayBlocks(ctx)
 	if err != nil {
 		return nil, err
 	}
 	toBlock := new(big.Int).Add(fromBlock, maxDelay)
+	fmt.Printf("LookupBatchContaining: toBlock %v\n", toBlock)
 	latestBlockNumber, err := r.CurrentBlockHeight(ctx)
 	if err != nil {
 		return nil, err
@@ -443,13 +447,16 @@ func (r *SequencerInboxWatcher) LookupBatchContaining(ctx context.Context, looku
 	if toBlock.Cmp(latestBlockNumber) > 0 {
 		toBlock = latestBlockNumber
 	}
+	fmt.Printf("LookupBatchContaining: toBlock %v\n", toBlock)
 
 	batchRefs, err := r.LookupBatchesInRange(ctx, fromBlock, toBlock)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("LookupBatchContaining: batchRefs %v\n", len(batchRefs))
 	var found SequencerBatchRef
 	for _, batchRef := range batchRefs {
+		fmt.Printf("LookupBatchContaining: found batch before %v after %v\n", batchRef.GetBeforeCount(), batchRef.GetAfterCount())
 		if seqNum.Cmp(batchRef.GetBeforeCount()) >= 0 && seqNum.Cmp(batchRef.GetAfterCount()) < 0 {
 			found = batchRef
 			break
