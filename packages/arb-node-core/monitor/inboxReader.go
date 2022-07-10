@@ -295,15 +295,20 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 			if err != nil {
 				return err
 			}
-			if ir.caughtUpTarget == nil && to.Cmp(currentHeight) == 0 {
+			if to.Cmp(currentHeight) == 0 && !reorgingDelayed && !reorgingSequencer {
+				var newCaughtUpTarget *big.Int
 				if len(sequencerBatches) > 0 {
-					ir.caughtUpTarget = sequencerBatches[len(sequencerBatches)-1].GetAfterCount()
+					newCaughtUpTarget = sequencerBatches[len(sequencerBatches)-1].GetAfterCount()
 				} else {
 					dbMessageCount, err := ir.db.GetMessageCount()
 					if err != nil {
 						return err
 					}
-					ir.caughtUpTarget = dbMessageCount
+					newCaughtUpTarget = dbMessageCount
+				}
+				// Only let the caught up target decrease (to avoid perpetually being not caught up)
+				if ir.caughtUpTarget == nil || newCaughtUpTarget.Cmp(ir.caughtUpTarget) < 0 {
+					ir.caughtUpTarget = newCaughtUpTarget
 				}
 			}
 			if len(sequencerBatches) > 0 {
