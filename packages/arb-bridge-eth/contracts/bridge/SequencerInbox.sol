@@ -47,11 +47,12 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
     address private deprecatedSequencer;
     address public rollup;
     mapping(address => bool) public override isSequencer;
-    bool public isShutdownForNitro;
 
     // Window in which only the Sequencer can update the Inbox; this delay is what allows the Sequencer to give receipts with sub-blocktime latency.
     uint256 public override maxDelayBlocks;
     uint256 public override maxDelaySeconds;
+
+    bool public isShutdownForNitro;
 
     string internal constant SHUTDOWN_FOR_NITRO = "SHUTDOWN_FOR_NITRO";
 
