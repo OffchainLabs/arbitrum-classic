@@ -19,11 +19,12 @@ package cmdhelp
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math"
 	"math/big"
 	"strings"
 	"syscall"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -102,7 +103,7 @@ func GetKeystore(
 			if len(walletConfig.Fireblocks.FeedSigner.Pathname) == 0 {
 				return nil, nil, errors.New("missing feed signer private key")
 			}
-			ks, account, _, err := openKeystore("feed signer", walletConfig.Fireblocks.FeedSigner.Pathname, walletConfig.Fireblocks.FeedSigner.Password(), false)
+			ks, account, _, err := OpenKeystore("feed signer", walletConfig.Fireblocks.FeedSigner.Pathname, walletConfig.Fireblocks.FeedSigner.Password(), false)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -136,7 +137,7 @@ func GetKeystore(
 			return crypto.Sign(data, privateKey)
 		}
 	} else {
-		ks, account, newKeystoreCreated, err := openKeystore("account", walletConfig.Local.Pathname, walletConfig.Local.Password(), walletConfig.Local.OnlyCreateKey)
+		ks, account, newKeystoreCreated, err := OpenKeystore("account", walletConfig.Local.Pathname, walletConfig.Local.Password(), walletConfig.Local.OnlyCreateKey)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -171,7 +172,7 @@ func GetKeystore(
 	return auth, signer, nil
 }
 
-func openKeystore(description string, walletPath string, walletPassword *string, createNewKey bool) (*keystore.KeyStore, *accounts.Account, bool, error) {
+func OpenKeystore(description string, walletPath string, walletPassword *string, createNewKey bool) (*keystore.KeyStore, *accounts.Account, bool, error) {
 	ks := keystore.NewKeyStore(
 		walletPath,
 		keystore.StandardScryptN,
