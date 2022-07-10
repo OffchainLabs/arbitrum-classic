@@ -315,9 +315,11 @@ class ArbCore {
     // Useful for unit tests
     uint256_t maxCheckpointGas();
 
-   public:
     // Controlling checkpoint pruning
     void updateCheckpointPruningGas(uint256_t gas);
+
+    // Useful for manual value loading
+    std::shared_ptr<DataStorage> getDataStorage();
 
    private:
     uint256_t getCheckpointPruningGas();

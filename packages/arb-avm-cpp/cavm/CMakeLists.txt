@@ -35,6 +35,7 @@ set(LIB_SOURCES
   carbstorage.cpp
   cexecutioncursor.cpp
   cmachine.cpp
+  dumpstate.cpp
 )
 
 add_library(cavm STATIC ${LIB_HEADERS} ${LIB_SOURCES})
