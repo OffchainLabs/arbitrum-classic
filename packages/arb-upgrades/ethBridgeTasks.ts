@@ -214,7 +214,7 @@ task('configure-migration', 'configure nitro migrator contract')
     console.log('Nitro migrator configured:', initializeRec)
   })
 
-task('migration-step-1', 'run migration step 1')
+task('migration-step-1', 'run nitro migration step 1')
   .addParam('migrator', '')
   .addVariadicPositionalParam('sequenceraddresses')
 
@@ -230,7 +230,7 @@ task('migration-step-1', 'run migration step 1')
     console.log('Ran migration step 1:', receipt)
   })
 
-task('migration-step-2', 'run migration step 2')
+task('migration-step-2', 'run nitro migration step 2')
   .addParam('migrator', '')
   .addOptionalParam('finalNodeNum')
   .addFlag('destroyAlternatives')
@@ -260,7 +260,7 @@ task('migration-step-2', 'run migration step 2')
     console.log('Ran migration step 2:', receipt)
   })
 
-task('migration-step-3', 'run migration step 3')
+task('migration-step-3', 'run nitro migration step 3')
   .addParam('migrator', '')
 
   .setAction(async (args, hre) => {
@@ -273,4 +273,39 @@ task('migration-step-3', 'run migration step 3')
     console.log('Running migration step 3')
     const receipt = await (await Migrator.nitroStep3()).wait()
     console.log('Ran migration step 3:', receipt)
+  })
+
+task('migrator-transfer-child-ownership', 'transfer the ownership of a contract owned by the nitro migrator')
+  .addParam('migrator', '')
+  .addParam('child', '')
+  .addParam('newowner', '')
+
+  .setAction(async (args, hre) => {
+    let Migrator = (await hre.ethers.getContractFactory('NitroMigrator'))
+      .attach(args.migrator)
+      .connect(hre.ethers.provider)
+    const owner = await Migrator.owner()
+    Migrator = Migrator.connect(hre.ethers.provider.getSigner(owner))
+
+    const receipt = await (await Migrator.transferOtherContractOwnership(args.child, args.newowner)).wait()
+    console.log('Transferred ownership:', receipt)
+  })
+
+task('migrator-transfer-rollup-ownership', 'transfer the ownership a rollup owned by the nitro migrator')
+  .addParam('migrator', '')
+  .addParam('rollup', '')
+  .addParam('newowner', '')
+
+  .setAction(async (args, hre) => {
+    let Migrator = (await hre.ethers.getContractFactory('NitroMigrator'))
+      .attach(args.migrator)
+      .connect(hre.ethers.provider)
+    const owner = await Migrator.owner()
+    Migrator = Migrator.connect(hre.ethers.provider.getSigner(owner))
+
+    const setOwnerData = (await hre.ethers.getContractFactory('RollupAdminFacet'))
+      .interface
+      .encodeFunctionData("setOwner", [args.newowner]);
+    const receipt = await (await Migrator.executeTransaction(setOwnerData, args.rollup, 0)).wait()
+    console.log('Transferred ownership:', receipt)
   })
