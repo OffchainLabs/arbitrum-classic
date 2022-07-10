@@ -200,7 +200,9 @@ class ArbCore {
     ArbCore(std::shared_ptr<DataStorage> data_storage_,
             ArbCoreConfig coreConfig);
 
-    ~ArbCore() { abortThread(); }
+    ~ArbCore() {
+        abortThread();
+    }
     void printDatabaseMetadata();
     InitializeResult initialize(const LoadedExecutable& executable);
     InitializeResult applyConfig();
@@ -468,6 +470,8 @@ class ArbCore {
         const std::vector<MachineEmission<std::vector<unsigned char>>>& sends);
 
    private:
+    ValueResult<bool> deleteBatchItemsStartingAt(ReadWriteTransaction& tx,
+                                                 uint256_t start);
     ValueResult<std::optional<uint256_t>> addMessages(
         const message_data_struct& data,
         ValueCache& cache);

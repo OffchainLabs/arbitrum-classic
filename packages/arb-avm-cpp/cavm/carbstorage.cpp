@@ -82,6 +82,7 @@ CArbStorage* createArbStorage(const char* db_path,
     coreConfig.test_reorg_to_l2_block = arb_core_config.test_reorg_to_l2_block;
     coreConfig.test_reorg_to_log = arb_core_config.test_reorg_to_log;
     coreConfig.test_reorg_to_message = arb_core_config.test_reorg_to_message;
+    coreConfig.test_reorg_messages = arb_core_config.test_reorg_messages;
     coreConfig.test_run_until = arb_core_config.test_run_until;
     coreConfig.test_load_count = arb_core_config.test_load_count;
     coreConfig.test_reset_db_except_inbox =
