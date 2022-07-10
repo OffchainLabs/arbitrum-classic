@@ -216,7 +216,6 @@ task('configure-migration', 'configure nitro migrator contract')
 
 task('migration-step-1', 'run nitro migration step 1')
   .addParam('migrator', '')
-  .addVariadicPositionalParam('sequenceraddresses')
 
   .setAction(async (args, hre) => {
     let Migrator = (await hre.ethers.getContractFactory('NitroMigrator'))
@@ -226,7 +225,7 @@ task('migration-step-1', 'run nitro migration step 1')
     Migrator = Migrator.connect(hre.ethers.provider.getSigner(owner))
 
     console.log('Running migration step 1')
-    const receipt = await (await Migrator.nitroStep1(args.sequenceraddresses)).wait()
+    const receipt = await (await Migrator.nitroStep1()).wait()
     console.log('Ran migration step 1:', receipt)
   })
 

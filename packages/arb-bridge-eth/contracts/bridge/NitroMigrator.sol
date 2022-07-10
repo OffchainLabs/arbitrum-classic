@@ -146,7 +146,7 @@ contract NitroMigrator is Ownable {
     /// this will create the final input in the inbox, but there won't be the final assertion available yet.
     /// it is assumed that at this point the sequencer has stopped receiving txs and has posted its final batch on-chain
     /// Before this step the ownership of the Rollup and Bridge  must have been transferred to this contract
-    function nitroStep1(address[] calldata seqAddresses) external onlyOwner {
+    function nitroStep1() external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Step0, "WRONG_STEP");
 
         // check that ownership of the bridge and rollup has been transferred
@@ -203,8 +203,7 @@ contract NitroMigrator is Ownable {
         // `nitroStep2` will only enforce inclusion of assertions that read up to this current point.
         sequencerInbox.shutdownForNitro(
             delayedMessageCount,
-            bridge.inboxAccs(delayedMessageCount - 1),
-            seqAddresses
+            bridge.inboxAccs(delayedMessageCount - 1)
         );
 
         // this speeds up the process allowing validators to post assertions more frequently
