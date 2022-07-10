@@ -42,7 +42,11 @@ interface INitroRollup {
     function setInbox(IInbox newInbox) external;
 }
 
-contract NitroMigrator is Ownable {
+interface IArbOwner {
+    function addChainOwner(address newOwner) external;
+}
+
+contract NitroMigrator is Ownable, IMessageProvider {
     uint8 internal constant L1MessageType_shutdownForNitro = 128;
 
     Inbox public inbox;
@@ -270,11 +274,38 @@ contract NitroMigrator is Ownable {
         }
     }
 
-    function transferOtherContractOwnership(Ownable ownable, address newOwner)
-        external
-        payable
-        onlyOwner
-    {
+    function transferOtherContractOwnership(Ownable ownable, address newOwner) external onlyOwner {
         ownable.transferOwnership(newOwner);
+    }
+
+    uint8 internal constant L2_MSG = 3;
+    uint8 internal constant L2MessageType_unsignedContractTx = 1;
+
+    function addArbosOwner(address newOwner) external onlyOwner {
+        require(latestCompleteStep != NitroMigrationSteps.Uninitialized, "UNINITIALIZED");
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+        require(chainId > 100, "SHADOW_FORKS_ONLY");
+        address bridgeOwner = bridge.owner();
+        if (bridgeOwner != address(this)) {
+            rollup.transferOwnership(Ownable(address(bridge)), address(this));
+        }
+        bridge.setInbox(address(this), true);
+        bytes memory msgData = abi.encodePacked(
+            L2MessageType_unsignedContractTx,
+            uint256(1000000),
+            uint256(2000000000),
+            uint256(0x6B), // ArbOwner
+            uint256(0),
+            abi.encodeWithSelector(IArbOwner.addChainOwner.selector, newOwner)
+        );
+        uint256 seqNum = bridge.deliverMessageToInbox(L2_MSG, address(0), keccak256(msgData));
+        emit InboxMessageDelivered(seqNum, msgData);
+        bridge.setInbox(address(this), false);
+        if (bridgeOwner != address(this)) {
+            bridge.transferOwnership(bridgeOwner);
+        }
     }
 }

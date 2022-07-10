@@ -308,3 +308,18 @@ task('migrator-transfer-rollup-ownership', 'transfer the ownership a rollup owne
     const receipt = await (await Migrator.executeTransaction(setOwnerData, args.rollup, 0)).wait()
     console.log('Transferred ownership:', receipt)
   })
+
+task('migrator-add-arbos-owner', 'adds an ArbOS chain owner via the nitro migrator')
+  .addParam('migrator', '')
+  .addParam('newowner', '')
+
+  .setAction(async (args, hre) => {
+    let Migrator = (await hre.ethers.getContractFactory('NitroMigrator'))
+      .attach(args.migrator)
+      .connect(hre.ethers.provider)
+    const owner = await Migrator.owner()
+    Migrator = Migrator.connect(hre.ethers.provider.getSigner(owner))
+
+    const receipt = await (await Migrator.addArbosOwner(args.newowner)).wait()
+    console.log('Added owner:', receipt)
+  })
