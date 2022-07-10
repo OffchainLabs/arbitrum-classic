@@ -277,7 +277,11 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 				}
 			}
 			if from.Cmp(currentHeight) >= 0 {
-				break
+				if reorgingDelayed || reorgingSequencer {
+					from = new(big.Int).Sub(currentHeight, new(big.Int).SetUint64(blocksToFetch))
+				} else {
+					break
+				}
 			}
 			to := new(big.Int).Add(from, new(big.Int).SetUint64(blocksToFetch))
 			if to.Cmp(currentHeight) > 0 {
