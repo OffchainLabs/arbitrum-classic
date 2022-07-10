@@ -916,7 +916,7 @@ func AddCore(f *flag.FlagSet, maxExecutionGas int) {
 	f.Int("core.test.reorg-to.l2-block", 0, "reorg to snapshot with given L2 block or before, zero to disable")
 	f.Int("core.test.reorg-to.log", 0, "reorg to snapshot with given log or before, zero to disable")
 	f.Int("core.test.reorg-to.message", 0, "reorg to snapshot with given message or before, zero to disable")
-	f.Int("core.test.reorg-messages", 0, "when reorganizing on startup, delete any future messages")
+	f.Bool("core.test.reorg-messages", false, "when reorganizing on startup, delete any future messages")
 	f.Bool("core.test.reset-all-except-inbox", false, "remove all database info except for inbox")
 	f.Int("core.test.run-until", 0, "run until gas is reached for profile test, zero to disable")
 
