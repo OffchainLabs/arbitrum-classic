@@ -268,6 +268,10 @@ func txLogsToResults(logs []core.ValueAndInbox) (map[common.Hash]*evm.TxResult, 
 const maxTxDataSize int = 100_000
 
 func (b *SequencerBatcher) SendTransaction(startCtx context.Context, startTx *types.Transaction) error {
+	if b.config.Node.Sequencer.Dangerous.DisableUserMessageSequencing {
+		return errors.New("user transaction sequencing disabled")
+	}
+
 	_, err := types.Sender(b.signer, startTx)
 	if err != nil {
 		logger.Warn().Err(err).Msg("error processing user transaction")
