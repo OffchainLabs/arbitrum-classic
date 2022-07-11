@@ -131,10 +131,10 @@ func (r *RPCEthClient) reconnect(ctx context.Context) error {
 	if r.rpc != nil {
 		r.rpc.Close()
 	}
-	r.eth = nil
-	r.rpc = nil
-	runtime.GC()
 	if r.transport != nil {
+		r.eth = nil
+		r.rpc = nil
+		runtime.GC()
 		r.transport.CloseIdleConnections()
 	}
 	rpccl, err := r.newRPCClient(ctx)
