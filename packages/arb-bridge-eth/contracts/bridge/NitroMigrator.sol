@@ -165,8 +165,6 @@ contract NitroMigrator is Ownable, IMessageProvider {
         // the rollup event bridge will update the delayed accumulator after the final rollup shutdown events, but this
         // shouldn't be an issue
         bridge.setInbox(address(inbox), false);
-        bridge.setOutbox(address(outboxV1), false);
-        bridge.setOutbox(address(outboxV2), false);
 
         // we disable the rollupEventBridge later since its needed in order to create/confirm assertions
         // the rollup event bridge will still add messages to the Bridge's accumulator, but these will never be included into the sequencer inbox
@@ -185,21 +183,6 @@ contract NitroMigrator is Ownable, IMessageProvider {
             abi.encodeWithSelector(INitroInbox.IInbox.postUpgradeInit.selector, nitroBridge)
         );
         nitroRollup.setInbox(inbox);
-
-        bridge.setOutbox(address(this), true);
-
-        {
-            uint256 bal = address(bridge).balance;
-            // TODO: import nitro contracts and use interface
-            (bool success, ) = bridge.executeCall(
-                address(nitroBridge),
-                bal,
-                abi.encodeWithSelector(INitroBridge.IBridge.acceptFundsFromOldBridge.selector)
-            );
-            require(success, "ESCROW_TRANSFER_FAIL");
-        }
-
-        bridge.setOutbox(address(this), false);
 
         // if the sequencer posted its final batch and was shutdown before `nitroStep1` there shouldn't be any reorgs
         // even though we remove the seqAddr from the sequencer inbox with `shutdownForNitro` this wouldnt stop a reorg from
@@ -237,17 +220,28 @@ contract NitroMigrator is Ownable, IMessageProvider {
         );
         bridge.setInbox(address(rollupEventBridge), false);
 
+        // Move the classic bridge funds to the nitro bridge
+        bridge.setOutbox(address(this), true);
+        {
+            uint256 bal = address(bridge).balance;
+            // TODO: import nitro contracts and use interface
+            (bool success, ) = bridge.executeCall(
+                address(nitroBridge),
+                bal,
+                abi.encodeWithSelector(INitroBridge.IBridge.acceptFundsFromOldBridge.selector)
+            );
+            require(success, "ESCROW_TRANSFER_FAIL");
+        }
+        bridge.setOutbox(address(this), false);
+
+        // the bridge will proxy executeCall calls from the classic outboxes
+        nitroBridge.setOutbox(address(bridge), true);
+        bridge.setReplacementBridge(nitroBridge);
+
         // we don't enable sequencer inbox and the rollup event bridge in nitro bridge as they are already configured in the deployment
         nitroBridge.setDelayedInbox(address(inbox), true);
-        nitroBridge.setOutbox(address(outboxV1), true);
-        nitroBridge.setOutbox(address(outboxV2), true);
 
-        // set the classic bridge to proxy view only calls to the nitro bridge
-        classicProxyAdmin.upgradeAndCall(
-            TransparentUpgradeableProxy(payable(address(bridge))),
-            address(new NonDelegatingProxy()),
-            abi.encodeWithSelector(NonDelegatingProxy.postUpgradeInit.selector, nitroBridge)
-        );
+        // TODO: set the genesis block hash of the nitro rollup
 
         latestCompleteStep = NitroMigrationSteps.Step3;
     }
