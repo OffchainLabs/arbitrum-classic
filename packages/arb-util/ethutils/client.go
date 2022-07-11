@@ -253,7 +253,10 @@ func (r *RPCEthClient) TransactionReceipt(ctx context.Context, txHash common.Has
 	r.RLock()
 	val, err := r.eth.TransactionReceipt(ctx, txHash)
 	r.RUnlock()
-	return val, r.handleCallErr(err)
+	if err != nil && err.Error() != "not found" {
+		return nil, r.handleCallErr(err)
+	}
+	return val, err
 }
 
 func (r *RPCEthClient) NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error) {
