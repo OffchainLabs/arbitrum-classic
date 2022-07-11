@@ -106,6 +106,10 @@ func (r *RPCEthClient) handleCallErr(err error) error {
 		atomic.StoreUint64(&r.errCount, 0)
 		return nil
 	}
+	if err.Error() == "not found" {
+		// Don't reconnect if error simply "not found"
+		return err
+	}
 	totalErrCount := atomic.AddUint64(&r.errCount, 1)
 
 	// If we've had above a threshold number of errors, reinitialize the connection
@@ -253,10 +257,7 @@ func (r *RPCEthClient) TransactionReceipt(ctx context.Context, txHash common.Has
 	r.RLock()
 	val, err := r.eth.TransactionReceipt(ctx, txHash)
 	r.RUnlock()
-	if err != nil && err.Error() != "not found" {
-		return nil, r.handleCallErr(err)
-	}
-	return val, err
+	return val, r.handleCallErr(err)
 }
 
 func (r *RPCEthClient) NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error) {
