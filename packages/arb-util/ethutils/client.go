@@ -24,6 +24,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -130,6 +131,9 @@ func (r *RPCEthClient) reconnect(ctx context.Context) error {
 	if r.rpc != nil {
 		r.rpc.Close()
 	}
+	r.eth = nil
+	r.rpc = nil
+	runtime.GC()
 	if r.transport != nil {
 		r.transport.CloseIdleConnections()
 	}
