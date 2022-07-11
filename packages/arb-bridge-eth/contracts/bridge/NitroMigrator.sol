@@ -225,7 +225,6 @@ contract NitroMigrator is Ownable, IMessageProvider {
     ) external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Step1, "WRONG_STEP");
         rollup.shutdownForNitro(finalNodeNum, destroyAlternatives, destroyChallenges);
-        bridge.setInbox(address(rollupEventBridge), false);
         latestCompleteStep = NitroMigrationSteps.Step2;
     }
 
@@ -236,6 +235,7 @@ contract NitroMigrator is Ownable, IMessageProvider {
             rollup.latestConfirmed() == rollup.latestNodeCreated(),
             "ROLLUP_SHUTDOWN_NOT_COMPLETE"
         );
+        bridge.setInbox(address(rollupEventBridge), false);
 
         // we don't enable sequencer inbox and the rollup event bridge in nitro bridge as they are already configured in the deployment
         nitroBridge.setDelayedInbox(address(inbox), true);
