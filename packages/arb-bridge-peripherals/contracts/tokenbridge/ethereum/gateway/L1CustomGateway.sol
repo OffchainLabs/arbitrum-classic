@@ -216,6 +216,11 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
             );
     }
 
+    function setOwner(address newOwner) external onlyOwner {
+        require(newOwner != address(0), "INVALID_OWNER");
+        owner = newOwner;
+    }
+
     /**
      * @notice Allows owner to force register a custom L1/L2 token pair.
      * @dev _l1Addresses[i] counterpart is assumed to be _l2Addresses[i]
