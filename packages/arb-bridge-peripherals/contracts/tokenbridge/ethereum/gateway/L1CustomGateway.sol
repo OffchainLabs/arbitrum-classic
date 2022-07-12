@@ -55,7 +55,10 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         _status = _NOT_ENTERED;
     }
 
-    // end of inline reentrancy guard
+    modifier onlyOwner() {
+        require(msg.sender == owner, "ONLY_OWNER");
+        _;
+    }
 
     function outboundTransferCustomRefund(
         address _l1Token,
@@ -229,8 +232,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
-    ) external payable returns (uint256) {
-        require(msg.sender == owner, "ONLY_OWNER");
+    ) external payable onlyOwner returns (uint256) {
         require(_l1Addresses.length == _l2Addresses.length, "INVALID_LENGTHS");
 
         for (uint256 i = 0; i < _l1Addresses.length; i++) {
