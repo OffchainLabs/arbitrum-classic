@@ -122,6 +122,10 @@ int main(int argc, char* argv[]) {
     execConfig.inbox_messages = inbox_messages;
     mach->machine_state.context = AssertionContext{execConfig};
     auto assertion = mach->run();
+    if (mach->isAborted()) {
+        std::cout << "Machine aborted"
+                  << "\n";
+    }
 
     std::cout << "Produced " << assertion.logs.size() << " logs\n";
 
@@ -141,5 +145,10 @@ int main(int argc, char* argv[]) {
     execConfig.inbox_messages = std::vector<MachineMessage>();
     mach2->machine_state.context = AssertionContext{execConfig};
     mach2->run();
+    if (mach2->isAborted()) {
+        std::cout << "Machine aborted"
+                  << "\n";
+    }
+
     return 0;
 }

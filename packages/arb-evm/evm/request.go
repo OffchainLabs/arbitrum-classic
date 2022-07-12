@@ -149,11 +149,11 @@ func (a *AggregatorInfo) AsOptionalValue() value.Value {
 			aggVal = inbox.NewIntFromAddress(*a.Aggregator)
 		}
 
-		val := value.NewTuple2(
+		innerVal := value.NewTuple2(
 			newOptional(aggVal),
 			value.NewIntValue(a.CalldataBytes),
 		)
-		tup, _ := value.NewTupleFromSlice([]value.Value{val})
+		tup, _ := value.NewTupleFromSlice([]value.Value{innerVal})
 		val = tup
 	}
 	return newOptional(val)

@@ -25,7 +25,6 @@ import "@openzeppelin/contracts-0.8/access/Ownable.sol";
 contract GasRefunder is IGasRefunder, Ownable {
     mapping(address => bool) public allowedContracts;
     mapping(address => bool) public allowedRefundees;
-    mapping(address => uint256) public lastContractRefund;
     address public disallower;
 
     struct CommonParameters {
@@ -51,7 +50,6 @@ contract GasRefunder is IGasRefunder, Ownable {
     enum RefundDenyReason {
         CONTRACT_NOT_ALLOWED,
         REFUNDEE_NOT_ALLOWED,
-        ALREADY_REFUNDED_THIS_BLOCK,
         REFUNDEE_ABOVE_MAX_BALANCE,
         OUT_OF_FUNDS
     }
@@ -200,18 +198,6 @@ contract GasRefunder is IGasRefunder, Ownable {
             );
             return false;
         }
-
-        if (lastContractRefund[msg.sender] == block.number) {
-            // There was already a refund this block, don't refund further
-            emit RefundGasCostsDenied(
-                refundee,
-                msg.sender,
-                RefundDenyReason.ALREADY_REFUNDED_THIS_BLOCK,
-                gasUsed
-            );
-            return false;
-        }
-        lastContractRefund[msg.sender] = block.number;
 
         uint256 estGasPrice = block.basefee + commonParams.maxGasTip;
         if (tx.gasprice < estGasPrice) {

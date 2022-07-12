@@ -118,14 +118,14 @@ func startup() error {
 
 func NewArbRelay(settings configuration.Feed) *ArbRelay {
 	var broadcastClients []*broadcastclient.BroadcastClient
-	confirmedAccumulatorChan := make(chan common.Hash, 1)
+	confirmedAccumulatorChan := make(chan common.Hash, 10)
 	for _, address := range settings.Input.URLs {
 		client := broadcastclient.NewBroadcastClient(address, nil, settings.Input.Timeout)
 		client.ConfirmedAccumulatorListener = confirmedAccumulatorChan
 		broadcastClients = append(broadcastClients, client)
 	}
 	return &ArbRelay{
-		broadcaster:              broadcaster.NewBroadcaster(settings.Output),
+		broadcaster:              broadcaster.NewBroadcaster(&settings.Output),
 		broadcastClients:         broadcastClients,
 		confirmedAccumulatorChan: confirmedAccumulatorChan,
 	}
@@ -133,16 +133,18 @@ func NewArbRelay(settings configuration.Feed) *ArbRelay {
 
 const RECENT_FEED_ITEM_TTL time.Duration = time.Second * 10
 
-func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
+func (ar *ArbRelay) Start(parentContext context.Context) (chan bool, error) {
+	ctx, cancelFunc := context.WithCancel(parentContext)
 	done := make(chan bool)
 
-	err := ar.broadcaster.Start(ctx)
+	broadcasterErrChan, err := ar.broadcaster.Start(ctx)
 	if err != nil {
+		cancelFunc()
 		return nil, errors.New("broadcast unable to start")
 	}
 
 	// connect returns
-	messages := make(chan broadcaster.BroadcastFeedMessage)
+	messages := make(chan broadcaster.BroadcastFeedMessage, 10)
 	for _, client := range ar.broadcastClients {
 		client.ConnectInBackground(ctx, messages)
 	}
@@ -150,6 +152,7 @@ func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 	recentFeedItems := make(map[common.Hash]time.Time)
 	go func() {
 		defer func() {
+			cancelFunc()
 			done <- true
 		}()
 		recentFeedItemsCleanup := time.NewTicker(RECENT_FEED_ITEM_TTL)
@@ -157,6 +160,9 @@ func (ar *ArbRelay) Start(ctx context.Context) (chan bool, error) {
 		for {
 			select {
 			case <-ctx.Done():
+				return
+			case err := <-broadcasterErrChan:
+				logger.Error().Err(err).Msg("relay aborting")
 				return
 			case msg := <-messages:
 				newAcc := msg.FeedItem.BatchItem.Accumulator

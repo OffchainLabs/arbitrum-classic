@@ -10,6 +10,26 @@ import "@openzeppelin/contracts/GSN/Context.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
+interface IL1CustomGateway {
+    function registerTokenToL2(
+        address _l2Address,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        uint256 _maxSubmissionCost,
+        address _creditBackAddress
+    ) external payable returns (uint256);
+}
+
+interface IGatewayRouter {
+    function setGateway(
+        address _gateway,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        uint256 _maxSubmissionCost,
+        address _creditBackAddress
+    ) external payable returns (uint256);
+}
+
 contract TestCustomTokenL1 is aeERC20, ICustomToken {
     address public bridge;
     address public router;
@@ -64,8 +84,7 @@ contract TestCustomTokenL1 is aeERC20, ICustomToken {
         bool prev = shouldRegisterGateway;
         shouldRegisterGateway = true;
 
-        // L1CustomGateway(bridge).registerTokenToL2{value: valueForGateway}(
-        L1CustomGateway(bridge).registerTokenToL2(
+        IL1CustomGateway(bridge).registerTokenToL2{ value: valueForGateway }(
             l2CustomTokenAddress,
             maxGasForCustomBridge,
             gasPriceBid,
@@ -73,8 +92,7 @@ contract TestCustomTokenL1 is aeERC20, ICustomToken {
             creditBackAddress
         );
 
-        // L1GatewayRouter(router).setGateway{value: valueForRouter}(
-        L1GatewayRouter(router).setGateway(
+        IGatewayRouter(router).setGateway{ value: valueForRouter }(
             bridge,
             maxGasForRouter,
             gasPriceBid,

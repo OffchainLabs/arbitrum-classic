@@ -172,11 +172,28 @@ func AddSequencerL2BatchFromOrigin(
 	return arbTx, nil
 }
 
+var sequencerInboxABI *abi.ABI
+
+func init() {
+	var err error
+	sequencerInboxABI, err = ethbridgecontracts.SequencerInboxMetaData.GetAbi()
+	if err != nil {
+		panic(err)
+	}
+}
+
+// these values don't include the data gas
+const addSequencerBatchGasLimit uint64 = 2_000_000
+const smallerAddSequencerBatchGasLimit uint64 = 1_000_000
+
+var maxGasChargeWei *big.Int = big.NewInt(175e16) // 1.75 ether
+
 // AddSequencerL2BatchFromOriginCustomNonce is like AddSequencerL2BatchFromOrigin but with a custom nonce that will
 // be incremented on success.  This is to handle the case when a stuck transaction is present on startup.
 func AddSequencerL2BatchFromOriginCustomNonce(
 	ctx context.Context,
-	inbox *ethbridgecontracts.SequencerInbox,
+	client ethutils.EthClient,
+	seqInboxAddr common.Address,
 	auth transactauth.TransactAuth,
 	nonce *big.Int,
 	transactions []byte,
@@ -187,40 +204,57 @@ func AddSequencerL2BatchFromOriginCustomNonce(
 	gasRefunderExtraGas uint64,
 ) (*arbtransaction.ArbTransaction, error) {
 	rawAuth := auth.GetAuth(ctx)
-	arbTx, err := transactauth.MakeTxCustomNonce(ctx, auth, func(auth *bind.TransactOpts) (*types.Transaction, error) {
-		if gasRefunder != (ethcommon.Address{}) {
-			tx, err := inbox.AddSequencerL2BatchFromOriginWithGasRefunder(auth, transactions, lengths, sectionsMetadata, afterAcc, gasRefunder)
-			if err != nil {
-				return nil, err
-			}
-			newGasLimit := tx.Gas() + gasRefunderExtraGas
-			if tx.Type() == types.DynamicFeeTxType {
-				tx = types.NewTx(&types.DynamicFeeTx{
-					ChainID:    tx.ChainId(),
-					Nonce:      tx.Nonce(),
-					GasTipCap:  tx.GasTipCap(),
-					GasFeeCap:  tx.GasFeeCap(),
-					Gas:        newGasLimit,
-					To:         tx.To(),
-					Value:      tx.Value(),
-					Data:       tx.Data(),
-					AccessList: tx.AccessList(),
-				})
-			} else {
-				tx = types.NewTx(&types.LegacyTx{
-					Nonce:    tx.Nonce(),
-					GasPrice: tx.GasPrice(),
-					Gas:      newGasLimit,
-					To:       tx.To(),
-					Value:    tx.Value(),
-					Data:     tx.Data(),
-				})
-			}
-			return auth.Signer(auth.From, tx)
+	latestHeader, err := client.HeaderByNumber(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	method := sequencerInboxABI.Methods["addSequencerL2BatchFromOriginWithGasRefunder"]
+	inputs, err := method.Inputs.Pack(transactions, lengths, sectionsMetadata, afterAcc, gasRefunder)
+	if err != nil {
+		return nil, err
+	}
+	data := append([]byte{}, method.ID...)
+	data = append(data, inputs...)
+	var dataGas uint64
+	for _, b := range data {
+		if b == 0 {
+			dataGas += 4
 		} else {
-			return inbox.AddSequencerL2BatchFromOrigin(auth, transactions, lengths, sectionsMetadata, afterAcc)
+			dataGas += 16
 		}
-	}, nonce)
+	}
+	to := seqInboxAddr.ToEthAddress()
+	gasLimit := addSequencerBatchGasLimit + dataGas
+	gasFeeCap := new(big.Int).Mul(latestHeader.BaseFee, big.NewInt(2))
+	gasTipCap := big.NewInt(15e8) // 1.5 gwei
+	gasFeeCap.Add(gasFeeCap, gasTipCap)
+	gasCharge := new(big.Int).Mul(gasFeeCap, new(big.Int).SetUint64(gasLimit))
+	if gasCharge.Cmp(maxGasChargeWei) > 0 {
+		// try to reduce the gas charge by setting the gas fee cap to 3/2 the base fee
+		gasFeeCap.Mul(latestHeader.BaseFee, big.NewInt(3))
+		gasFeeCap.Div(gasFeeCap, big.NewInt(2))
+		gasFeeCap.Add(gasFeeCap, gasTipCap)
+		gasCharge.Mul(gasFeeCap, new(big.Int).SetUint64(gasLimit))
+	}
+	if gasCharge.Cmp(maxGasChargeWei) > 0 {
+		// try to reduce the gas charge by using a lower gas limit
+		gasLimit = smallerAddSequencerBatchGasLimit + dataGas
+		gasCharge.Mul(gasFeeCap, new(big.Int).SetUint64(gasLimit))
+	}
+	tx := types.NewTx(&types.DynamicFeeTx{
+		Nonce:     nonce.Uint64(),
+		GasTipCap: gasTipCap,
+		GasFeeCap: gasFeeCap,
+		Gas:       gasLimit,
+		To:        &to,
+		Value:     big.NewInt(0),
+		Data:      data,
+	})
+	tx, err = rawAuth.Signer(rawAuth.From, tx)
+	if err != nil {
+		return nil, err
+	}
+	err = client.SendTransaction(ctx, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -229,5 +263,5 @@ func AddSequencerL2BatchFromOriginCustomNonce(
 		rawAuth.Nonce.Set(nonce)
 	}
 
-	return arbTx, nil
+	return arbtransaction.NewArbTransaction(tx), nil
 }

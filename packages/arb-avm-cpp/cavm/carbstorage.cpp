@@ -37,6 +37,10 @@ CArbStorage* createArbStorage(const char* db_path,
     coreConfig.message_process_count = arb_core_config.message_process_count;
     coreConfig.add_messages_max_failure_count =
         arb_core_config.add_messages_max_failure_count;
+    coreConfig.deliver_messages_max_failure_count =
+        arb_core_config.deliver_messages_max_failure_count;
+    coreConfig.thread_max_failure_count =
+        arb_core_config.thread_max_failure_count;
     coreConfig.checkpoint_load_gas_cost =
         arb_core_config.checkpoint_load_gas_cost;
     coreConfig.checkpoint_load_gas_factor =
@@ -54,6 +58,8 @@ CArbStorage* createArbStorage(const char* db_path,
         arb_core_config.cache_expiration_seconds;
     coreConfig.idle_sleep_milliseconds =
         arb_core_config.idle_sleep_milliseconds;
+    coreConfig.yield_instruction_count =
+        arb_core_config.yield_instruction_count;
     coreConfig.seed_cache_on_startup = arb_core_config.seed_cache_on_startup;
     coreConfig.debug = arb_core_config.debug;
     coreConfig.debug_timing = arb_core_config.debug_timing;

@@ -27,7 +27,6 @@ import (
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
@@ -35,19 +34,11 @@ import (
 func TestBroadcasterSendsConfirmedAccumulatorMessages(t *testing.T) {
 	ctx := context.Background()
 
-	broadcasterSettings := configuration.FeedOutput{
-		Addr:          "0.0.0.0",
-		IOTimeout:     2 * time.Second,
-		Port:          "9642",
-		Ping:          5 * time.Second,
-		ClientTimeout: 20 * time.Second,
-		Queue:         1,
-		Workers:       128,
-	}
+	broadcasterSettings := configuration.DefaultFeedOutput()
 
 	b := NewBroadcaster(broadcasterSettings)
 
-	err := b.Start(ctx)
+	_, err := b.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,19 +147,12 @@ func TestBroadcasterRespondsToPing(t *testing.T) {
 	t.Skip("Server is not responding to ping anymore")
 	ctx := context.Background()
 
-	broadcasterSettings := configuration.FeedOutput{
-		Addr:          "0.0.0.0",
-		IOTimeout:     2 * time.Second,
-		Port:          "9643",
-		Ping:          5 * time.Second,
-		ClientTimeout: 20 * time.Second,
-		Queue:         1,
-		Workers:       128,
-	}
+	broadcasterSettings := configuration.DefaultFeedOutput()
+	broadcasterSettings.Port = "9643"
 
 	b := NewBroadcaster(broadcasterSettings)
 
-	err := b.Start(ctx)
+	_, err := b.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,22 +195,15 @@ func TestBroadcasterRespondsToPing(t *testing.T) {
 }
 
 func TestBroadcasterReorganizesCacheBasedOnAccumulator(t *testing.T) {
-	ctx, cancelFunc, _ := cmdhelp.CreateLaunchContext()
+	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
-	broadcasterSettings := configuration.FeedOutput{
-		Addr:          "0.0.0.0",
-		IOTimeout:     2 * time.Second,
-		Port:          "9642",
-		Ping:          5 * time.Second,
-		ClientTimeout: 30 * time.Second,
-		Queue:         1,
-		Workers:       128,
-	}
+	broadcasterSettings := configuration.DefaultFeedOutput()
+	broadcasterSettings.ClientTimeout = 30
 
 	b := NewBroadcaster(broadcasterSettings)
 
-	err := b.Start(ctx)
+	_, err := b.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

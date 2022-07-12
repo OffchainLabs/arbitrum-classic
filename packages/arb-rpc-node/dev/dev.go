@@ -253,6 +253,7 @@ func (b *Backend) ExportData() ([]byte, error) {
 	b.Lock()
 	messageCount, err := b.arbcore.GetMessageCount()
 	if err != nil {
+		b.Unlock()
 		return nil, err
 	}
 	messages, err := b.arbcore.GetMessages(big.NewInt(0), messageCount)
