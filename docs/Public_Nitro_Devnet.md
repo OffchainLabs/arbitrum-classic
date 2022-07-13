@@ -4,6 +4,9 @@ title: Public Nitro Devnet Guide
 sidebar_label: Public Nitro Devnet
 ---
 
+
+***Note: Frormer Nitro Devnet chain 421612 has been deprecated in favor of chain 421613:***
+
 In order to make it easy for people to get started using Arbitrum Nitro, we've launched our own hosted Arbitrum Nitro Rollup chain hosted on the Goerli testnet.
 
 For a general introduction to the Arbitrum Nitro, see our [announcement](https://medium.com/offchainlabs/arbitrum-nitro-sneak-preview-44550d9054f5).
@@ -15,8 +18,8 @@ As we approach mainnet launch and incorporate feedback, we will likely reset the
 Connect your wallet to the devnet; if [your wallet](https://portal.arbitrum.one/#wallets) requires it, add the Arbitrum Nitro Devnet as a custom RPC:
 
 - Network Name: Arbitrum Nitro Devnet
-- RPC URL: https://nitro-devnet.arbitrum.io/rpc
-- ChainID: 421612
+- RPC URL: goerli-rollup.arbitrum.io/rpc 
+- ChainID: 421613
 - Symbol: ETH
 - Block Explorer URL: https://nitro-devnet-explorer.arbitrum.io
 
@@ -59,7 +62,7 @@ Porting your frontend is just as easy as deploying your contracts. Just take you
 ## Deployed Contracts
 
 ### Protocol (L1)
-
+TODO: UPDATE
 |                     | Goerli                                                                                                                |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | Rollup              | [0x767CfF8D8de386d7cbe91DbD39675132ba2f5967](https://goerli.etherscan.io/address/0x767CfF8D8de386d7cbe91DbD39675132ba2f5967) |
