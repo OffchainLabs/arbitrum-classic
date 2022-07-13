@@ -346,6 +346,12 @@ jobs:
             yarn install --cache-folder ~/.cache/yarn
           working_directory: /home/user/project
       - run:
+          name: lint
+          command: |
+            yarn lint:js --format junit -o ${TEST_RESULTS}/arb-bridge-peripherals-lint.xml
+            yarn lint:solidity
+          working_directory: /home/user/project/packages/arb-bridge-peripherals
+      - run:
           name: test interface compatibility
           command: |
             yarn test:compatibility
