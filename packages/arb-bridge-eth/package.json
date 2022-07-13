@@ -45,7 +45,7 @@
     "hardhat": "hardhat --config hardhat.config.ts"
   },
   "dependencies": {
-    "@arbitrum/nitro-contracts": "1.0.0-beta.5",
+    "@arbitrum/nitro-contracts": "https://gitpkg.now.sh/OffchainLabs/nitro/contracts?b705200c4d9ca90e82579057e1b155c3913562db",
     "@openzeppelin/contracts": "3.4.2",
     "@openzeppelin/contracts-0.8": "npm:@openzeppelin/contracts@^4.3.2",
     "@openzeppelin/contracts-upgradeable": "3.4.2",

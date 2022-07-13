@@ -1,6 +1,6 @@
 import { task } from 'hardhat/config'
 import { HardhatRuntimeEnvironment } from 'hardhat/types'
-import { initUpgrades } from './index'
+import { initUpgrades, getAdminFromProxyStorage } from './index'
 
 const handleFork = async (hre: HardhatRuntimeEnvironment) => {
   const network = hre.network
@@ -145,4 +145,39 @@ task('set-outbox', 'deploy and set a new outbox')
     const setRollupRec = await setRollupRes.wait()
     console.log('Outbox set', setRollupRec)
     console.log('all set 👍')
+  })
+
+task('configure-migration', 'configure nitro migrator contract')
+  .addParam('migrator', '')
+  .addParam('oldoutboxproxy', '')
+  .addParam('nitrorollupproxy', '')
+
+  .setAction(async (args, hre) => {
+    const { getDeployments } = initUpgrades(hre, process.cwd())
+    const { data } = await getDeployments()
+
+    const proxyAdmin = await getAdminFromProxyStorage(hre, data.contracts.Inbox.proxyAddress)
+    const newProxyAdmin = await getAdminFromProxyStorage(hre, args.nitrorollupproxy.proxyAddress)
+    if (proxyAdmin != newProxyAdmin) {
+      throw new Error(
+        'Classic proxy admin ' + proxyAdmin + ' differs from nitro proxy admin ' + newProxyAdmin
+      )
+    }
+
+    const Migrator = (await hre.ethers.getContractFactory('NitroMigrator'))
+      .attach(args.migrator)
+      .connect(hre.ethers.provider)
+    const initializeRes = await Migrator.configureDeployment(
+      data.contracts.Inbox.proxyAddress,
+      data.contracts.SequencerInbox.proxyAddress,
+      data.contracts.Bridge.proxyAddress,
+      data.contracts.RollupEventBridge.proxyAddress,
+      args.oldoutboxproxy,
+      data.contracts.Outbox.proxyAddress,
+      data.contracts.Rollup.proxyAddress,
+      args.nitrorollupproxy,
+      proxyAdmin,
+    )
+    const initializeRec = await initializeRes.wait()
+    console.log('Nitro migrator configured', initializeRec)
   })

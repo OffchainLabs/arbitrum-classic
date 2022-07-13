@@ -2,10 +2,17 @@
 # yarn lockfile v1
 
 
-"@arbitrum/nitro-contracts@1.0.0-beta.5":
-  version "1.0.0-beta.5"
-  resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.0.0-beta.5.tgz#b4ca2a8d99b8a108e7dc412f6c2cb74818d5099a"
-  integrity sha512-hEpRXIL8S6AfTt6dqJsKCa84JufhuXuRgm2BnximdRrhJ8ukqR6Pt/mndYMa4nWRRTBMYkIxy6EA5iYxDwxWAQ==
+"@arbitrum/nitro-contracts@https://gitpkg.now.sh/OffchainLabs/nitro/contracts?678866136ca917ed20dd3f0ee23176bb7bb7bd49":
+  version "1.0.0-beta.8"
+  resolved "https://gitpkg.now.sh/OffchainLabs/nitro/contracts?678866136ca917ed20dd3f0ee23176bb7bb7bd49#ccacdf6e00feb1a8af23c0938b2f00ead2ee69fd"
+  dependencies:
+    "@openzeppelin/contracts" "4.5.0"
+    "@openzeppelin/contracts-upgradeable" "4.5.2"
+    hardhat "^2.6.6"
+
+"@arbitrum/nitro-contracts@https://gitpkg.now.sh/OffchainLabs/nitro/contracts?b705200c4d9ca90e82579057e1b155c3913562db":
+  version "1.0.0-beta.8"
+  resolved "https://gitpkg.now.sh/OffchainLabs/nitro/contracts?b705200c4d9ca90e82579057e1b155c3913562db#388f31134598b44d9265b08b9129341e42a0c70b"
   dependencies:
     "@openzeppelin/contracts" "4.5.0"
     "@openzeppelin/contracts-upgradeable" "4.5.2"
@@ -1623,13 +1630,6 @@ aproba@^1.0.3:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/aproba/-/aproba-1.2.0.tgz#6802e6264efd18c790a1b0d517f0f2627bf2c94a"
   integrity sha512-Y9J6ZjXtoYh8RnXVCMOU/ttDmk1aBjunq9vO0ta5x85WDQiQfUF9sIPBITdbiiIVcBo03Hi3jMxigBtsddlXRw==
-
-arbos-precompiles@^1.0.2:
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/arbos-precompiles/-/arbos-precompiles-1.0.2.tgz#7bebd5963aef972cd259eb41f3116ea065013ea6"
-  integrity sha512-1dOFYFJUN0kKoofh6buZJ8qCqTs+oLGSsGzHI0trA/Pka/TCERflCRsNVxez2lihOvK7MT/a2RA8AepKtBXdPQ==
-  dependencies:
-    hardhat "^2.6.4"
 
 are-we-there-yet@~1.1.2:
   version "1.1.7"
