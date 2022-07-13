@@ -55,8 +55,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
 
     modifier onlyCounterpartGateway() override {
         require(
-            msg.sender == counterpartGateway ||
-                AddressAliasHelper.undoL1ToL2Alias(msg.sender) == counterpartGateway,
+            msg.sender == AddressAliasHelper.applyL1ToL2Alias(counterpartGateway),
             "ONLY_COUNTERPART_GATEWAY"
         );
         _;
@@ -70,7 +69,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         // this has no other logic since the current upgrade doesn't require this logic
     }
 
-    function _initialize(address _l1Counterpart, address _router) internal virtual override {
+    function _initialize(address _l1Counterpart, address _router) internal override {
         TokenGateway._initialize(_l1Counterpart, _router);
         // L1 gateway must have a router
         require(_router != address(0), "BAD_ROUTER");
@@ -104,7 +103,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         bytes memory _data
     ) public view override returns (bytes memory outboundCalldata) {
         outboundCalldata = abi.encodeWithSelector(
-            TokenGateway.finalizeInboundTransfer.selector,
+            ITokenGateway.finalizeInboundTransfer.selector,
             _token,
             _from,
             _to,
@@ -120,7 +119,19 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) public payable virtual returns (bytes memory) {
+    ) public payable returns (bytes memory) {
+        return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
+    }
+
+    function outboundTransferCustomRefund(
+        address _l1Token,
+        address _to,
+        address, /* _refundTo */
+        uint256 _amount,
+        uint256, /* _maxGas */
+        uint256, /* _gasPriceBid */
+        bytes calldata _data
+    ) public payable override returns (bytes memory res) {
         return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
     }
 
@@ -138,7 +149,7 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         uint256, /* _maxGas */
         uint256, /* _gasPriceBid */
         bytes calldata _data
-    ) public payable virtual override returns (bytes memory res) {
+    ) public payable override returns (bytes memory res) {
         // This function is set as public and virtual so that subclasses can override
         // it and add custom validation for callers (ie only whitelisted users)
 

@@ -18,7 +18,7 @@
 
 pragma solidity ^0.6.11;
 
-import { ArbitrumEnabledToken } from "../ICustomToken.sol";
+import { ArbitrumEnabledToken, L1MintableToken } from "../ICustomToken.sol";
 import "./L1ArbitrumExtendedGateway.sol";
 import "../../arbitrum/gateway/L2CustomGateway.sol";
 import "../../libraries/gateway/ICustomGateway.sol";
@@ -55,17 +55,30 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         _status = _NOT_ENTERED;
     }
 
-    // end of inline reentrancy guard
+    modifier onlyOwner() {
+        require(msg.sender == owner, "ONLY_OWNER");
+        _;
+    }
 
-    function outboundTransfer(
+    function outboundTransferCustomRefund(
         address _l1Token,
+        address _refundTo,
         address _to,
         uint256 _amount,
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable override nonReentrant returns (bytes memory res) {
-        return super.outboundTransfer(_l1Token, _to, _amount, _maxGas, _gasPriceBid, _data);
+        return
+            super.outboundTransferCustomRefund(
+                _l1Token,
+                _refundTo,
+                _to,
+                _amount,
+                _maxGas,
+                _gasPriceBid,
+                _data
+            );
     }
 
     function finalizeInboundTransfer(
@@ -85,12 +98,38 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         address _inbox,
         address _owner
     ) public {
-        L1ArbitrumExtendedGateway._initialize(_l1Counterpart, _l1Router, _inbox);
+        L1ArbitrumGateway._initialize(_l1Counterpart, _l1Router, _inbox);
         owner = _owner;
         // disable whitelist by default
         whitelist = address(0);
         // reentrancy guard
         _status = _NOT_ENTERED;
+    }
+
+    function inboundEscrowTransfer(
+        address _l1Token,
+        address _dest,
+        uint256 _amount
+    ) internal override {
+        // The token gateways assume that there is always a 1:1 escrow when users are withdrawing
+        // from the L2 to L1.
+
+        // This assumption breaks when tokens wish to be able to mint in the L2.
+        // In order to support that feature, the L1 token must allow this gateway to
+        // mint more collateral as needed when its underfunded.
+        uint256 escrowBalance = L1MintableToken(_l1Token).balanceOf(address(this));
+        if (escrowBalance < _amount) {
+            // this will never overflow because of the < check
+            uint256 escrowNeeded = _amount - escrowBalance;
+
+            // This codepath may still be triggerred by tokens that are not minting in the L2
+            // but this doesnt affect their security.
+
+            // tokens were minted in L2 and now we should mint the extra needed in L1
+            // if this was not supposed to mint, it will revert then continue to attempt the regular codepath
+            try L1MintableToken(_l1Token).bridgeMint(address(this), escrowNeeded) {} catch {}
+        }
+        super.inboundEscrowTransfer(_l1Token, _dest, _amount);
     }
 
     /**
@@ -177,6 +216,11 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
             );
     }
 
+    function setOwner(address newOwner) external onlyOwner {
+        require(newOwner != address(0), "INVALID_OWNER");
+        owner = newOwner;
+    }
+
     /**
      * @notice Allows owner to force register a custom L1/L2 token pair.
      * @dev _l1Addresses[i] counterpart is assumed to be _l2Addresses[i]
@@ -193,8 +237,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
-    ) external payable returns (uint256) {
-        require(msg.sender == owner, "ONLY_OWNER");
+    ) external payable onlyOwner returns (uint256) {
         require(_l1Addresses.length == _l2Addresses.length, "INVALID_LENGTHS");
 
         for (uint256 i = 0; i < _l1Addresses.length; i++) {

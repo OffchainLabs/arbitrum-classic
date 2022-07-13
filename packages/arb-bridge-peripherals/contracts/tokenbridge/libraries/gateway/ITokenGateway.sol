@@ -49,6 +49,16 @@ interface ITokenGateway {
         bytes calldata _data
     ) external payable returns (bytes memory);
 
+    function outboundTransferCustomRefund(
+        address _token,
+        address _refundTo,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) external payable returns (bytes memory);
+
     function finalizeInboundTransfer(
         address _token,
         address _from,
@@ -65,4 +75,12 @@ interface ITokenGateway {
      * @return L2 address of a bridged ERC20 token
      */
     function calculateL2TokenAddress(address l1ERC20) external view returns (address);
+
+    function getOutboundCalldata(
+        address _token,
+        address _from,
+        address _to,
+        uint256 _amount,
+        bytes memory _data
+    ) external view returns (bytes memory);
 }

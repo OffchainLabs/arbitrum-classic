@@ -41,13 +41,13 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
     function initialize(
         address _owner,
         address _defaultGateway,
-        address _whitelist,
+        address , // was _whitelist, now unused
         address _counterpartGateway,
         address _inbox
     ) public {
         GatewayRouter._initialize(_counterpartGateway, address(0), _defaultGateway);
         owner = _owner;
-        WhitelistConsumer.whitelist = _whitelist;
+        WhitelistConsumer.whitelist = address(0);
         inbox = _inbox;
     }
 
@@ -218,6 +218,24 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
             _setGateways(_token, _gateway, _maxGas, _gasPriceBid, _maxSubmissionCost, msg.sender);
     }
 
+    function _outboundTransferChecks(
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) internal view {
+        // when sending a L1 to L2 transaction, we expect the user to send
+        // eth in flight in order to pay for L2 gas costs
+        // this check prevents users from misconfiguring the msg.value
+
+        // _data is (uint256, bytes) encoded, but we don't need the bytes
+        uint256 _maxSubmissionCost = abi.decode(_data, (uint256));
+
+        // here we don't use SafeMath since this validation is to prevent users
+        // from shooting themselves on the foot.
+        require(_maxSubmissionCost != 0, "NO_SUBMISSION_COST");
+        require(msg.value == _maxSubmissionCost + (_maxGas * _gasPriceBid), "WRONG_ETH_VALUE");
+    }
+
     function outboundTransfer(
         address _token,
         address _to,
@@ -225,20 +243,44 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) public payable override onlyWhitelisted returns (bytes memory) {
-        // when sending a L1 to L2 transaction, we expect the user to send
-        // eth in flight in order to pay for L2 gas costs
-        // this check prevents users from misconfiguring the msg.value
-        (uint256 _maxSubmissionCost, ) = abi.decode(_data, (uint256, bytes));
+    ) public payable override returns (bytes memory) {
+        _outboundTransferChecks(_maxGas, _gasPriceBid, _data);
 
-        // here we don't use SafeMath since this validation is to prevent users
-        // from shooting themselves on the foot.
-        uint256 expectedEth = _maxSubmissionCost + (_maxGas * _gasPriceBid);
-        require(_maxSubmissionCost > 0, "NO_SUBMISSION_COST");
-        require(msg.value == expectedEth, "WRONG_ETH_VALUE");
-
-        // will revert if msg.sender is not whitelisted
         return super.outboundTransfer(_token, _to, _amount, _maxGas, _gasPriceBid, _data);
+    }
+
+    /**
+     * @notice Deposit ERC20 token from Ethereum into Arbitrum using the registered or otherwise default gateway
+     * @dev Some legacy gateway might not have the outboundTransferCustomRefund method and will revert, in such case use outboundTransfer instead
+     *      L2 address alias will not be applied to the following types of addresses on L1:
+     *      - an externally-owned account
+     *      - a contract in construction
+     *      - an address where a contract will be created
+     *      - an address where a contract lived, but was destroyed
+     * @param _token L1 address of ERC20
+     * @param _refundTo Account, or its L2 alias if it have code in L1, to be credited with excess gas refund in L2
+     * @param _to Account to be credited with the tokens in the L2 (can be the user's L2 account or a contract), not subject to L2 aliasing
+                  This account, or its L2 alias if it have code in L1, will also be able to cancel the retryable ticket and receive callvalue refund
+     * @param _amount Token Amount
+     * @param _maxGas Max gas deducted from user's L2 balance to cover L2 execution
+     * @param _gasPriceBid Gas price for L2 execution
+     * @param _data encoded data from router and user
+     * @return res abi encoded inbox sequence number
+     */
+    function outboundTransferCustomRefund(
+        address _token,
+        address _refundTo,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) public payable override returns (bytes memory) {
+        // _refundTo will be rewritten to L2 alias if the address have code in L1
+        require(_refundTo != address(0), "INVALID_REFUND_ADDR");
+        _outboundTransferChecks(_maxGas, _gasPriceBid, _data);
+
+        return super.outboundTransferCustomRefund(_token, _refundTo, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
 
     modifier onlyCounterpartGateway() override {

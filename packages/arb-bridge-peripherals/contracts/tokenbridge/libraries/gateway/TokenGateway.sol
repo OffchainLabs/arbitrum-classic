@@ -61,29 +61,4 @@ abstract contract TokenGateway is ITokenGateway {
         virtual
         override
         returns (address);
-
-    function outboundTransfer(
-        address _token,
-        address _to,
-        uint256 _amount,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
-        bytes calldata _data
-    ) external payable virtual override returns (bytes memory);
-
-    function getOutboundCalldata(
-        address _token,
-        address _from,
-        address _to,
-        uint256 _amount,
-        bytes memory _data
-    ) public view virtual returns (bytes memory);
-
-    function finalizeInboundTransfer(
-        address _token,
-        address _from,
-        address _to,
-        uint256 _amount,
-        bytes calldata _data
-    ) external payable virtual override;
 }

@@ -83,6 +83,8 @@ abstract contract GatewayRouter is TokenGateway {
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable virtual override returns (bytes memory) {
+        // this function is kept instead of delegating to outboundTransferCustomRefund to allow 
+        // compatibility with older gateways that did not implement outboundTransferCustomRefund
         address gateway = getGateway(_token);
         bytes memory gatewayData = GatewayMessageHandler.encodeFromRouterToGateway(
             msg.sender,
@@ -93,6 +95,46 @@ abstract contract GatewayRouter is TokenGateway {
         return
             ITokenGateway(gateway).outboundTransfer{ value: msg.value }(
                 _token,
+                _to,
+                _amount,
+                _maxGas,
+                _gasPriceBid,
+                gatewayData
+            );
+    }
+
+    /**
+     * @notice Bridge ERC20 token using the registered or otherwise default gateway
+     * @dev Some legacy gateway might not have the outboundTransferCustomRefund method and will revert, in such case use outboundTransfer instead
+     * @param _token L1 address of ERC20
+     * @param _refundTo account to be credited with the excess gas refund in the L2, subject to L2 alias rewrite if its a L1 contract
+     * @param _to account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
+     * @param _amount Token Amount
+     * @param _maxGas Max gas deducted from user's L2 balance to cover L2 execution
+     * @param _gasPriceBid Gas price for L2 execution
+     * @param _data encoded data from router and user
+     * @return res abi encoded inbox sequence number
+     */
+    function outboundTransferCustomRefund(
+        address _token,
+        address _refundTo,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) public payable virtual override returns (bytes memory) {
+        address gateway = getGateway(_token);
+        bytes memory gatewayData = GatewayMessageHandler.encodeFromRouterToGateway(
+            msg.sender,
+            _data
+        );
+
+        emit TransferRouted(_token, msg.sender, _to, gateway);
+        return
+            ITokenGateway(gateway).outboundTransferCustomRefund{ value: msg.value }(
+                _token,
+                _refundTo,
                 _to,
                 _amount,
                 _maxGas,

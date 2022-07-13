@@ -82,7 +82,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         address _l2Counterpart,
         address _router,
         address _inbox
-    ) internal virtual {
+    ) internal {
         TokenGateway._initialize(_l2Counterpart, _router);
         // L1 gateway must have a router
         require(_router != address(0), "BAD_ROUTER");
@@ -142,7 +142,11 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         IERC20(_l1Token).safeTransfer(_dest, _amount);
     }
 
-    function createOutboundTx(
+    /**
+     * @dev Only excess gas is refunded to the _refundTo account, l2 call value is always returned to the _to account
+     */
+    function createOutboundTxCustomRefund(
+        address _refundTo,
         address _from,
         uint256, /* _tokenAmount */
         uint256 _maxGas,
@@ -156,9 +160,10 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         // msg.value is sent, but 0 is set to the L2 call value
         // the eth sent is used to pay for the tx's gas
         return
-            sendTxToL2(
+            sendTxToL2CustomRefund(
                 inbox,
                 counterpartGateway,
+                _refundTo,
                 _from,
                 msg.value, // we forward the L1 call value to the inbox
                 0, // l2 call value 0 by default
@@ -172,9 +177,54 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
     }
 
     /**
+     * @notice DEPRECATED - look at createOutboundTxCustomRefund instead
+     */
+    function createOutboundTx(
+        address _from,
+        uint256 _tokenAmount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        uint256 _maxSubmissionCost,
+        bytes memory _outboundCalldata
+    ) internal returns (uint256) {
+        return
+            createOutboundTxCustomRefund(
+                _from,
+                _from,
+                _tokenAmount,
+                _maxGas,
+                _gasPriceBid,
+                _maxSubmissionCost,
+                _outboundCalldata
+            );
+    }
+
+    /**
+     * @notice DEPRECATED - look at outboundTransferCustomRefund instead
+     */
+    function outboundTransfer(
+        address _l1Token,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data
+    ) public payable override returns (bytes memory res) {
+        return
+            outboundTransferCustomRefund(_l1Token, _to, _to, _amount, _maxGas, _gasPriceBid, _data);
+    }
+
+    /**
      * @notice Deposit ERC20 token from Ethereum into Arbitrum. If L2 side hasn't been deployed yet, includes name/symbol/decimals data for initial L2 deploy. Initiate by GatewayRouter.
+     * @dev L2 address alias will not be applied to the following types of addresses on L1:
+     *      - an externally-owned account
+     *      - a contract in construction
+     *      - an address where a contract will be created
+     *      - an address where a contract lived, but was destroyed
      * @param _l1Token L1 address of ERC20
-     * @param _to account to be credited with the tokens in the L2 (can be the user's L2 account or a contract)
+     * @param _refundTo Account, or its L2 alias if it have code in L1, to be credited with excess gas refund in L2
+     * @param _to Account to be credited with the tokens in the L2 (can be the user's L2 account or a contract), not subject to L2 aliasing
+                  This account, or its L2 alias if it have code in L1, will also be able to cancel the retryable ticket and receive callvalue refund
      * @param _amount Token Amount
      * @param _maxGas Max gas deducted from user's L2 balance to cover L2 execution
      * @param _gasPriceBid Gas price for L2 execution
@@ -182,8 +232,9 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
      * @return res abi encoded inbox sequence number
      */
     //  * @param maxSubmissionCost Max gas deducted from user's L2 balance to cover base submission fee
-    function outboundTransfer(
+    function outboundTransferCustomRefund(
         address _l1Token,
+        address _refundTo,
         address _to,
         uint256 _amount,
         uint256 _maxGas,
@@ -219,7 +270,8 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
             // we override the res field to save on the stack
             res = getOutboundCalldata(_l1Token, _from, _to, _amount, extraData);
 
-            seqNum = createOutboundTx(
+            seqNum = createOutboundTxCustomRefund(
+                _refundTo,
                 _from,
                 _amount,
                 _maxGas,
@@ -259,7 +311,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         bytes memory emptyBytes = "";
 
         outboundCalldata = abi.encodeWithSelector(
-            TokenGateway.finalizeInboundTransfer.selector,
+            ITokenGateway.finalizeInboundTransfer.selector,
             _l1Token,
             _from,
             _to,
