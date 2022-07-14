@@ -5,7 +5,7 @@ sidebar_label: Public Nitro Rollup Testnet
 ---
 
 
-***Note: Frormer Nitro Devnet chain 421612 has been deprecated in favor of chain 421613:***
+***Note: Former Nitro Devnet chain 421612 will soon be been deprecated in favor of chain 421613:***
 
 In order to make it easy for people to get started using Arbitrum Nitro, we've launched our own hosted Arbitrum Nitro Rollup chain hosted on the Goerli testnet.
 
