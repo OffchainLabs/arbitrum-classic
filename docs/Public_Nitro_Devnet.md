@@ -21,20 +21,20 @@ Connect your wallet to the devnet; if [your wallet](https://portal.arbitrum.one/
 - RPC URL: goerli-rollup.arbitrum.io/rpc 
 - ChainID: 421613
 - Symbol: ETH
-- Block Explorer URL: https://nitro-devnet-explorer.arbitrum.io
+- Block Explorer URL: https://goerli-rollup-explorer.arbitrum.io/
 
 - Retryable Dashboard: http://retryable-tx-panel-nitro.arbitrum.io/
-- Token Bridge: https://nitro-devnet-bridge.arbitrum.io/
+- Token Bridge: https://bridge.arbitrum.io/
 
 ## Observing transactions
 
-If you'd like to see your transactions in action, check out our [block explorer](https://nitro-devnet-explorer.arbitrum.io)!
+If you'd like to see your transactions in action, check out our [block explorer](https://goerli-rollup-explorer.arbitrum.io/)!
 
 There you'll be able to see all the transactions being executed in Arbitrum and also see exactly how much Ethereum Gas each transaction uses.
 
 ## Bridging Eth and ERC-20 Tokens
 
-In order to deposit and withdraw Eth or tokens, visit https://nitro-devnet-bridge.arbitrum.io/.
+In order to deposit and withdraw Eth or tokens, visit https://bridge.arbitrum.io/.
 
 You can get ETH to use in the Arbitrum Nitro Devnet by visiting the [twitter faucet](https://twitter.com/intent/tweet?text=ok%20I%20need%20@arbitrum%20to%20give%20me%20Nitro%20devnet%20gas.%20like%20VERY%20SOON.%20I%20cant%20take%20this,%20I%E2%80%99ve%20been%20waiting%20for%20@nitro_devnet%20release.%20I%20just%20want%20to%20start%20developing.%20but%20I%20need%20the%20gas%20IN%20MY%20WALLET%20NOW.%20can%20devs%20DO%20SOMETHING??%20%20SEND%20HERE:%200x-your-eth-address-here).
 
@@ -80,7 +80,7 @@ Porting your frontend is just as easy as deploying your contracts. Just take you
 
 **IMPORTANT**: _Do **not** simply transfer tokens or Ether to any of the addresses below; it will result in loss of funds._
 
-_Users should only interact with the token bridge via dapp interfaces like https://nitro-devnet-bridge.arbitrum.io_.
+_Users should only interact with the token bridge via dapp interfaces like https://bridge.arbitrum.io_.
 
 |                       | Goerli / Nitro Devnet                                                                                                 |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------- |
