@@ -10,7 +10,7 @@ Arbitrum Rollup supports EVM transactions, and therefore allows you to trustless
 
 Although Arbitrum supports Solidity code, there are differences in the effects of a few operations, including language features that don't make much sense in the Layer 2 context.
 
-- `tx.gasprice` returns the user’s ArbGas price bid
+- `tx.gasprice` returns the user’s ArbGas price paid (same as the current basefee)
 - `blockhash(x)` returns Arbitrum blockhash of a specific L1 block x if `block.number - 255 <= x <= block.number`, else returns zero. Arbitrum blockhash is a value deterministically generated from the L1 block number and state of the inbox. 
 - `block.coinbase` returns zero
 - `block.difficulty` returns the constant 2500000000000000
