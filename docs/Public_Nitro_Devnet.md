@@ -62,19 +62,19 @@ Porting your frontend is just as easy as deploying your contracts. Just take you
 ## Deployed Contracts
 
 ### Protocol (L1)
-TODO: UPDATE
+
 |                     | Goerli                                                                                                                |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Rollup              | [0x767CfF8D8de386d7cbe91DbD39675132ba2f5967](https://goerli.etherscan.io/address/0x767CfF8D8de386d7cbe91DbD39675132ba2f5967) |
-| Delayed Inbox       | [0x1FdBBcC914e84aF593884bf8e8Dd6877c29035A2](https://goerli.etherscan.io/address/0x1FdBBcC914e84aF593884bf8e8Dd6877c29035A2) |
-| Sequencer Inbox     | [0xb32f4257e05C56C53D46bbEC9e85770eB52425D6](https://goerli.etherscan.io/address/0xb32f4257e05C56C53D46bbEC9e85770eB52425D6) |
-| Bridge              | [0x9903A892Da86c1e04522d63B08e5514a921E81Df](https://goerli.etherscan.io/address/0x9903A892Da86c1e04522d63B08e5514a921E81Df) |
-| Outbox              | [0xFDF2B11347dA17326BAF30bbcd3F4b09c4719584](https://goerli.etherscan.io/address/0xFDF2B11347dA17326BAF30bbcd3F4b09c4719584) |
-| OneStepProver0      | [0x91DDCCc4CccbB7609E045E10D311712789F2010f](https://goerli.etherscan.io/address/0x91DDCCc4CccbB7609E045E10D311712789F2010f) |
-| OneStepProverMemory | [0x4A78961010c3A6c587077Efc0CD6BaA22c974E0a](https://goerli.etherscan.io/address/0x4A78961010c3A6c587077Efc0CD6BaA22c974E0a) |
-| OneStepProverMath   | [0x8b6dBCA5A16d77333819487143Ad88653E5D2574](https://goerli.etherscan.io/address/0x8b6dBCA5A16d77333819487143Ad88653E5D2574) |
-| OneStepProverHostIo | [0xB4dba7DB08fBcF1809ec4A2139d168Fa3f466868](https://goerli.etherscan.io/address/0xB4dba7DB08fBcF1809ec4A2139d168Fa3f466868) |
-| OneStepProofEntry   | [0x1c6bA2a2c079Df3608961135E1cdd65d908AE23e](https://goerli.etherscan.io/address/0x1c6bA2a2c079Df3608961135E1cdd65d908AE23e) |
+| Rollup              | [0x45e5cAea8768F42B385A366D3551Ad1e0cbFAb17](https://goerli.etherscan.io/address/0x45e5cAea8768F42B385A366D3551Ad1e0cbFAb17) |
+| Delayed Inbox       | [0x6BEbC4925716945D46F0Ec336D5C2564F419682C](https://goerli.etherscan.io/address/0x6BEbC4925716945D46F0Ec336D5C2564F419682C) |
+| Sequencer Inbox     | [0x0484A87B144745A2E5b7c359552119B6EA2917A9](https://goerli.etherscan.io/address/0x0484A87B144745A2E5b7c359552119B6EA2917A9) |
+| Bridge              | [0xaf4159A80B6Cc41ED517DB1c453d1Ef5C2e4dB72](https://goerli.etherscan.io/address/0xaf4159A80B6Cc41ED517DB1c453d1Ef5C2e4dB72) |
+| Outbox              | [0x45Af9Ed1D03703e480CE7d328fB684bb67DA5049](https://goerli.etherscan.io/address/0x45Af9Ed1D03703e480CE7d328fB684bb67DA5049) |
+| OneStepProver0      | [0xD7422f07fe48f6e82E40587feb2acaE1451f08A6](https://goerli.etherscan.io/address/0xD7422f07fe48f6e82E40587feb2acaE1451f08A6) |
+| OneStepProverMemory | [0x9221854E95283670E58738805a2d20405d17682E](https://goerli.etherscan.io/address/0x9221854E95283670E58738805a2d20405d17682E) |
+| OneStepProverMath   | [0xFe18aB9B105a8C13Fbd67a0DaCb1C70e84Bb5d5E](https://goerli.etherscan.io/address/0xFe18aB9B105a8C13Fbd67a0DaCb1C70e84Bb5d5E) |
+| OneStepProverHostIo | [0x5518772ddb8e65416c6572E28BE58dAfc8A3834c](https://goerli.etherscan.io/address/0x5518772ddb8e65416c6572E28BE58dAfc8A3834c) |
+| OneStepProofEntry   | [0xe46a0585C3Cb05AaE200161534Af1aE5Dff61294](https://goerli.etherscan.io/address/0xe46a0585C3Cb05AaE200161534Af1aE5Dff61294) |
 
 ### Token Bridge
 
@@ -84,34 +84,34 @@ _Users should only interact with the token bridge via dapp interfaces like https
 
 |                       | Goerli / Nitro Devnet                                                                                                 |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| L1 Gateway Router     | [0x8BDFa67ace22cE2BFb2fFebe72f0c91CDA694d4b](https://goerli.etherscan.io/address/0x8BDFa67ace22cE2BFb2fFebe72f0c91CDA694d4b) |
-| L2 Gateway Router     | [0xC502Ded1EE1d616B43F7f20Ebde83Be1A275ca3c](https://nitro-devnet-explorer.arbitrum.io/address/0xC502Ded1EE1d616B43F7f20Ebde83Be1A275ca3c)  |
-| L1 ERC20 Gateway      | [0x6336C4e811b2f7D17d45b6241Fd47F2E11621Ffb](https://goerli.etherscan.io/address/0x6336C4e811b2f7D17d45b6241Fd47F2E11621Ffb) |
-| L2 ERC20 Gateway      | [0xf298434ffE691400b932f4b14B436f451F4CED76](https://nitro-devnet-explorer.arbitrum.io/address/0xf298434ffE691400b932f4b14B436f451F4CED76)  |
-| L1 Arb-Custom Gateway | [0x23D4e0D7Cb7AE7CF745E82262B17eb46535Ae819](https://goerli.etherscan.io/address/0x23D4e0D7Cb7AE7CF745E82262B17eb46535Ae819) |
-| L2 Arb-Custom Gateway | [0x7AC493f26EF26904E52fE46C8DaEE247b9A556B8](https://nitro-devnet-explorer.arbitrum.io/address/0x7AC493f26EF26904E52fE46C8DaEE247b9A556B8)  |
-| L1 Weth Gateway       | [0x64bfF696bE6a087A81936b9a2489624015381be4](https://goerli.etherscan.io/address/0x64bfF696bE6a087A81936b9a2489624015381be4) |
-| L2 Weth Gateway       | [0xf10c7CAA33A3360f60053Bc1081980f62567505F](https://nitro-devnet-explorer.arbitrum.io/address/0xf10c7CAA33A3360f60053Bc1081980f62567505F)  |
+| L1 Gateway Router     | [0x4c7708168395aEa569453Fc36862D2ffcDaC588c](https://goerli.etherscan.io/address/0x4c7708168395aEa569453Fc36862D2ffcDaC588c) |
+| L2 Gateway Router     | [0xE5B9d8d42d656d1DcB8065A6c012FE3780246041](https://goerli-rollup-explorer.arbitrum.io/address/0xE5B9d8d42d656d1DcB8065A6c012FE3780246041)  |
+| L1 ERC20 Gateway      | [0x715D99480b77A8d9D603638e593a539E21345FdF](https://goerli.etherscan.io/address/0x715D99480b77A8d9D603638e593a539E21345FdF) |
+| L2 ERC20 Gateway      | [0x2eC7Bc552CE8E51f098325D2FcF0d3b9d3d2A9a2](https://goerli-rollup-explorer.arbitrum.io/address/0x2eC7Bc552CE8E51f098325D2FcF0d3b9d3d2A9a2)  |
+| L1 Arb-Custom Gateway | [0x9fDD1C4E4AA24EEc1d913FABea925594a20d43C7](https://goerli.etherscan.io/address/0x9fDD1C4E4AA24EEc1d913FABea925594a20d43C7) |
+| L2 Arb-Custom Gateway | [0x8b6990830cF135318f75182487A4D7698549C717](https://goerli-rollup-explorer.arbitrum.io/address/0x8b6990830cF135318f75182487A4D7698549C717)  |
+| L1 Weth Gateway       | [0x6e244cD02BBB8a6dbd7F626f05B2ef82151Ab502](https://goerli.etherscan.io/address/0x6e244cD02BBB8a6dbd7F626f05B2ef82151Ab502) |
+| L2 Weth Gateway       | [0xf9F2e89c8347BD96742Cc07095dee490e64301d6](https://goerli-rollup-explorer.arbitrum.io/address/0xf9F2e89c8347BD96742Cc07095dee490e64301d6)  |
 | L1 Weth               | [0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6](https://goerli.etherscan.io/address/0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6) |
-| L2 Weth               | [0x96CfA560e7332DebA750e330fb6f59E2269f40Dd](https://nitro-devnet-explorer.arbitrum.io/address/0x96CfA560e7332DebA750e330fb6f59E2269f40Dd)  |
+| L2 Weth               | [0xe39Ab88f8A4777030A534146A9Ca3B52bd5D43A3](https://goerli-rollup-explorer.arbitrum.io/address/0xe39Ab88f8A4777030A534146A9Ca3B52bd5D43A3)  |
 
 ### Arbitrum Precompiles (L2, same on all Arb-chains)
 
 |                  | Address                                                                                                              |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------- |
-| ArbSys           | [0x0000000000000000000000000000000000000064](https://nitro-devnet-explorer.arbitrum.io/address/0x0000000000000000000000000000000000000064) |
-| ArbRetryableTx   | [0x000000000000000000000000000000000000006E](https://nitro-devnet-explorer.arbitrum.io/address/0x000000000000000000000000000000000000006E) |
-| ArbGasInfo       | [0x000000000000000000000000000000000000006C](https://nitro-devnet-explorer.arbitrum.io/address/0x000000000000000000000000000000000000006C) |
-| ArbAddressTable  | [0x0000000000000000000000000000000000000066](https://nitro-devnet-explorer.arbitrum.io/address/0x0000000000000000000000000000000000000066) |
-| ArbStatistics    | [0x000000000000000000000000000000000000006F](https://nitro-devnet-explorer.arbitrum.io/address/0x000000000000000000000000000000000000006F) |
-| NodeInterface    | [0x00000000000000000000000000000000000000C8](https://nitro-devnet-explorer.arbitrum.io/address/0x00000000000000000000000000000000000000C8) |
-| ArbBLS           | [0x0000000000000000000000000000000000000067](https://nitro-devnet-explorer.arbitrum.io/address/0x0000000000000000000000000000000000000067) |
-| ArbInfo          | [0x0000000000000000000000000000000000000065](https://nitro-devnet-explorer.arbitrum.io/address/0x0000000000000000000000000000000000000065) |
-| ArbAggregator    | [0x000000000000000000000000000000000000006D](https://nitro-devnet-explorer.arbitrum.io/address/0x000000000000000000000000000000000000006D) |
-| ArbFunctionTable | [0x0000000000000000000000000000000000000068](https://nitro-devnet-explorer.arbitrum.io/address/0x0000000000000000000000000000000000000068) |
+| ArbSys           | [0x0000000000000000000000000000000000000064](https://goerli-rollup-explorer.arbitrum.io/address/0x0000000000000000000000000000000000000064) |
+| ArbRetryableTx   | [0x000000000000000000000000000000000000006E](https://goerli-rollup-explorer.arbitrum.io/address/0x000000000000000000000000000000000000006E) |
+| ArbGasInfo       | [0x000000000000000000000000000000000000006C](https://goerli-rollup-explorer.arbitrum.io/address/0x000000000000000000000000000000000000006C) |
+| ArbAddressTable  | [0x0000000000000000000000000000000000000066](https://goerli-rollup-explorer.arbitrum.io/address/0x0000000000000000000000000000000000000066) |
+| ArbStatistics    | [0x000000000000000000000000000000000000006F](https://goerli-rollup-explorer.arbitrum.io/address/0x000000000000000000000000000000000000006F) |
+| NodeInterface    | [0x00000000000000000000000000000000000000C8](https://goerli-rollup-explorer.arbitrum.io/address/0x00000000000000000000000000000000000000C8) |
+| ArbBLS           | [0x0000000000000000000000000000000000000067](https://goerli-rollup-explorer.arbitrum.io/address/0x0000000000000000000000000000000000000067) |
+| ArbInfo          | [0x0000000000000000000000000000000000000065](https://goerli-rollup-explorer.arbitrum.io/address/0x0000000000000000000000000000000000000065) |
+| ArbAggregator    | [0x000000000000000000000000000000000000006D](https://goerli-rollup-explorer.arbitrum.io/address/0x000000000000000000000000000000000000006D) |
+| ArbFunctionTable | [0x0000000000000000000000000000000000000068](https://goerli-rollup-explorer.arbitrum.io/address/0x0000000000000000000000000000000000000068) |
 
 ### Misc
 
 |              | Nitro Devnet                                                                                                | 
 | ------------ | -------------------------------------------------------------------------------------------------------------------- | 
-| L2 Multicall | [0x1068dbfcc13f3a22fcAe684943AFA43cc66fA689](https://nitro-devnet-explorer.arbitrum.io/address/0x1068dbfcc13f3a22fcAe684943AFA43cc66fA689) | 
+| L2 Multicall | [0x108B25170319f38DbED14cA9716C54E5D1FF4623](https://goerli-rollup-explorer.arbitrum.io/address/0x108B25170319f38DbED14cA9716C54E5D1FF4623) | 
