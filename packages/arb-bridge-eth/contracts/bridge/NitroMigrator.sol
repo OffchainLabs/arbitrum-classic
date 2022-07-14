@@ -227,6 +227,7 @@ contract NitroMigrator is Ownable, IMessageProvider {
         bridge.setOutbox(address(this), true);
         {
             uint256 bal = address(bridge).balance;
+            // TODO: import nitro contracts and use interface
             (bool success, ) = bridge.executeCall(
                 address(nitroBridge),
                 bal,
