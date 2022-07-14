@@ -22,7 +22,7 @@ import "../bridge/Bridge.sol";
 
 contract BridgeMock is Bridge {
     constructor() public {
-        activeOutbox = msg.sender;
+        localActiveOutbox = msg.sender;
     }
 
     function deliverMessageToInboxTest(

@@ -270,7 +270,7 @@ task('migration-step-3', 'run nitro migration step 3')
     Migrator = Migrator.connect(hre.ethers.provider.getSigner(owner))
 
     console.log('Running migration step 3')
-    const receipt = await (await Migrator.nitroStep3()).wait()
+    const receipt = await (await Migrator.nitroStep3(false)).wait()
     console.log('Ran migration step 3:', receipt)
   })
 

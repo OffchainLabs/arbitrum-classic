@@ -56,7 +56,7 @@ contract Bridge is OwnableUpgradeable, IBridge {
     }
 
     function allowedOutboxes(address outbox) external view override returns (bool) {
-        if (replacementBridge != address(0)) {
+        if (address(replacementBridge) != address(0)) {
             return replacementBridge.allowedOutboxes(outbox);
         }
         return allowedOutboxesMap[outbox].allowed;
@@ -112,7 +112,7 @@ contract Bridge is OwnableUpgradeable, IBridge {
         bytes calldata data
     ) external override returns (bool success, bytes memory returnData) {
         require(allowedOutboxesMap[msg.sender].allowed, "NOT_FROM_OUTBOX");
-        if (replacementBridge != address(0)) {
+        if (address(replacementBridge) != address(0)) {
             return replacementBridge.executeCall(destAddr, amount, data);
         }
         if (data.length > 0) require(destAddr.isContract(), "NO_CODE_AT_DEST");
@@ -165,7 +165,7 @@ contract Bridge is OwnableUpgradeable, IBridge {
     }
 
     function activeOutbox() external view override returns (address) {
-        if (replacementBridge == address(0)) {
+        if (address(replacementBridge) == address(0)) {
             return localActiveOutbox;
         } else {
             return replacementBridge.activeOutbox();
@@ -173,6 +173,6 @@ contract Bridge is OwnableUpgradeable, IBridge {
     }
 
     function setReplacementBridge(address newReplacementBridge) external override onlyOwner {
-        replacementBridge = newReplacementBridge;
+        replacementBridge = IBridge(newReplacementBridge);
     }
 }

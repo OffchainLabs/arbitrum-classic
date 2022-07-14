@@ -20,7 +20,6 @@ import "./Bridge.sol";
 import "./Outbox.sol";
 import "./Inbox.sol";
 import "./SequencerInbox.sol";
-import "./NonDelegatingProxy.sol";
 import "./Old_Outbox/OldOutbox.sol";
 import "../rollup/facets/RollupAdmin.sol";
 import "../rollup/RollupEventBridge.sol";
@@ -40,6 +39,8 @@ interface INitroRollup {
     function inbox() external view returns (INitroInbox.IInbox);
 
     function setInbox(IInbox newInbox) external;
+
+    function setOwner(address newOwner) external;
 }
 
 interface IArbOwner {
@@ -132,7 +133,7 @@ contract NitroMigrator is Ownable, IMessageProvider {
         }
         // this returns a different magic value so we can differentiate the user and admin facets
         require(_rollup.isNitroReady() == uint8(0xa4b2), "ADMIN_ROLLUP_NOT_NITRO_READY");
-
+        
         require(_inbox.isNitroReady() == uint8(0xa4b1), "INBOX_NOT_UPGRADED");
         require(_sequencerInbox.isNitroReady() == uint8(0xa4b1), "SEQINBOX_NOT_UPGRADED");
 
@@ -211,20 +212,21 @@ contract NitroMigrator is Ownable, IMessageProvider {
         latestCompleteStep = NitroMigrationSteps.Step2;
     }
 
-    function nitroStep3() external onlyOwner {
+    // CHRIS: TODO: remove skipCheck
+    function nitroStep3(bool skipCheck) external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Step2, "WRONG_STEP");
         // CHRIS: TODO: destroying the node in the previous steps does not reset latestConfirmed/latestNodeCreated
         require(
-            rollup.latestConfirmed() == rollup.latestNodeCreated(),
+            skipCheck || rollup.latestConfirmed() == rollup.latestNodeCreated(),
             "ROLLUP_SHUTDOWN_NOT_COMPLETE"
         );
+        
         bridge.setInbox(address(rollupEventBridge), false);
 
         // Move the classic bridge funds to the nitro bridge
         bridge.setOutbox(address(this), true);
         {
             uint256 bal = address(bridge).balance;
-            // TODO: import nitro contracts and use interface
             (bool success, ) = bridge.executeCall(
                 address(nitroBridge),
                 bal,
@@ -236,12 +238,19 @@ contract NitroMigrator is Ownable, IMessageProvider {
 
         // the bridge will proxy executeCall calls from the classic outboxes
         nitroBridge.setOutbox(address(bridge), true);
-        bridge.setReplacementBridge(nitroBridge);
+        bridge.setReplacementBridge(address(nitroBridge));
 
         // we don't enable sequencer inbox and the rollup event bridge in nitro bridge as they are already configured in the deployment
         nitroBridge.setDelayedInbox(address(inbox), true);
 
         // TODO: set the genesis block hash of the nitro rollup
+
+        // the migration is complete, relinquish ownership back to the
+        // nitro proxy admin owner
+        address nitroProxyAdminOwner = nitroProxyAdmin.owner();
+        rollup.setOwner(nitroProxyAdminOwner);
+        classicProxyAdmin.transferOwnership(nitroProxyAdminOwner);
+        nitroRollup.setOwner(address(nitroProxyAdmin));
 
         latestCompleteStep = NitroMigrationSteps.Step3;
     }
