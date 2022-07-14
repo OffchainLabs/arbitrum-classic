@@ -18,7 +18,7 @@ As we approach mainnet launch and incorporate feedback, we will likely reset the
 Connect your wallet to the devnet; if [your wallet](https://portal.arbitrum.one/#wallets) requires it, add the Arbitrum Nitro Devnet as a custom RPC:
 
 - Network Name: Arbitrum Nitro Devnet
-- RPC URL: goerli-rollup.arbitrum.io/rpc 
+- RPC URL: https://goerli-rollup.arbitrum.io/rpc 
 - ChainID: 421613
 - Symbol: ETH
 - Block Explorer URL: https://goerli-rollup-explorer.arbitrum.io/
