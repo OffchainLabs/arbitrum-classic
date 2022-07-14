@@ -1,7 +1,7 @@
 ---
 id: Public_Nitro_Devnet
-title: Public Nitro Devnet Guide
-sidebar_label: Public Nitro Devnet
+title: Public Nitro Testnet Guide
+sidebar_label: Public Nitro Rollup Testnet
 ---
 
 
