@@ -401,20 +401,17 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     )
 
     await expect(
-      (
-        await processL2ToL1Tx(
-          await l2TestBridge.functions[
-            'outboundTransfer(address,address,uint256,bytes)'
-          ](
-            l1CustomToken.address,
-            accounts[0].address,
-            l2Balance.sub(smallWithdrawal),
-            '0x'
-          ),
-          inboxMock,
-          false
-        )
-      )[0]
+      processL2ToL1Tx(
+        await l2TestBridge.functions[
+          'outboundTransfer(address,address,uint256,bytes)'
+        ](
+          l1CustomToken.address,
+          accounts[0].address,
+          l2Balance.sub(smallWithdrawal),
+          '0x'
+        ),
+        inboxMock
+      )
     ).to.be.revertedWith('ERC20: transfer amount exceeds balance')
     // .to.emit(l1CustomToken, 'Transfer(address,address,uint256)')
     // .withArgs(ethers.constants.AddressZero, l1TestBridge.address, tokenAmount) // this is the mint
