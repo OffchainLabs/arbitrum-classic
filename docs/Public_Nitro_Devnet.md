@@ -110,6 +110,6 @@ _Users should only interact with the token bridge via dapp interfaces like https
 
 ### Misc
 
-|              | Nitro Devnet                                                                                                | 
+|              | Nitro Testnet                                                                                                | 
 | ------------ | -------------------------------------------------------------------------------------------------------------------- | 
 | L2 Multicall | [0x108B25170319f38DbED14cA9716C54E5D1FF4623](https://goerli-rollup-explorer.arbitrum.io/address/0x108B25170319f38DbED14cA9716C54E5D1FF4623) | 
