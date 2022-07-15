@@ -1,5 +1,5 @@
 ---
-id: Public_Nitro_Devnet
+id: Public_Nitro_Testnet
 title: Public Nitro Testnet Guide
 sidebar_label: Public Nitro Rollup Testnet
 ---
@@ -80,7 +80,7 @@ Porting your frontend is just as easy as deploying your contracts. Just take you
 
 _Users should only interact with the token bridge via dapp interfaces like https://bridge.arbitrum.io_.
 
-|                       | Goerli / Nitro Devnet                                                                                                 |
+|                       | Goerli / Nitro Testnet                                                                                                 |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | L1 Gateway Router     | [0x4c7708168395aEa569453Fc36862D2ffcDaC588c](https://goerli.etherscan.io/address/0x4c7708168395aEa569453Fc36862D2ffcDaC588c) |
 | L2 Gateway Router     | [0xE5B9d8d42d656d1DcB8065A6c012FE3780246041](https://goerli-rollup-explorer.arbitrum.io/address/0xE5B9d8d42d656d1DcB8065A6c012FE3780246041)  |
