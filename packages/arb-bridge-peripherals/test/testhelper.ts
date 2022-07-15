@@ -90,7 +90,8 @@ export const applyAlias = (address: string) =>
 
 export const processL2ToL1Tx = async (
   tx: Promise<ContractTransaction> | ContractTransaction,
-  inboxMock: InboxMock
+  inboxMock: InboxMock,
+  waitAll = true
 ) => {
   const receipt = await (await tx).wait()
   const iface = ArbSysMock__factory.createInterface()
@@ -115,5 +116,5 @@ export const processL2ToL1Tx = async (
         })
       )
   })
-  return Promise.all(l2ToL1Logs)
+  return waitAll ? Promise.all(l2ToL1Logs) : l2ToL1Logs
 }
