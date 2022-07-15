@@ -177,21 +177,24 @@ func (c *CrossDB) BatchesExported() uint64 {
 	return binary.BigEndian.Uint64(batchNumBytes)
 }
 
-func (c *CrossDB) importMsgBatch(ctx context.Context, batchNum uint64) error {
+func (c *CrossDB) importMsgBatch(ctx context.Context, batchNum uint64) (bool, error) {
 	batchNumBig := new(big.Int).SetUint64(batchNum)
 	merkle, err := c.txDB.GetMessageBatch(batchNumBig)
 	if err != nil {
-		return err
+		return false, err
+	}
+	if merkle == nil {
+		return false, nil
 	}
 	batch := c.msgDB.NewBatch()
 	if err := c.storeMerkle(ctx, merkle.Tree, batch); err != nil {
-		return err
+		return false, err
 	}
 	batchEntry := make([]byte, 8)
 	binary.BigEndian.PutUint64(batchEntry[0:8], merkle.NumInBatch.Uint64())
 	batchEntry = append(batchEntry, merkle.Tree.Hash().Bytes()...)
 	batch.Put(msgBatchKey(batchNumBig), batchEntry)
-	return batch.Write()
+	return true, batch.Write()
 }
 
 func (c *CrossDB) mainThread(ctx context.Context) {
@@ -221,20 +224,22 @@ func (c *CrossDB) mainThread(ctx context.Context) {
 		for flag {
 			flag = false
 			if batchNum < atomic.LoadUint64(&c.targetMsgBatch) {
-				err := c.importMsgBatch(ctx, batchNum)
+				batchFound, err := c.importMsgBatch(ctx, batchNum)
 				if err != nil {
 					c.err = err
 					return
 				}
-				batchNum++
-				batchNumBytes := make([]byte, 8)
-				binary.BigEndian.PutUint64(batchNumBytes[:], batchNum)
-				err = c.msgDB.Put(batchNumKey[:], batchNumBytes)
-				if err != nil {
-					c.err = err
-					return
+				if batchFound {
+					batchNum++
+					batchNumBytes := make([]byte, 8)
+					binary.BigEndian.PutUint64(batchNumBytes[:], batchNum)
+					err = c.msgDB.Put(batchNumKey[:], batchNumBytes)
+					if err != nil {
+						c.err = err
+						return
+					}
+					flag = true
 				}
-				flag = true
 			}
 			if blockCount < atomic.LoadUint64(&c.targetBlock) {
 				err := c.importBlock(ctx, blockCount)
