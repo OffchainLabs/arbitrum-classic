@@ -307,7 +307,7 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     )
   })
 
-  it('should withdraw tokens when minted in L2', async function () {
+  it.skip('should withdraw tokens when minted in L2', async function () {
     // custom token setup
     const L1CustomToken = await ethers.getContractFactory(
       'MintableTestCustomTokenL1'
