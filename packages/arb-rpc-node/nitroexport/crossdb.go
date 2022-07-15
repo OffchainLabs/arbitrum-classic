@@ -18,6 +18,7 @@ package nitroexport
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"math/big"
 	"path/filepath"
@@ -34,16 +35,21 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	arbcommon "github.com/offchainlabs/arbitrum/packages/arb-util/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 )
+
+var batchNumKey = hashing.SoliditySHA3([]byte("msgBatch"))
 
 type CrossDB struct {
 	txDB  *txdb.TxDB
 	ethDB ethdb.Database
+	msgDB ethdb.Database
 
 	err error
 
 	// atomic reads / writes:
 	targetBlock       uint64
+	targetMsgBatch    uint64
 	latestStoredBlock uint64
 
 	targetChangedChan chan struct{}
@@ -51,18 +57,25 @@ type CrossDB struct {
 
 func NewCrossDB(
 	txDB *txdb.TxDB,
-	ethDBPath string,
+	exportPath string,
 ) (*CrossDB, error) {
+	ethDBPath := filepath.Join(exportPath, "l2chaindata")
 	freezer := filepath.Join(ethDBPath, "ancient")
 	ethDB, err := rawdb.NewLevelDBDatabaseWithFreezer(ethDBPath, 0, 0, freezer, "", false)
-
 	if err != nil {
 		return nil, err
 	}
+	msgDBPath := filepath.Join(exportPath, "classic-msg")
+	msgDB, err := rawdb.NewLevelDBDatabase(msgDBPath, 0, 0, "", false)
+	if err != nil {
+		return nil, err
+	}
+
 	return &CrossDB{
 		err:               nil,
 		txDB:              txDB,
 		ethDB:             ethDB,
+		msgDB:             msgDB,
 		targetChangedChan: make(chan struct{}),
 	}, nil
 }
@@ -124,6 +137,63 @@ func (c *CrossDB) importBlock(ctx context.Context, blockNumber uint64) error {
 	return err
 }
 
+func (c *CrossDB) OutboxBatchesExported() (uint64, error) {
+	return c.ethDB.Ancients()
+}
+
+func (c *CrossDB) storeMerkle(ctx context.Context, node evm.MerkleNode, batch ethdb.Batch) error {
+	key := node.Hash().Bytes()
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	switch n := node.(type) {
+	case *evm.MerkleInteriorNode:
+		if node.Lowest() == node.Highest() {
+			return errors.New("one index on internal merkle")
+		}
+		if err := c.storeMerkle(ctx, n.Left, batch); err != nil {
+			return err
+		}
+		if err := c.storeMerkle(ctx, n.Right, batch); err != nil {
+			return err
+		}
+		data := append(n.Left.Hash().Bytes(), n.Right.Hash().Bytes()...)
+		return batch.Put(key, data)
+	case *evm.MerkleLeaf:
+		return batch.Put(key, n.Data)
+	}
+	return errors.New("unexpected MerkleNode type")
+}
+
+func msgBatchKey(batchNum *big.Int) []byte {
+	return hashing.SoliditySHA3(append([]byte("msgBatch"), batchNum.Bytes()...)).Bytes()
+}
+
+func (c *CrossDB) BatchesExported() uint64 {
+	batchNumBytes, err := c.msgDB.Get(batchNumKey[:])
+	if err != nil {
+		return 0
+	}
+	return binary.BigEndian.Uint64(batchNumBytes)
+}
+
+func (c *CrossDB) importMsgBatch(ctx context.Context, batchNum uint64) error {
+	batchNumBig := new(big.Int).SetUint64(batchNum)
+	merkle, err := c.txDB.GetMessageBatch(batchNumBig)
+	if err != nil {
+		return err
+	}
+	batch := c.msgDB.NewBatch()
+	if err := c.storeMerkle(ctx, merkle.Tree, batch); err != nil {
+		return err
+	}
+	batchEntry := make([]byte, 8)
+	binary.BigEndian.PutUint64(batchEntry[0:8], merkle.NumInBatch.Uint64())
+	batchEntry = append(batchEntry, merkle.Tree.Hash().Bytes()...)
+	batch.Put(msgBatchKey(batchNumBig), batchEntry)
+	return batch.Write()
+}
+
 func (c *CrossDB) mainThread(ctx context.Context) {
 	if c.err != nil {
 		return
@@ -133,6 +203,7 @@ func (c *CrossDB) mainThread(ctx context.Context) {
 		c.err = err
 		return
 	}
+	batchNum := c.BatchesExported()
 	if blockCount > 0 {
 		lastBlock := blockCount - 1
 		storedHash := rawdb.ReadCanonicalHash(c.ethDB, lastBlock)
@@ -146,13 +217,34 @@ func (c *CrossDB) mainThread(ctx context.Context) {
 		}
 	}
 	for {
-		for blockCount < atomic.LoadUint64(&c.targetBlock) {
-			err := c.importBlock(ctx, blockCount)
-			if err != nil {
-				c.err = err
-				return
+		flag := true
+		for flag {
+			flag = false
+			if batchNum < atomic.LoadUint64(&c.targetMsgBatch) {
+				err := c.importMsgBatch(ctx, batchNum)
+				if err != nil {
+					c.err = err
+					return
+				}
+				batchNum++
+				batchNumBytes := make([]byte, 8)
+				binary.BigEndian.PutUint64(batchNumBytes[:], batchNum)
+				err = c.msgDB.Put(batchNumKey[:], batchNumBytes)
+				if err != nil {
+					c.err = err
+					return
+				}
+				flag = true
 			}
-			blockCount++
+			if blockCount < atomic.LoadUint64(&c.targetBlock) {
+				err := c.importBlock(ctx, blockCount)
+				if err != nil {
+					c.err = err
+					return
+				}
+				blockCount++
+				flag = true
+			}
 		}
 		select {
 		case <-c.targetChangedChan:
@@ -163,7 +255,15 @@ func (c *CrossDB) mainThread(ctx context.Context) {
 	}
 }
 
-func (c *CrossDB) UpdateTarget(target uint64) {
+func (c *CrossDB) UpdateTargetBatch(target uint64) {
+	atomic.StoreUint64(&c.targetMsgBatch, target)
+	select {
+	case c.targetChangedChan <- struct{}{}:
+	default:
+	}
+}
+
+func (c *CrossDB) UpdateTargetBlock(target uint64) {
 	atomic.StoreUint64(&c.targetBlock, target)
 	select {
 	case c.targetChangedChan <- struct{}{}:

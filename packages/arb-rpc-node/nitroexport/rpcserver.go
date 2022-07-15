@@ -20,7 +20,7 @@ type ExportRPCServer struct {
 }
 
 func NewExportRPCServer(ctx context.Context, txDB *txdb.TxDB, arbcore core.ArbCore, pathPrefix string) (*ExportRPCServer, error) {
-	ethDbPath := path.Join(pathPrefix, "nitro", "l2chaindata")
+	ethDbPath := path.Join(pathPrefix, "nitro")
 	err := os.MkdirAll(ethDbPath, os.ModePerm)
 	if err != nil {
 		return nil, err
@@ -56,8 +56,18 @@ func (r *ExportRPCServer) ExportHistory(blockNumber rpc.BlockNumber) error {
 	if err != nil {
 		return err
 	}
-	r.db.UpdateTarget(blockU64)
+	r.db.UpdateTargetBlock(blockU64)
 	return r.db.CurrentError()
+}
+
+func (r *ExportRPCServer) ExportOutbox(batchNumber hexutil.Uint64) error {
+	r.db.UpdateTargetBatch(uint64(batchNumber))
+	return r.db.CurrentError()
+}
+
+func (r *ExportRPCServer) ExportOutboxStatus() (hexutil.Uint64, error) {
+	batches := r.db.BatchesExported()
+	return hexutil.Uint64(batches), r.db.CurrentError()
 }
 
 func (r *ExportRPCServer) ExportHistoryStatus() (hexutil.Uint64, error) {
