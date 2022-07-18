@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts v4.4.1 (utils/introspection/ERC165.sol)
 
-// With modification to Solidity ^0.6.11
+// With pragma modification to support ^0.6.11
 // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v4.6/contracts/utils/introspection/ERC165.sol
 
 pragma solidity ^0.6.11;

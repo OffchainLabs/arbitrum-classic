@@ -329,6 +329,8 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         override(ERC165)
         returns (bool)
     {
+        // registering interfaces that is added after arb-bridge-peripherals >1.0.11
+        // using function selector instead of single function interfaces to reduce bloat
         return
             interfaceId == this.outboundTransferCustomRefund.selector ||
             ERC165.supportsInterface(interfaceId);
