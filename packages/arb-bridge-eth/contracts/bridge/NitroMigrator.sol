@@ -40,6 +40,13 @@ interface INitroRollup {
     function inbox() external view returns (INitroInbox.IInbox);
 
     function setInbox(IInbox newInbox) external;
+
+    function pause() external;
+
+    function unpause() external;
+
+    function createNitroMigrationGenesis(uint64 genesisBlockNumber, bytes32 genesisBlockHash)
+        external;
 }
 
 interface IArbOwner {
@@ -143,6 +150,9 @@ contract NitroMigrator is Ownable, IMessageProvider {
         INitroInbox.IInbox oldNitroInbox = nitroRollup.inbox();
         nitroBridge.setDelayedInbox(address(oldNitroInbox), false);
 
+        require(nitroRollup.latestNodeCreated() == 0, "NITRO_ROLLUP_HAS_NODES");
+        nitroRollup.pause();
+
         latestCompleteStep = NitroMigrationSteps.Step0;
     }
 
@@ -211,7 +221,10 @@ contract NitroMigrator is Ownable, IMessageProvider {
         latestCompleteStep = NitroMigrationSteps.Step2;
     }
 
-    function nitroStep3() external onlyOwner {
+    function nitroStep3(uint64 nitroGenesisBlockNumber, bytes32 nitroGenesisHash)
+        external
+        onlyOwner
+    {
         require(latestCompleteStep == NitroMigrationSteps.Step2, "WRONG_STEP");
         // CHRIS: TODO: destroying the node in the previous steps does not reset latestConfirmed/latestNodeCreated
         require(
@@ -241,7 +254,8 @@ contract NitroMigrator is Ownable, IMessageProvider {
         // we don't enable sequencer inbox and the rollup event bridge in nitro bridge as they are already configured in the deployment
         nitroBridge.setDelayedInbox(address(inbox), true);
 
-        // TODO: set the genesis block hash of the nitro rollup
+        nitroRollup.unpause();
+        nitroRollup.createNitroMigrationGenesis(nitroGenesisBlockNumber, nitroGenesisHash);
 
         latestCompleteStep = NitroMigrationSteps.Step3;
     }
