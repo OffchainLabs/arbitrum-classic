@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts v4.4.1 (utils/introspection/IERC165.sol)
 
-// With pragma modification to allow interface compatibility with ^0.8.0
+// With pragma modification to allow interface compatibility with >=0.6.9 <0.9.0
 // https://github.com/OpenZeppelin/openzeppelin-contracts/blob/release-v4.6/contracts/utils/introspection/IERC165.sol
 
 // solhint-disable-next-line compiler-version
