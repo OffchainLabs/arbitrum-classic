@@ -297,4 +297,16 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         revert("ONLY_COUNTERPART_GATEWAY");
         _;
     }
+
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC165)
+        returns (bool)
+    {
+        return
+            interfaceId == this.outboundTransferCustomRefund.selector ||
+            ERC165.supportsInterface(interfaceId);
+    }
 }

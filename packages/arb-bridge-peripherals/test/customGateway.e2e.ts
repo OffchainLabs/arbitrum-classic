@@ -428,4 +428,16 @@ describe('Bridge peripherals end-to-end custom gateway', () => {
     //   'Tokens not escrowed'
     // )
   })
+
+  it('should support ERC165 interface', async function () {
+    expect(await l1TestBridge.supportsInterface('0x01ffc9a7')).is.true
+    expect(await l2TestBridge.supportsInterface('0x01ffc9a7')).is.true
+    expect(await l1TestBridge.supportsInterface('0xffffffff')).is.false
+    expect(await l2TestBridge.supportsInterface('0xffffffff')).is.false
+  })
+
+  it('should support outboundTransferCustomRefund interface', async function () {
+    // 4fb1a07b  =>  outboundTransferCustomRefund(address,address,address,uint256,uint256,uint256,bytes)
+    expect(await l1TestBridge.supportsInterface('0x4fb1a07b')).is.true
+  })
 })

@@ -133,4 +133,9 @@ describe.only('Bridge peripherals weth layer 2', () => {
     const newBalance = await l2Weth.balanceOf(dest)
     assert.equal(newBalance.toString(), '0', 'Tokens not burnt correctly')
   })
+
+  it('should support ERC165 interface', async function () {
+    expect(await testBridge.supportsInterface('0x01ffc9a7')).is.true
+    expect(await testBridge.supportsInterface('0xffffffff')).is.false
+  })
 })
