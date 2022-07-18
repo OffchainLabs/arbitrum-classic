@@ -322,17 +322,11 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
         return outboundCalldata;
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override(ERC165)
-        returns (bool)
-    {
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
         // registering interfaces that is added after arb-bridge-peripherals >1.0.11
         // using function selector instead of single function interfaces to reduce bloat
         return
             interfaceId == this.outboundTransferCustomRefund.selector ||
-            ERC165.supportsInterface(interfaceId);
+            super.supportsInterface(interfaceId);
     }
 }
