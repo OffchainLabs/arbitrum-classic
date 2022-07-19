@@ -261,6 +261,8 @@ task('migration-step-2', 'run nitro migration step 2')
 
 task('migration-step-3', 'run nitro migration step 3')
   .addParam('migrator', '')
+  .addParam('genesisnumber', 'The nitro genesis block number')
+  .addParam('genesishash', 'The nitro genesis block hash')
 
   .setAction(async (args, hre) => {
     let Migrator = (await hre.ethers.getContractFactory('NitroMigrator'))
@@ -270,7 +272,7 @@ task('migration-step-3', 'run nitro migration step 3')
     Migrator = Migrator.connect(hre.ethers.provider.getSigner(owner))
 
     console.log('Running migration step 3')
-    const receipt = await (await Migrator.nitroStep3(false)).wait()
+    const receipt = await (await Migrator.nitroStep3(args.genesisnumber, args.genesishash, false)).wait()
     console.log('Ran migration step 3:', receipt)
   })
 

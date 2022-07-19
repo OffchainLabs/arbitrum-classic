@@ -41,6 +41,15 @@ interface INitroRollup {
     function setInbox(IInbox newInbox) external;
 
     function setOwner(address newOwner) external;
+
+    function pause() external;
+
+    function unpause() external;
+
+    function latestNodeCreated() external returns (uint64);
+
+    function createNitroMigrationGenesis(uint64 genesisBlockNumber, bytes32 genesisBlockHash)
+        external;
 }
 
 interface IArbOwner {
@@ -133,7 +142,7 @@ contract NitroMigrator is Ownable, IMessageProvider {
         }
         // this returns a different magic value so we can differentiate the user and admin facets
         require(_rollup.isNitroReady() == uint8(0xa4b2), "ADMIN_ROLLUP_NOT_NITRO_READY");
-        
+
         require(_inbox.isNitroReady() == uint8(0xa4b1), "INBOX_NOT_UPGRADED");
         require(_sequencerInbox.isNitroReady() == uint8(0xa4b1), "SEQINBOX_NOT_UPGRADED");
 
@@ -143,6 +152,9 @@ contract NitroMigrator is Ownable, IMessageProvider {
         // The nitro deployment script already configured a delayed inbox, so we disable it here
         INitroInbox.IInbox oldNitroInbox = nitroRollup.inbox();
         nitroBridge.setDelayedInbox(address(oldNitroInbox), false);
+
+        require(nitroRollup.latestNodeCreated() == 0, "NITRO_ROLLUP_HAS_NODES");
+        nitroRollup.pause();
 
         latestCompleteStep = NitroMigrationSteps.Step0;
     }
@@ -213,14 +225,17 @@ contract NitroMigrator is Ownable, IMessageProvider {
     }
 
     // CHRIS: TODO: remove skipCheck
-    function nitroStep3(bool skipCheck) external onlyOwner {
+    function nitroStep3(uint64 nitroGenesisBlockNumber, bytes32 nitroGenesisHash, bool skipCheck)
+        external
+        onlyOwner
+    {
         require(latestCompleteStep == NitroMigrationSteps.Step2, "WRONG_STEP");
         // CHRIS: TODO: destroying the node in the previous steps does not reset latestConfirmed/latestNodeCreated
         require(
             skipCheck || rollup.latestConfirmed() == rollup.latestNodeCreated(),
             "ROLLUP_SHUTDOWN_NOT_COMPLETE"
         );
-        
+
         bridge.setInbox(address(rollupEventBridge), false);
 
         // Move the classic bridge funds to the nitro bridge
@@ -244,7 +259,8 @@ contract NitroMigrator is Ownable, IMessageProvider {
         // we don't enable sequencer inbox and the rollup event bridge in nitro bridge as they are already configured in the deployment
         nitroBridge.setDelayedInbox(address(inbox), true);
 
-        // TODO: set the genesis block hash of the nitro rollup
+        nitroRollup.unpause();
+        nitroRollup.createNitroMigrationGenesis(nitroGenesisBlockNumber, nitroGenesisHash);
 
         // the migration is complete, relinquish ownership back to the
         // nitro proxy admin owner
