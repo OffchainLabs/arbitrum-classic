@@ -1170,7 +1170,6 @@ MainLoop:
 				Str("oldBlockNumber", chainTime.BlockNum.String()).
 				Str("newBlockNumber", newChainTime.BlockNum.String()).
 				Msg("chain time moved backwards")
-			continue
 		} else if chainTimeCmp == 0 {
 			// Chain time hasn't changed
 			continue
