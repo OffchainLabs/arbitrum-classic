@@ -1,5 +1,5 @@
 ---
-id: Public_Nitro_Devnet
+id: Public_Nitro_Testnet
 title: Public Nitro Testnet Guide
 sidebar_label: Public Nitro Rollup Testnet
 ---
@@ -11,13 +11,11 @@ In order to make it easy for people to get started using Arbitrum Nitro, we've l
 
 For a general introduction to the Arbitrum Nitro, see our [announcement](https://medium.com/offchainlabs/arbitrum-nitro-sneak-preview-44550d9054f5).
 
-As we approach mainnet launch and incorporate feedback, we will likely reset the devnet a few times, so please plan accordingly.
-
 ## Connecting to the chain
 
-Connect your wallet to the devnet; if [your wallet](https://portal.arbitrum.one/#wallets) requires it, add the Arbitrum Nitro Devnet as a custom RPC:
+Connect your wallet to the testnet; if [your wallet](https://portal.arbitrum.one/#wallets) requires it, add the Arbitrum Nitro Testnet as a custom RPC:
 
-- Network Name: Arbitrum Nitro Devnet
+- Network Name: Arbitrum Nitro Rollup Testnet
 - RPC URL: https://goerli-rollup.arbitrum.io/rpc
 - ChainID: 421613
 - Symbol: ETH
@@ -36,13 +34,13 @@ There you'll be able to see all the transactions being executed in Arbitrum and 
 
 In order to deposit and withdraw Eth or tokens, visit https://bridge.arbitrum.io/.
 
-You can get ETH to use in the Arbitrum Nitro Devnet by visiting the [twitter faucet](https://twitter.com/intent/tweet?text=ok%20I%20need%20@arbitrum%20to%20give%20me%20Nitro%20devnet%20gas.%20like%20VERY%20SOON.%20I%20cant%20take%20this,%20I%E2%80%99ve%20been%20waiting%20for%20@nitro_devnet%20release.%20I%20just%20want%20to%20start%20developing.%20but%20I%20need%20the%20gas%20IN%20MY%20WALLET%20NOW.%20can%20devs%20DO%20SOMETHING??%20%20SEND%20HERE:%200x-your-eth-address-here).
+You can get ETH to use in the Arbitrum Nitro Testnet by visiting the [twitter faucet](https://twitter.com/intent/tweet?text=ok%20I%20need%20@arbitrum%20to%20give%20me%20Nitro%20testnet%20gas.%20like%20VERY%20SOON.%20I%20cant%20take%20this,%20I%E2%80%99ve%20been%20waiting%20for%20@nitro_devnet%20release.%20I%20just%20want%20to%20start%20developing.%20but%20I%20need%20the%20gas%20IN%20MY%20WALLET%20NOW.%20can%20devs%20DO%20SOMETHING??%20%20SEND%20HERE:%200x-your-eth-address-here).
 
 You may also deposit Eth from Goerli so that you can pay for fees in L2. In order to get Goerli Eth, use one of the standard faucets.
 
 ## Interacting with the chain
 
-Once your wallet is connect to the Arbitrum Nitro Devnet, you should be able to interact with the chain just like you would with Ethereum.
+Once your wallet is connect to the Arbitrum Nitro Testnet, you should be able to interact with the chain just like you would with Ethereum.
 
 The are a couple things to note on the Arbitrum chain.
 
@@ -51,7 +49,7 @@ The are a couple things to note on the Arbitrum chain.
 
 ## Deploying your contracts
 
-Deploying your contracts onto the Arbitrum Devnet is as easy as changing your RPC endpoint to https://nitro-devnet.arbitrum.io/rpc
+Deploying your contracts onto the Arbitrum Testnet is as easy as changing your RPC endpoint to https://goerli-rollup-explorer.arbitrum.io
 
 For a deeper dive into deploying with truffle see [here](Contract_Deployment.md).
 
@@ -82,7 +80,7 @@ Porting your frontend is just as easy as deploying your contracts. Just take you
 
 _Users should only interact with the token bridge via dapp interfaces like https://bridge.arbitrum.io_.
 
-|                       | Goerli / Nitro Devnet                                                                                                 |
+|                       | Goerli / Nitro Testnet                                                                                                 |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | L1 Gateway Router     | [0x4c7708168395aEa569453Fc36862D2ffcDaC588c](https://goerli.etherscan.io/address/0x4c7708168395aEa569453Fc36862D2ffcDaC588c) |
 | L2 Gateway Router     | [0xE5B9d8d42d656d1DcB8065A6c012FE3780246041](https://goerli-rollup-explorer.arbitrum.io/address/0xE5B9d8d42d656d1DcB8065A6c012FE3780246041)  |
@@ -112,6 +110,6 @@ _Users should only interact with the token bridge via dapp interfaces like https
 
 ### Misc
 
-|              | Nitro Devnet                                                                                                | 
+|              | Nitro Testnet                                                                                                | 
 | ------------ | -------------------------------------------------------------------------------------------------------------------- | 
 | L2 Multicall | [0x108B25170319f38DbED14cA9716C54E5D1FF4623](https://goerli-rollup-explorer.arbitrum.io/address/0x108B25170319f38DbED14cA9716C54E5D1FF4623) | 
