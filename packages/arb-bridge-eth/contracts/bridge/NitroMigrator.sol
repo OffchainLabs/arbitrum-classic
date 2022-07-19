@@ -20,7 +20,6 @@ import "./Bridge.sol";
 import "./Outbox.sol";
 import "./Inbox.sol";
 import "./SequencerInbox.sol";
-import "./NonDelegatingProxy.sol";
 import "./Old_Outbox/OldOutbox.sol";
 import "../rollup/facets/RollupAdmin.sol";
 import "../rollup/RollupEventBridge.sol";
@@ -41,9 +40,13 @@ interface INitroRollup {
 
     function setInbox(IInbox newInbox) external;
 
+    function setOwner(address newOwner) external;
+
     function pause() external;
 
     function unpause() external;
+
+    function latestNodeCreated() external returns (uint64);
 
     function createNitroMigrationGenesis(uint64 genesisBlockNumber, bytes32 genesisBlockHash)
         external;
@@ -221,16 +224,18 @@ contract NitroMigrator is Ownable, IMessageProvider {
         latestCompleteStep = NitroMigrationSteps.Step2;
     }
 
-    function nitroStep3(uint64 nitroGenesisBlockNumber, bytes32 nitroGenesisHash)
+    // CHRIS: TODO: remove skipCheck
+    function nitroStep3(uint64 nitroGenesisBlockNumber, bytes32 nitroGenesisHash, bool skipCheck)
         external
         onlyOwner
     {
         require(latestCompleteStep == NitroMigrationSteps.Step2, "WRONG_STEP");
         // CHRIS: TODO: destroying the node in the previous steps does not reset latestConfirmed/latestNodeCreated
         require(
-            rollup.latestConfirmed() == rollup.latestNodeCreated(),
+            skipCheck || rollup.latestConfirmed() == rollup.latestNodeCreated(),
             "ROLLUP_SHUTDOWN_NOT_COMPLETE"
         );
+
         bridge.setInbox(address(rollupEventBridge), false);
 
         // Move the classic bridge funds to the nitro bridge
@@ -249,13 +254,20 @@ contract NitroMigrator is Ownable, IMessageProvider {
 
         // the bridge will proxy executeCall calls from the classic outboxes
         nitroBridge.setOutbox(address(bridge), true);
-        bridge.setReplacementBridge(nitroBridge);
+        bridge.setReplacementBridge(address(nitroBridge));
 
         // we don't enable sequencer inbox and the rollup event bridge in nitro bridge as they are already configured in the deployment
         nitroBridge.setDelayedInbox(address(inbox), true);
 
         nitroRollup.unpause();
         nitroRollup.createNitroMigrationGenesis(nitroGenesisBlockNumber, nitroGenesisHash);
+
+        // the migration is complete, relinquish ownership back to the
+        // nitro proxy admin owner
+        address nitroProxyAdminOwner = nitroProxyAdmin.owner();
+        rollup.setOwner(nitroProxyAdminOwner);
+        classicProxyAdmin.transferOwnership(nitroProxyAdminOwner);
+        nitroRollup.setOwner(address(nitroProxyAdmin));
 
         latestCompleteStep = NitroMigrationSteps.Step3;
     }
