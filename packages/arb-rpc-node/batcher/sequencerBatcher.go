@@ -1170,6 +1170,8 @@ MainLoop:
 				Str("oldBlockNumber", chainTime.BlockNum.String()).
 				Str("newBlockNumber", newChainTime.BlockNum.String()).
 				Msg("chain time moved backwards")
+			b.lastCreatedBatchAt = new(big.Int).Set(newChainTime.BlockNum.AsInt())
+			b.lastSequencedDelayedAt = new(big.Int).Set(newChainTime.BlockNum.AsInt())
 		} else if chainTimeCmp == 0 {
 			// Chain time hasn't changed
 			continue
