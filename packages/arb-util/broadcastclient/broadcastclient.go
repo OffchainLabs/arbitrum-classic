@@ -23,8 +23,11 @@ import (
 	"io"
 	"math/big"
 	"net"
+	"net/http"
+	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
@@ -39,8 +42,12 @@ type BroadcastClient struct {
 	websocketUrl    string
 	lastInboxSeqNum *big.Int
 
+	// Should be accessed atomically
+	chainId uint64
+
 	connMutex *sync.Mutex
 	conn      net.Conn
+	errChan   chan error
 
 	retryMutex *sync.Mutex
 	retryCount int
@@ -53,7 +60,13 @@ type BroadcastClient struct {
 
 var logger = arblog.Logger.With().Str("component", "broadcaster").Logger()
 
-func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int, idleTimeout time.Duration) *BroadcastClient {
+func NewBroadcastClient(
+	websocketUrl string,
+	chainId uint64,
+	lastInboxSeqNum *big.Int,
+	idleTimeout time.Duration,
+	broadcastClientErrChan chan error,
+) *BroadcastClient {
 	var seqNum *big.Int
 	if lastInboxSeqNum == nil {
 		seqNum = big.NewInt(0)
@@ -63,21 +76,59 @@ func NewBroadcastClient(websocketUrl string, lastInboxSeqNum *big.Int, idleTimeo
 
 	return &BroadcastClient{
 		websocketUrl:    websocketUrl,
+		chainId:         chainId,
 		lastInboxSeqNum: seqNum,
 		connMutex:       &sync.Mutex{},
+		errChan:         broadcastClientErrChan,
 		retryMutex:      &sync.Mutex{},
 		idleTimeout:     idleTimeout,
 	}
 }
 
+func (bc *BroadcastClient) ChainId() uint64 {
+	return atomic.LoadUint64(&bc.chainId)
+}
+
+func (bc *BroadcastClient) SetChainId(newChainId uint64) error {
+	oldChainId := atomic.LoadUint64(&bc.chainId)
+	if oldChainId == 0 {
+		swapped := atomic.CompareAndSwapUint64(&bc.chainId, 0, newChainId)
+		if !swapped {
+			// Chain ID was zero, but changed since checked
+			newExpectedChainId := atomic.LoadUint64(&bc.chainId)
+			if newExpectedChainId != newChainId {
+				logger.
+					Error().
+					Uint64("newExpectedChainId", newExpectedChainId).
+					Uint64("newChainId", newChainId).
+					Msg("chain id initially unknown but changed to unexpected value")
+				return ErrIncorrectChainId
+			}
+		}
+	} else if oldChainId != newChainId {
+		logger.
+			Error().
+			Uint64("oldChainId", oldChainId).
+			Uint64("newChainId", newChainId).
+			Msg("incorrect chain id when connecting to server feed")
+		return ErrIncorrectChainId
+	}
+
+	return nil
+}
+
 func (bc *BroadcastClient) Connect(ctx context.Context) (chan broadcaster.BroadcastFeedMessage, error) {
 	messageReceiver := make(chan broadcaster.BroadcastFeedMessage)
 
-	return messageReceiver, bc.ConnectWithChannel(ctx, messageReceiver)
+	err := bc.ConnectWithChannel(ctx, messageReceiver, nil)
+	if err != nil {
+		return nil, err
+	}
+	return messageReceiver, nil
 }
 
-func (bc *BroadcastClient) ConnectWithChannel(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) error {
-	earlyFrameData, _, err := bc.connect(ctx, messageReceiver)
+func (bc *BroadcastClient) ConnectWithChannel(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage, newChainIdChan chan uint64) error {
+	earlyFrameData, _, err := bc.connect(ctx, messageReceiver, newChainIdChan, bc.lastInboxSeqNum)
 	if err != nil {
 		return err
 	}
@@ -87,10 +138,10 @@ func (bc *BroadcastClient) ConnectWithChannel(ctx context.Context, messageReceiv
 	return nil
 }
 
-func (bc *BroadcastClient) ConnectInBackground(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) {
+func (bc *BroadcastClient) ConnectInBackground(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage, newChainIdChan chan uint64) {
 	go (func() {
 		for {
-			err := bc.ConnectWithChannel(ctx, messageReceiver)
+			err := bc.ConnectWithChannel(ctx, messageReceiver, newChainIdChan)
 			if err == nil {
 				break
 			}
@@ -105,15 +156,86 @@ func (bc *BroadcastClient) ConnectInBackground(ctx context.Context, messageRecei
 	})()
 }
 
-func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) (io.Reader, chan broadcaster.BroadcastFeedMessage, error) {
+var ErrIncorrectFeedServerVersion = errors.New("incorrect feed server version")
+var ErrIncorrectChainId = errors.New("incorrect chain id")
+
+func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage, newChainIdChan chan uint64, previousSequenceNumber *big.Int) (io.Reader, chan broadcaster.BroadcastFeedMessage, error) {
 
 	if len(bc.websocketUrl) == 0 {
 		// Nothing to do
 		return nil, nil, nil
 	}
 
+	expectedChainId := bc.ChainId()
+
+	var requestedSequenceNumber string
+	if previousSequenceNumber.Cmp(big.NewInt(0)) > 0 {
+		requestedSequenceNumber = new(big.Int).Add(previousSequenceNumber, big.NewInt(2)).String()
+	} else {
+		requestedSequenceNumber = "0"
+	}
+	header := ws.HandshakeHeaderHTTP(http.Header{
+		wsbroadcastserver.HTTPHeaderFeedClientVersion:       []string{strconv.Itoa(wsbroadcastserver.FeedClientVersion)},
+		wsbroadcastserver.HTTPHeaderRequestedSequenceNumber: []string{requestedSequenceNumber},
+	})
+
 	logger.Info().Str("url", bc.websocketUrl).Msg("connecting to arbitrum inbox message broadcaster")
+	var chainId uint64
+	var feedServerVersion uint64
 	timeoutDialer := ws.Dialer{
+		Header: header,
+		OnHeader: func(key, value []byte) (err error) {
+			headerName := string(key)
+			headerValue := string(value)
+			if headerName == wsbroadcastserver.HTTPHeaderFeedServerVersion {
+				feedServerVersion, err = strconv.ParseUint(headerValue, 0, 64)
+				if err != nil {
+					return err
+				}
+				if feedServerVersion != wsbroadcastserver.FeedServerVersion {
+					logger.
+						Error().
+						Uint64("expectedFeedServerVersion", wsbroadcastserver.FeedServerVersion).
+						Uint64("actualFeedServerVersion", feedServerVersion).
+						Msg("incorrect feed server version")
+					return ErrIncorrectFeedServerVersion
+				}
+			} else if headerName == wsbroadcastserver.HTTPHeaderChainId {
+				chainId, err = strconv.ParseUint(headerValue, 0, 64)
+				if err != nil {
+					return err
+				}
+				if expectedChainId == 0 {
+					swapped := atomic.CompareAndSwapUint64(&bc.chainId, 0, chainId)
+					if !swapped {
+						// Chain ID was zero, but changed since checked
+						newExpectedChainId := atomic.LoadUint64(&bc.chainId)
+						if newExpectedChainId != chainId {
+							logger.
+								Error().
+								Uint64("newExpectedChainId", newExpectedChainId).
+								Uint64("actualChainId", chainId).
+								Msg("chain id initially unknown but changed to unexpected value")
+							return ErrIncorrectChainId
+						}
+					}
+					if newChainIdChan != nil {
+						select {
+						case newChainIdChan <- chainId:
+						case <-time.After(time.Second * 1):
+						}
+					}
+				} else if chainId != expectedChainId {
+					logger.
+						Error().
+						Uint64("expectedChainId", expectedChainId).
+						Uint64("actualChainId", chainId).
+						Msg("incorrect chain id when connecting to server feed")
+					return ErrIncorrectChainId
+				}
+			}
+			return nil
+		},
 		Timeout: 10 * time.Second,
 	}
 
@@ -139,7 +261,7 @@ func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan bro
 	bc.conn = conn
 	bc.connMutex.Unlock()
 
-	logger.Info().Msg("Connected")
+	logger.Info().Uint64("chainId", chainId).Uint64("feedServerVersion", feedServerVersion).Msg("Connected")
 
 	return earlyFrameData, messageReceiver, nil
 }
@@ -166,7 +288,10 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 					logger.Error().Err(err).Str("feed", bc.websocketUrl).Int("opcode", int(op)).Msgf("error calling readData")
 				}
 				_ = bc.conn.Close()
-				earlyFrameData = bc.RetryConnect(ctx, messageReceiver)
+				earlyFrameData, err = bc.RetryConnect(ctx, messageReceiver)
+				if err != nil {
+					logger.Warn().Err(err).Str("feed", bc.websocketUrl).Int("opcode", int(op)).Msgf("retryConnect failed")
+				}
 				continue
 			}
 
@@ -187,9 +312,12 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 				}
 
 				if res.Version == 1 {
+					var currentLastSeqNum *big.Int
 					for _, message := range res.Messages {
+						currentLastSeqNum = message.FeedItem.BatchItem.LastSeqNum
 						messageReceiver <- *message
 					}
+					bc.lastInboxSeqNum = new(big.Int).Add(currentLastSeqNum, big.NewInt(1))
 
 					if res.ConfirmedAccumulator.IsConfirmed && bc.ConfirmedAccumulatorListener != nil {
 						bc.ConfirmedAccumulatorListener <- res.ConfirmedAccumulator.Accumulator
@@ -211,7 +339,7 @@ func (bc *BroadcastClient) GetRetryCount() int {
 	return bc.retryCount
 }
 
-func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) io.Reader {
+func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) (io.Reader, error) {
 	bc.retryMutex.Lock()
 	defer bc.retryMutex.Unlock()
 
@@ -221,15 +349,15 @@ func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver cha
 	for !bc.shuttingDown {
 		select {
 		case <-ctx.Done():
-			return nil
+			return nil, nil
 		case <-time.After(waitDuration):
 		}
 
 		bc.retryCount++
-		earlyFrameData, _, err := bc.connect(ctx, messageReceiver)
+		earlyFrameData, _, err := bc.connect(ctx, messageReceiver, nil, bc.lastInboxSeqNum)
 		if err == nil {
 			bc.retrying = false
-			return earlyFrameData
+			return earlyFrameData, nil
 		}
 
 		if waitDuration < maxWaitDuration {
@@ -237,7 +365,7 @@ func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver cha
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
 func (bc *BroadcastClient) Close() {

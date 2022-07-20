@@ -19,7 +19,11 @@ package wsbroadcastserver
 import (
 	"context"
 	"errors"
+	"fmt"
+	"math/big"
 	"net"
+	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -32,6 +36,13 @@ import (
 	"github.com/mailru/easygo/netpoll"
 )
 
+const HTTPHeaderFeedServerVersion = "Feed-Server-Version"
+const HTTPHeaderFeedClientVersion = "Feed-Client-Version"
+const HTTPHeaderRequestedSequenceNumber = "Requested-Sequence-Number"
+const HTTPHeaderChainId = "Chain-Id"
+const FeedServerVersion = 1
+const FeedClientVersion = 1
+
 var logger = arblog.Logger.With().Str("component", "wsbroadcastserver").Logger()
 
 type WSBroadcastServer struct {
@@ -43,15 +54,22 @@ type WSBroadcastServer struct {
 	started       bool
 	clientManager *ClientManager
 	catchupBuffer CatchupBuffer
+	chainId       uint64
 }
 
-func NewWSBroadcastServer(settings *configuration.FeedOutput, catchupBuffer CatchupBuffer) *WSBroadcastServer {
+func NewWSBroadcastServer(settings *configuration.FeedOutput, catchupBuffer CatchupBuffer, chainId uint64) *WSBroadcastServer {
 	return &WSBroadcastServer{
 		startMutex:    &sync.Mutex{},
 		settings:      *settings,
 		started:       false,
 		catchupBuffer: catchupBuffer,
+		chainId:       chainId,
 	}
+}
+
+// SetChainId not thread safe, call before calling Start
+func (s *WSBroadcastServer) SetChainId(chainId uint64) {
+	s.chainId = chainId
 }
 
 func (s *WSBroadcastServer) Start(ctx context.Context) (chan error, error) {
@@ -84,8 +102,52 @@ func (s *WSBroadcastServer) Start(ctx context.Context) (chan error, error) {
 
 		safeConn := deadliner{conn, s.settings.IOTimeout}
 
+		// Prepare handshake header writer from http.Header mapping.
+		header := ws.HandshakeHeaderHTTP(http.Header{
+			HTTPHeaderFeedServerVersion: []string{strconv.Itoa(FeedServerVersion)},
+			HTTPHeaderChainId:           []string{strconv.FormatUint(s.chainId, 10)},
+		})
+
+		var feedClientVersionSeen bool
+		var requestedSeqNum *big.Int
+		upgrader := ws.Upgrader{
+			OnHeader: func(key []byte, value []byte) error {
+				headerName := string(key)
+				if headerName == HTTPHeaderFeedClientVersion {
+					feedClientVersion, err := strconv.ParseUint(string(value), 0, 64)
+					if err != nil {
+						return err
+					}
+					if feedClientVersion < FeedClientVersion {
+						return ws.RejectConnectionError(
+							ws.RejectionStatus(http.StatusBadRequest),
+							ws.RejectionReason(fmt.Sprintf("Feed Client version too old: %d, expected %d", feedClientVersion, FeedClientVersion)),
+						)
+					}
+					feedClientVersionSeen = true
+				} else if headerName == HTTPHeaderRequestedSequenceNumber {
+					var ok bool
+					requestedSeqNum, ok = new(big.Int).SetString(string(value), 0)
+					if !ok {
+						return fmt.Errorf("unable to parse HTTP header key: %s, value: %s", headerName, string(value))
+					}
+				}
+
+				return nil
+			},
+			OnBeforeUpgrade: func() (ws.HandshakeHeader, error) {
+				if s.settings.RequireVersion && !feedClientVersionSeen {
+					return nil, ws.RejectConnectionError(
+						ws.RejectionStatus(http.StatusBadRequest),
+						ws.RejectionReason(fmt.Sprintf("Feed-Client-Version HTTP header missing")),
+					)
+				}
+				return header, nil
+			},
+		}
+
 		// Zero-copy upgrade to WebSocket connection.
-		hs, err := ws.Upgrade(safeConn)
+		hs, err := upgrader.Upgrade(safeConn)
 		if err != nil {
 			logger.Warn().Err(err).Str("connection_name", nameConn(safeConn)).Msg("upgrade error")
 			_ = safeConn.Close()
@@ -106,7 +168,7 @@ func (s *WSBroadcastServer) Start(ctx context.Context) (chan error, error) {
 		}
 
 		// Register incoming client in clientManager.
-		client := clientManager.Register(safeConn, desc)
+		client := clientManager.Register(safeConn, desc, requestedSeqNum)
 
 		// Subscribe to events about conn.
 		err = s.poller.Start(desc, func(ev netpoll.Event) {
