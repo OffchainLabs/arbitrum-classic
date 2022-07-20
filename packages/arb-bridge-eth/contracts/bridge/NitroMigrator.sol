@@ -267,7 +267,7 @@ contract NitroMigrator is Ownable, IMessageProvider {
         address nitroProxyAdminOwner = nitroProxyAdmin.owner();
         rollup.setOwner(nitroProxyAdminOwner);
         classicProxyAdmin.transferOwnership(nitroProxyAdminOwner);
-        nitroRollup.setOwner(address(nitroProxyAdmin));
+        nitroRollup.setOwner(address(nitroProxyAdminOwner));
 
         latestCompleteStep = NitroMigrationSteps.Step3;
     }
