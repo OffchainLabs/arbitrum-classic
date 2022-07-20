@@ -62,7 +62,7 @@ type Server struct {
 const DefaultMaxAVMGas = 500000000
 
 var DefaultConfig = ServerConfig{
-	Mode:          NormalMode,
+	Mode:          configuration.NormalRpcMode,
 	MaxCallAVMGas: DefaultMaxAVMGas,
 	Tracing: configuration.Tracing{
 		Enable:    true,
@@ -82,7 +82,7 @@ func NewServer(
 	}
 	return &Server{
 		srv:                   srv,
-		ganacheMode:           config.Mode == GanacheMode,
+		ganacheMode:           config.Mode == configuration.GanacheRpcMode,
 		maxAVMGas:             maxGas,
 		aggregator:            srv.Aggregator(),
 		sequencerInboxWatcher: sequencerInboxWatcher,

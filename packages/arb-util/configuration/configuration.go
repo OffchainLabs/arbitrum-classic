@@ -231,9 +231,33 @@ type WS struct {
 }
 
 type Forwarder struct {
-	Target    string `koanf:"target"`
-	Submitter string `koanf:"submitter-address"`
-	RpcMode   string `koanf:"rpc-mode"`
+	Target      string `koanf:"target"`
+	Submitter   string `koanf:"submitter-address"`
+	RpcModeImpl string `koanf:"rpc-mode"`
+}
+
+type RpcMode uint8
+
+const (
+	UnknownRpcMode RpcMode = iota
+	NormalRpcMode
+	GanacheRpcMode
+	ForwardingOnlyRpcMode
+	NonMutatingRpcMode
+)
+
+func (f *Forwarder) RpcMode() RpcMode {
+	if strings.EqualFold(f.RpcModeImpl, "full") {
+		return NormalRpcMode
+	} else if strings.EqualFold(f.RpcModeImpl, "ganache") {
+		return GanacheRpcMode
+	} else if strings.EqualFold(f.RpcModeImpl, "forwarding-only") {
+		return ForwardingOnlyRpcMode
+	} else if strings.EqualFold(f.RpcModeImpl, "non-mutating") {
+		return NonMutatingRpcMode
+	} else {
+		return UnknownRpcMode
+	}
 }
 
 type InboxReader struct {

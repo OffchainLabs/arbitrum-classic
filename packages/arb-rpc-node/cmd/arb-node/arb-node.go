@@ -172,20 +172,18 @@ func startup() error {
 		return errors.Errorf("Missing --rollup.machine.filename")
 	}
 
-	var rpcMode web3.RpcMode
+	rpcMode := config.Node.Forwarder.RpcMode()
 	if config.Node.Type() == configuration.ForwarderNodeType {
-		if config.Node.Forwarder.Target == "" {
-			return errors.New("Forwarder node needs --node.forwarder.target")
-		}
-
-		if config.Node.Forwarder.RpcMode == "full" {
-			rpcMode = web3.NormalMode
-		} else if config.Node.Forwarder.RpcMode == "non-mutating" {
-			rpcMode = web3.NonMutatingMode
-		} else if config.Node.Forwarder.RpcMode == "forwarding-only" {
-			rpcMode = web3.ForwardingOnlyMode
+		if rpcMode == configuration.NonMutatingRpcMode {
+			config.Node.Forwarder.Target = ""
 		} else {
-			return errors.Errorf("Unrecognized RPC mode %s", config.Node.Forwarder.RpcMode)
+			if config.Node.Forwarder.Target == "" {
+				return errors.New("Forwarder node needs --node.forwarder.target")
+			}
+
+			if rpcMode == configuration.GanacheRpcMode || rpcMode == configuration.UnknownRpcMode {
+				return errors.Errorf("Unrecognized RPC mode %s", config.Node.Forwarder.RpcModeImpl)
+			}
 		}
 	} else if config.Node.Type() == configuration.AggregatorNodeType {
 		if config.Node.Aggregator.InboxAddress == "" {
