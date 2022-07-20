@@ -273,11 +273,16 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		if err != nil {
 			return nil, false, err
 		}
+		coreL2BlockNumber, err := v.lookup.GetLastMachineL2BlockNumber()
+		if err != nil {
+			return nil, false, err
+		}
 		gasExecuted := new(big.Int).Sub(coreGasExecuted, startState.TotalGasConsumed)
 		sendCount := new(big.Int).Sub(coreSendCount, startState.TotalSendCount)
 		if sendCount.Cmp(v.SendThreshold) < 0 &&
 			gasExecuted.Cmp(v.GasThreshold) < 0 &&
-			timeSinceProposed.Cmp(v.BlockThreshold) < 0 {
+			timeSinceProposed.Cmp(v.BlockThreshold) < 0 &&
+			coreL2BlockNumber.BitLen() < 128 {
 			return nil, false, nil
 		}
 	}
