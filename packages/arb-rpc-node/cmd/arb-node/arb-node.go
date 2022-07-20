@@ -276,6 +276,12 @@ func startup() error {
 		}()
 	}
 
+	// Message count is 1 based, seqNum is 0 based, so next seqNum to request is same as current message count
+	seqNumToRequest, err := mon.Core.GetMessageCount()
+	if err != nil {
+		logger.Error().Err(err).Msg("can't get message count")
+	}
+
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
 	broadcastClientErrChan := make(chan error)
 	if len(config.Feed.Input.URLs) == 0 {
@@ -285,7 +291,13 @@ func startup() error {
 	} else {
 		sequencerFeed = make(chan broadcaster.BroadcastFeedMessage, 4096)
 		for _, url := range config.Feed.Input.URLs {
-			broadcastClient := broadcastclient.NewBroadcastClient(url, config.Node.ChainID, nil, config.Feed.Input.Timeout, broadcastClientErrChan)
+			broadcastClient := broadcastclient.NewBroadcastClient(
+				url,
+				config.Node.ChainID,
+				seqNumToRequest,
+				config.Feed.Input.Timeout,
+				broadcastClientErrChan,
+			)
 			broadcastClient.ConnectInBackground(ctx, sequencerFeed, nil)
 		}
 	}
