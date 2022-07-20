@@ -44,7 +44,7 @@ interface INitroRollup {
 
     function pause() external;
 
-    function unpause() external;
+    function resume() external;
 
     function latestNodeCreated() external returns (uint64);
 
