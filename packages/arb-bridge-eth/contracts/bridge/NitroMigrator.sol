@@ -259,8 +259,8 @@ contract NitroMigrator is Ownable, IMessageProvider {
         // we don't enable sequencer inbox and the rollup event bridge in nitro bridge as they are already configured in the deployment
         nitroBridge.setDelayedInbox(address(inbox), true);
 
-        nitroRollup.resume();
         nitroRollup.createNitroMigrationGenesis(nitroGenesisBlockNumber, nitroGenesisHash);
+        nitroRollup.resume();
 
         // the migration is complete, relinquish ownership back to the
         // nitro proxy admin owner
