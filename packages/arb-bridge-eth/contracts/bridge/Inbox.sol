@@ -62,8 +62,8 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
         // we deliver an end of block message followed by the shutdown message
         msgNum = _deliverMessage(L1MessageType_endOfBlock, msg.sender, abi.encodePacked(""));
         msgNum = _deliverMessage(L1MessageType_shutdownForNitro, msg.sender, abi.encodePacked(""));
-        // only the last inbox message number is returned
-        return msgNum;
+        // return the new message _count_ (one greater than the last _sequence number_)
+        return msgNum + 1;
     }
 
     /**
