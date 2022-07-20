@@ -63,21 +63,21 @@ var logger = arblog.Logger.With().Str("component", "broadcaster").Logger()
 func NewBroadcastClient(
 	websocketUrl string,
 	chainId uint64,
-	lastInboxSeqNum *big.Int,
+	requestedInboxSeqNum *big.Int,
 	idleTimeout time.Duration,
 	broadcastClientErrChan chan error,
 ) *BroadcastClient {
-	var seqNum *big.Int
-	if lastInboxSeqNum == nil {
-		seqNum = big.NewInt(0)
+	var lastSeqNum *big.Int
+	if requestedInboxSeqNum == nil || requestedInboxSeqNum.Cmp(big.NewInt(0)) <= 0 {
+		lastSeqNum = big.NewInt(0)
 	} else {
-		seqNum = lastInboxSeqNum
+		lastSeqNum = new(big.Int).Sub(requestedInboxSeqNum, big.NewInt(1))
 	}
 
 	return &BroadcastClient{
 		websocketUrl:    websocketUrl,
 		chainId:         chainId,
-		lastInboxSeqNum: seqNum,
+		lastInboxSeqNum: lastSeqNum,
 		connMutex:       &sync.Mutex{},
 		errChan:         broadcastClientErrChan,
 		retryMutex:      &sync.Mutex{},
