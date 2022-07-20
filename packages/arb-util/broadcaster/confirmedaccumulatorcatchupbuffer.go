@@ -18,6 +18,7 @@ package broadcaster
 
 import (
 	"context"
+	"math/big"
 	"sync/atomic"
 	"time"
 
@@ -35,11 +36,22 @@ func NewConfirmedAccumulatorCatchupBuffer() *ConfirmedAccumulatorCatchupBuffer {
 
 func (q *ConfirmedAccumulatorCatchupBuffer) OnRegisterClient(ctx context.Context, clientConnection *wsbroadcastserver.ClientConnection) error {
 	start := time.Now()
-	if len(q.broadcastMessages) > 0 {
-		// send the newly connected client all the messages we've got...
+	// send the newly connected client any messages starting with requested sequence number
+	startingIndex := 0
+	// Ignore messages older than requested sequence number
+	if clientConnection.RequestedSeqNum().Cmp(big.NewInt(0)) > 0 {
+		requestedLastSeqNum := new(big.Int).Sub(clientConnection.RequestedSeqNum(), big.NewInt(1))
+		for ; startingIndex < len(q.broadcastMessages); startingIndex++ {
+			if q.broadcastMessages[startingIndex].FeedItem.BatchItem.LastSeqNum.Cmp(requestedLastSeqNum) >= 0 {
+				break
+			}
+		}
+	}
+	messagesToSend := q.broadcastMessages[startingIndex:]
+	if len(messagesToSend) > 0 {
 		bm := BroadcastMessage{
 			Version:  1,
-			Messages: q.broadcastMessages,
+			Messages: messagesToSend,
 		}
 
 		err := clientConnection.Write(bm)

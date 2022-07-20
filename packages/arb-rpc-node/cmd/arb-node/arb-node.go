@@ -279,6 +279,7 @@ func startup() error {
 	}
 
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
+	broadcastClientErrChan := make(chan error)
 	if len(config.Feed.Input.URLs) == 0 {
 		logger.Warn().Msg("Missing --feed.input.url so not subscribing to feed")
 	} else if config.Node.Type() == configuration.ValidatorNodeType {
@@ -286,8 +287,8 @@ func startup() error {
 	} else {
 		sequencerFeed = make(chan broadcaster.BroadcastFeedMessage, 4096)
 		for _, url := range config.Feed.Input.URLs {
-			broadcastClient := broadcastclient.NewBroadcastClient(url, nil, config.Feed.Input.Timeout)
-			broadcastClient.ConnectInBackground(ctx, sequencerFeed)
+			broadcastClient := broadcastclient.NewBroadcastClient(url, config.Node.ChainID, nil, config.Feed.Input.Timeout, broadcastClientErrChan)
+			broadcastClient.ConnectInBackground(ctx, sequencerFeed, nil)
 		}
 	}
 
@@ -528,6 +529,8 @@ func startup() error {
 	case err := <-broadcasterErrChan:
 		return err
 	case err := <-errChan:
+		return err
+	case err := <-broadcastClientErrChan:
 		return err
 	case <-stakerDone:
 		return nil

@@ -19,13 +19,14 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	golog "log"
+	"math/big"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/pkg/errors"
 
@@ -34,6 +35,7 @@ import (
 	"github.com/rs/zerolog/pkgerrors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -46,6 +48,8 @@ var pprofMux *http.ServeMux
 type ArbRelay struct {
 	broadcastClients         []*broadcastclient.BroadcastClient
 	broadcaster              *broadcaster.Broadcaster
+	chainIdBig               *big.Int
+	chainIdHex               hexutil.Uint64
 	confirmedAccumulatorChan chan common.Hash
 }
 
@@ -101,7 +105,7 @@ func startup() error {
 	}
 
 	// Start up an arbitrum sequencer relay
-	arbRelay := NewArbRelay(config.Feed)
+	arbRelay, broadcastClientErrChan := NewArbRelay(config)
 	relayDone, err := arbRelay.Start(ctx)
 	if err != nil {
 		return err
@@ -111,42 +115,81 @@ func startup() error {
 	select {
 	case <-cancelChan:
 		return nil
+	case err := <-broadcastClientErrChan:
+		return err
 	case <-relayDone:
 		return nil
 	}
 }
 
-func NewArbRelay(settings configuration.Feed) *ArbRelay {
+func NewArbRelay(config *configuration.Config) (*ArbRelay, chan error) {
 	var broadcastClients []*broadcastclient.BroadcastClient
 	confirmedAccumulatorChan := make(chan common.Hash, 10)
-	for _, address := range settings.Input.URLs {
-		client := broadcastclient.NewBroadcastClient(address, nil, settings.Input.Timeout)
+	broadcastClientErrChan := make(chan error, 1)
+	for _, address := range config.Feed.Input.URLs {
+		client := broadcastclient.NewBroadcastClient(address, config.L2.ChainID, nil, config.Feed.Input.Timeout, broadcastClientErrChan)
 		client.ConfirmedAccumulatorListener = confirmedAccumulatorChan
 		broadcastClients = append(broadcastClients, client)
 	}
-	return &ArbRelay{
-		broadcaster:              broadcaster.NewBroadcaster(&settings.Output),
+	arbRelay := &ArbRelay{
+		broadcaster:              broadcaster.NewBroadcaster(&config.Feed.Output, 0),
 		broadcastClients:         broadcastClients,
 		confirmedAccumulatorChan: confirmedAccumulatorChan,
 	}
+	if config.L2.ChainID != 0 {
+		arbRelay.chainIdBig = new(big.Int).SetUint64(config.L2.ChainID)
+		arbRelay.chainIdHex = hexutil.Uint64(config.L2.ChainID)
+	}
+	return arbRelay, broadcastClientErrChan
 }
 
 const RECENT_FEED_ITEM_TTL time.Duration = time.Second * 10
 
 func (ar *ArbRelay) Start(parentContext context.Context) (chan bool, error) {
 	ctx, cancelFunc := context.WithCancel(parentContext)
+	defer cancelFunc()
 	done := make(chan bool)
 
+	// connect returns
+	messages := make(chan broadcaster.BroadcastFeedMessage, 10)
+	var chainIdChan chan uint64
+	if ar.chainIdBig == nil {
+		chainIdChan = make(chan uint64)
+	}
+	for _, client := range ar.broadcastClients {
+		client.ConnectInBackground(ctx, messages, chainIdChan)
+	}
+
+	var chainId uint64
+	if chainIdChan != nil {
+		// Wait for chain id from broadcaster
+		finished := false
+		for finished {
+			select {
+			case chainId = <-chainIdChan:
+				finished = true
+				break
+			case <-ctx.Done():
+				return nil, errors.New("context cancelled")
+			case <-time.After(time.Second * 5):
+				logger.Info().Msg("waiting for chain id from broadcaster")
+			}
+		}
+	}
+
+	if chainId != 0 {
+		for _, client := range ar.broadcastClients {
+			err := client.SetChainId(chainId)
+			if err != nil {
+				return nil, err
+			}
+		}
+		ar.broadcaster.SetChainId(chainId)
+	}
 	broadcasterErrChan, err := ar.broadcaster.Start(ctx)
 	if err != nil {
 		cancelFunc()
 		return nil, errors.New("broadcast unable to start")
-	}
-
-	// connect returns
-	messages := make(chan broadcaster.BroadcastFeedMessage, 10)
-	for _, client := range ar.broadcastClients {
-		client.ConnectInBackground(ctx, messages)
 	}
 
 	recentFeedItems := make(map[common.Hash]time.Time)
