@@ -19,6 +19,7 @@ package broadcastclient
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"io"
 	"math/big"
@@ -322,10 +323,12 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 					if res.ConfirmedAccumulator.IsConfirmed && bc.ConfirmedAccumulatorListener != nil {
 						bc.ConfirmedAccumulatorListener <- res.ConfirmedAccumulator.Accumulator
 					}
-				} else if res.Version == 2 {
-					logger.Fatal().Int("version", res.Version).Msg("connected to nitro feed with classic client")
+				} else if res.Version >= 2 {
+					bc.errChan <- fmt.Errorf("connected to nitro feed with classic client, server version: %d", res.Version)
+					break
 				} else {
-					logger.Fatal().Int("version", res.Version).Msg("unrecognized feed version")
+					bc.errChan <- fmt.Errorf("unrecognized feed version, server version: %d", res.Version)
+					break
 				}
 			}
 		}
