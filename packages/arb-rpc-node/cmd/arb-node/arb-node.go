@@ -279,7 +279,7 @@ func startup() error {
 	// Message count is 1 based, seqNum is 0 based, so next seqNum to request is same as current message count
 	seqNumToRequest, err := mon.Core.GetMessageCount()
 	if err != nil {
-		logger.Error().Err(err).Msg("can't get message count")
+		return errors.Wrap(err, "can't get message count")
 	}
 
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage

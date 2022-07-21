@@ -145,7 +145,6 @@ const RECENT_FEED_ITEM_TTL time.Duration = time.Second * 10
 
 func (ar *ArbRelay) Start(parentContext context.Context) (chan bool, error) {
 	ctx, cancelFunc := context.WithCancel(parentContext)
-	defer cancelFunc()
 	done := make(chan bool)
 
 	// connect returns
