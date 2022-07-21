@@ -56,7 +56,7 @@ func (q *ConfirmedAccumulatorCatchupBuffer) OnRegisterClient(ctx context.Context
 					startingIndex--
 				}
 				for ; startingIndex > 0; startingIndex-- {
-					if q.broadcastMessages[startingIndex].FeedItem.BatchItem.LastSeqNum.Cmp(requestedLastSeqNum) >= 0 {
+					if q.broadcastMessages[startingIndex].FeedItem.BatchItem.LastSeqNum.Cmp(requestedLastSeqNum) <= 0 {
 						break
 					}
 				}

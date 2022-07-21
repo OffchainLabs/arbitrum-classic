@@ -39,7 +39,9 @@ import (
 )
 
 type BroadcastClient struct {
-	websocketUrl    string
+	websocketUrl string
+
+	// sequence number of the previous message
 	lastInboxSeqNum *big.Int
 
 	chainId uint64
@@ -234,9 +236,6 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 				}
 				_ = bc.conn.Close()
 				earlyFrameData = bc.RetryConnect(ctx, messageReceiver)
-				if err != nil {
-					logger.Warn().Err(err).Str("feed", bc.websocketUrl).Int("opcode", int(op)).Msgf("retryConnect failed")
-				}
 				continue
 			}
 
