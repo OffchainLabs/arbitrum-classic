@@ -67,11 +67,6 @@ func NewWSBroadcastServer(settings *configuration.FeedOutput, catchupBuffer Catc
 	}
 }
 
-// SetChainId not thread safe, call before calling Start
-func (s *WSBroadcastServer) SetChainId(chainId uint64) {
-	s.chainId = chainId
-}
-
 func (s *WSBroadcastServer) Start(ctx context.Context) (chan error, error) {
 	s.startMutex.Lock()
 	defer s.startMutex.Unlock()

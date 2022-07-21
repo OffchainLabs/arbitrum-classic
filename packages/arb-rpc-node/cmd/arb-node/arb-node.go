@@ -298,7 +298,7 @@ func startup() error {
 				config.Feed.Input.Timeout,
 				broadcastClientErrChan,
 			)
-			broadcastClient.ConnectInBackground(ctx, sequencerFeed, nil)
+			broadcastClient.ConnectInBackground(ctx, sequencerFeed)
 		}
 	}
 

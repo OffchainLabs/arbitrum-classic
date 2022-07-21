@@ -28,7 +28,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
@@ -43,7 +42,6 @@ type BroadcastClient struct {
 	websocketUrl    string
 	lastInboxSeqNum *big.Int
 
-	// Should be accessed atomically
 	chainId uint64
 
 	connMutex *sync.Mutex
@@ -86,50 +84,18 @@ func NewBroadcastClient(
 	}
 }
 
-func (bc *BroadcastClient) ChainId() uint64 {
-	return atomic.LoadUint64(&bc.chainId)
-}
-
-func (bc *BroadcastClient) SetChainId(newChainId uint64) error {
-	oldChainId := atomic.LoadUint64(&bc.chainId)
-	if oldChainId == 0 {
-		swapped := atomic.CompareAndSwapUint64(&bc.chainId, 0, newChainId)
-		if !swapped {
-			// Chain ID was zero, but changed since checked
-			newExpectedChainId := atomic.LoadUint64(&bc.chainId)
-			if newExpectedChainId != newChainId {
-				logger.
-					Error().
-					Uint64("newExpectedChainId", newExpectedChainId).
-					Uint64("newChainId", newChainId).
-					Msg("chain id initially unknown but changed to unexpected value")
-				return ErrIncorrectChainId
-			}
-		}
-	} else if oldChainId != newChainId {
-		logger.
-			Error().
-			Uint64("oldChainId", oldChainId).
-			Uint64("newChainId", newChainId).
-			Msg("incorrect chain id when connecting to server feed")
-		return ErrIncorrectChainId
-	}
-
-	return nil
-}
-
 func (bc *BroadcastClient) Connect(ctx context.Context) (chan broadcaster.BroadcastFeedMessage, error) {
 	messageReceiver := make(chan broadcaster.BroadcastFeedMessage)
 
-	err := bc.ConnectWithChannel(ctx, messageReceiver, nil)
+	err := bc.ConnectWithChannel(ctx, messageReceiver)
 	if err != nil {
 		return nil, err
 	}
 	return messageReceiver, nil
 }
 
-func (bc *BroadcastClient) ConnectWithChannel(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage, newChainIdChan chan uint64) error {
-	earlyFrameData, _, err := bc.connect(ctx, messageReceiver, newChainIdChan, bc.lastInboxSeqNum)
+func (bc *BroadcastClient) ConnectWithChannel(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) error {
+	earlyFrameData, _, err := bc.connect(ctx, messageReceiver, bc.lastInboxSeqNum)
 	if err != nil {
 		return err
 	}
@@ -139,10 +105,10 @@ func (bc *BroadcastClient) ConnectWithChannel(ctx context.Context, messageReceiv
 	return nil
 }
 
-func (bc *BroadcastClient) ConnectInBackground(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage, newChainIdChan chan uint64) {
+func (bc *BroadcastClient) ConnectInBackground(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) {
 	go (func() {
 		for {
-			err := bc.ConnectWithChannel(ctx, messageReceiver, newChainIdChan)
+			err := bc.ConnectWithChannel(ctx, messageReceiver)
 			if err == nil {
 				break
 			}
@@ -160,14 +126,12 @@ func (bc *BroadcastClient) ConnectInBackground(ctx context.Context, messageRecei
 var ErrIncorrectFeedServerVersion = errors.New("incorrect feed server version")
 var ErrIncorrectChainId = errors.New("incorrect chain id")
 
-func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage, newChainIdChan chan uint64, previousSequenceNumber *big.Int) (io.Reader, chan broadcaster.BroadcastFeedMessage, error) {
+func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage, previousSequenceNumber *big.Int) (io.Reader, chan broadcaster.BroadcastFeedMessage, error) {
 
 	if len(bc.websocketUrl) == 0 {
 		// Nothing to do
 		return nil, nil, nil
 	}
-
-	expectedChainId := bc.ChainId()
 
 	var requestedSequenceNumber string
 	if previousSequenceNumber.Cmp(big.NewInt(0)) > 0 {
@@ -181,7 +145,6 @@ func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan bro
 	})
 
 	logger.Info().Str("url", bc.websocketUrl).Msg("connecting to arbitrum inbox message broadcaster")
-	var chainId uint64
 	var feedServerVersion uint64
 	timeoutDialer := ws.Dialer{
 		Header: header,
@@ -202,34 +165,14 @@ func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan bro
 					return ErrIncorrectFeedServerVersion
 				}
 			} else if headerName == wsbroadcastserver.HTTPHeaderChainId {
-				chainId, err = strconv.ParseUint(headerValue, 0, 64)
+				chainId, err := strconv.ParseUint(headerValue, 0, 64)
 				if err != nil {
 					return err
 				}
-				if expectedChainId == 0 {
-					swapped := atomic.CompareAndSwapUint64(&bc.chainId, 0, chainId)
-					if !swapped {
-						// Chain ID was zero, but changed since checked
-						newExpectedChainId := atomic.LoadUint64(&bc.chainId)
-						if newExpectedChainId != chainId {
-							logger.
-								Error().
-								Uint64("newExpectedChainId", newExpectedChainId).
-								Uint64("actualChainId", chainId).
-								Msg("chain id initially unknown but changed to unexpected value")
-							return ErrIncorrectChainId
-						}
-					}
-					if newChainIdChan != nil {
-						select {
-						case newChainIdChan <- chainId:
-						case <-time.After(time.Second * 1):
-						}
-					}
-				} else if chainId != expectedChainId {
+				if chainId != bc.chainId {
 					logger.
 						Error().
-						Uint64("expectedChainId", expectedChainId).
+						Uint64("expectedChainId", bc.chainId).
 						Uint64("actualChainId", chainId).
 						Msg("incorrect chain id when connecting to server feed")
 					return ErrIncorrectChainId
@@ -262,7 +205,7 @@ func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan bro
 	bc.conn = conn
 	bc.connMutex.Unlock()
 
-	logger.Info().Uint64("chainId", chainId).Uint64("feedServerVersion", feedServerVersion).Msg("Connected")
+	logger.Info().Uint64("chainId", bc.chainId).Uint64("feedServerVersion", feedServerVersion).Msg("Connected")
 
 	return earlyFrameData, messageReceiver, nil
 }
@@ -357,7 +300,7 @@ func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver cha
 		}
 
 		bc.retryCount++
-		earlyFrameData, _, err := bc.connect(ctx, messageReceiver, nil, bc.lastInboxSeqNum)
+		earlyFrameData, _, err := bc.connect(ctx, messageReceiver, bc.lastInboxSeqNum)
 		if err == nil {
 			bc.retrying = false
 			return earlyFrameData, nil

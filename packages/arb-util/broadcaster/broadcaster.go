@@ -54,11 +54,6 @@ func (b *Broadcaster) Start(ctx context.Context) (chan error, error) {
 	return b.server.Start(ctx)
 }
 
-// SetChainId not thread safe, call before calling Start
-func (b *Broadcaster) SetChainId(chainId uint64) {
-	b.server.SetChainId(chainId)
-}
-
 func (b *Broadcaster) BroadcastSingle(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {
 	var broadcastMessages []*BroadcastFeedMessage
 
