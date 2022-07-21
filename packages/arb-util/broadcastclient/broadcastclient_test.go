@@ -85,8 +85,8 @@ func startMakeBroadcastClient(ctx context.Context, t *testing.T, index int, expe
 	}
 	accListener := broadcastClient.ConfirmedAccumulatorListener
 
-	if broadcastClient.ChainId() != 9742 {
-		t.Fatalf("Incorrect chain id: %d", broadcastClient.ChainId())
+	if broadcastClient.chainId != 9742 {
+		t.Fatalf("Incorrect chain id: %d", broadcastClient.chainId)
 	}
 
 	go func() {

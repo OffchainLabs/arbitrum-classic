@@ -80,10 +80,10 @@ func startup() error {
 	defer cancelFunc()
 
 	config, err := configuration.ParseRelay()
-	if err != nil || len(config.Feed.Input.URLs) == 0 {
+	if err != nil || len(config.Feed.Input.URLs) == 0 || config.L2.ChainID == 0 {
 		fmt.Printf("\n")
 		fmt.Printf("Sample usage: arb-relay --conf=<filename> \n")
-		fmt.Printf("          or: arb-relay --feed.input.url=<feed websocket>\n\n")
+		fmt.Printf("          or: arb-relay --feed.input.url=<feed websocket> --l2.chain-id=<chain id>\n\n")
 		if err != nil && !strings.Contains(err.Error(), "help requested") {
 			fmt.Printf("%s\n", err.Error())
 		}
@@ -136,10 +136,8 @@ func NewArbRelay(config *configuration.Config) (*ArbRelay, chan error) {
 		broadcastClients:         broadcastClients,
 		confirmedAccumulatorChan: confirmedAccumulatorChan,
 	}
-	if config.L2.ChainID != 0 {
-		arbRelay.chainIdBig = new(big.Int).SetUint64(config.L2.ChainID)
-		arbRelay.chainIdHex = hexutil.Uint64(config.L2.ChainID)
-	}
+	arbRelay.chainIdBig = new(big.Int).SetUint64(config.L2.ChainID)
+	arbRelay.chainIdHex = hexutil.Uint64(config.L2.ChainID)
 	return arbRelay, broadcastClientErrChan
 }
 
@@ -152,40 +150,10 @@ func (ar *ArbRelay) Start(parentContext context.Context) (chan bool, error) {
 
 	// connect returns
 	messages := make(chan broadcaster.BroadcastFeedMessage, 10)
-	var chainIdChan chan uint64
-	if ar.chainIdBig == nil {
-		chainIdChan = make(chan uint64)
-	}
 	for _, client := range ar.broadcastClients {
-		client.ConnectInBackground(ctx, messages, chainIdChan)
+		client.ConnectInBackground(ctx, messages)
 	}
 
-	var chainId uint64
-	if chainIdChan != nil {
-		// Wait for chain id from broadcaster
-		finished := false
-		for finished {
-			select {
-			case chainId = <-chainIdChan:
-				finished = true
-				break
-			case <-ctx.Done():
-				return nil, errors.New("context cancelled")
-			case <-time.After(time.Second * 5):
-				logger.Info().Msg("waiting for chain id from broadcaster")
-			}
-		}
-	}
-
-	if chainId != 0 {
-		for _, client := range ar.broadcastClients {
-			err := client.SetChainId(chainId)
-			if err != nil {
-				return nil, err
-			}
-		}
-		ar.broadcaster.SetChainId(chainId)
-	}
 	broadcasterErrChan, err := ar.broadcaster.Start(ctx)
 	if err != nil {
 		cancelFunc()
