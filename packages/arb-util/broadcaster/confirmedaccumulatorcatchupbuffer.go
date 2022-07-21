@@ -41,23 +41,41 @@ func (q *ConfirmedAccumulatorCatchupBuffer) OnRegisterClient(ctx context.Context
 	// Ignore messages older than requested sequence number
 	if clientConnection.RequestedSeqNum().Cmp(big.NewInt(0)) > 0 {
 		requestedLastSeqNum := new(big.Int).Sub(clientConnection.RequestedSeqNum(), big.NewInt(1))
-		for ; startingIndex < len(q.broadcastMessages); startingIndex++ {
-			if q.broadcastMessages[startingIndex].FeedItem.BatchItem.LastSeqNum.Cmp(requestedLastSeqNum) >= 0 {
-				break
+		if q.broadcastMessages[0].FeedItem.BatchItem.LastSeqNum.Cmp(requestedLastSeqNum) < 0 {
+			startingIndex = int(new(big.Int).Sub(requestedLastSeqNum, q.broadcastMessages[0].FeedItem.BatchItem.LastSeqNum).Uint64())
+			comparison := q.broadcastMessages[startingIndex].FeedItem.BatchItem.LastSeqNum.Cmp(requestedLastSeqNum)
+			if comparison < 0 {
+				startingIndex++
+				for ; startingIndex < len(q.broadcastMessages); startingIndex++ {
+					if q.broadcastMessages[startingIndex].FeedItem.BatchItem.LastSeqNum.Cmp(requestedLastSeqNum) >= 0 {
+						break
+					}
+				}
+			} else if comparison > 0 {
+				if startingIndex > 0 {
+					startingIndex--
+				}
+				for ; startingIndex > 0; startingIndex-- {
+					if q.broadcastMessages[startingIndex].FeedItem.BatchItem.LastSeqNum.Cmp(requestedLastSeqNum) >= 0 {
+						break
+					}
+				}
 			}
 		}
 	}
-	messagesToSend := q.broadcastMessages[startingIndex:]
-	if len(messagesToSend) > 0 {
-		bm := BroadcastMessage{
-			Version:  1,
-			Messages: messagesToSend,
-		}
+	if startingIndex < len(q.broadcastMessages) {
+		messagesToSend := q.broadcastMessages[startingIndex:]
+		if len(messagesToSend) > 0 {
+			bm := BroadcastMessage{
+				Version:  1,
+				Messages: messagesToSend,
+			}
 
-		err := clientConnection.Write(bm)
-		if err != nil {
-			logger.Error().Err(err).Str("client", clientConnection.Name).Str("elapsed", time.Since(start).String()).Msg("error sending client cached messages")
-			return err
+			err := clientConnection.Write(bm)
+			if err != nil {
+				logger.Error().Err(err).Str("client", clientConnection.Name).Str("elapsed", time.Since(start).String()).Msg("error sending client cached messages")
+				return err
+			}
 		}
 	}
 

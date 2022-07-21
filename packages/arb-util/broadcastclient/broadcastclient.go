@@ -135,6 +135,7 @@ func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan bro
 
 	var requestedSequenceNumber string
 	if previousSequenceNumber.Cmp(big.NewInt(0)) > 0 {
+		// previousSequenceNumber is 1 before current, and we want 1 after current, so add 2.
 		requestedSequenceNumber = new(big.Int).Add(previousSequenceNumber, big.NewInt(2)).String()
 	} else {
 		requestedSequenceNumber = "0"
@@ -232,7 +233,7 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 					logger.Error().Err(err).Str("feed", bc.websocketUrl).Int("opcode", int(op)).Msgf("error calling readData")
 				}
 				_ = bc.conn.Close()
-				earlyFrameData, err = bc.RetryConnect(ctx, messageReceiver)
+				earlyFrameData = bc.RetryConnect(ctx, messageReceiver)
 				if err != nil {
 					logger.Warn().Err(err).Str("feed", bc.websocketUrl).Int("opcode", int(op)).Msgf("retryConnect failed")
 				}
@@ -285,7 +286,7 @@ func (bc *BroadcastClient) GetRetryCount() int {
 	return bc.retryCount
 }
 
-func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) (io.Reader, error) {
+func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) io.Reader {
 	bc.retryMutex.Lock()
 	defer bc.retryMutex.Unlock()
 
@@ -295,7 +296,7 @@ func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver cha
 	for !bc.shuttingDown {
 		select {
 		case <-ctx.Done():
-			return nil, nil
+			return nil
 		case <-time.After(waitDuration):
 		}
 
@@ -303,7 +304,7 @@ func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver cha
 		earlyFrameData, _, err := bc.connect(ctx, messageReceiver, bc.lastInboxSeqNum)
 		if err == nil {
 			bc.retrying = false
-			return earlyFrameData, nil
+			return earlyFrameData
 		}
 
 		if waitDuration < maxWaitDuration {
@@ -311,7 +312,7 @@ func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver cha
 		}
 	}
 
-	return nil, nil
+	return nil
 }
 
 func (bc *BroadcastClient) Close() {
