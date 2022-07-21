@@ -7,6 +7,7 @@ sidebar_label: Useful Addresses
 Here's some contract addreses that may be useful and/or of interest to those exploring the Arbitrum protocol:
 
 ### Protocol (L1)
+<em class="arb-docs-table useful-address-table" id="protocol-addresses-table">
 
 |                       | Mainnet: Arbitrum One                                                                                                 | Arbitrum Nova                                                                                                         | Arb-Rinkeby                                                                                                                   | Nitro Goerli Rollup                                                                                                          |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -25,6 +26,7 @@ Here's some contract addreses that may be useful and/or of interest to those exp
 | OneStepProverHostIo** |                                                                                                                       |                                                                                                                       |                                                                                                                               | [0x5518772ddb8e65416c6572E28BE58dAfc8A3834c](https://goerli.etherscan.io/address/0x5518772ddb8e65416c6572E28BE58dAfc8A3834c) |
 | OneStepProofEntry**   |                                                                                                                       |                                                                                                                       |                                                                                                                               | [0xe46a0585C3Cb05AaE200161534Af1aE5Dff61294](https://goerli.etherscan.io/address/0xe46a0585C3Cb05AaE200161534Af1aE5Dff61294) |
 
+</em>
 *Arbitrum Classic Stack Only
 **Nitro Only
 
@@ -33,6 +35,8 @@ Here's some contract addreses that may be useful and/or of interest to those exp
 **IMPORTANT**: _Do **not** simply transfer tokens or Ether to any of the addresses below; it will result in loss of funds._
 
 _Users should only interact with the token bridge via dapp interfaces like https://bridge.arbitrum.io_.
+
+<em class="arb-docs-table useful-address-table" id="bridge-addresses-table">
 
 |                       | Mainnet: Arbitrum One                                                                                                 | Mainnet: Arbitrum Nova                                                                                                             | Arb-Rinkeby                                                                                                                   | Nitro Goerli Rollup                                                                                                                         |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -47,6 +51,7 @@ _Users should only interact with the token bridge via dapp interfaces like https
 | L1 Weth               | [0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2](https://etherscan.io/address/0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2) | [0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2](https://etherscan.io/address/0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2)              | [0xc778417E063141139Fce010982780140Aa0cD5Ab](https://rinkeby.etherscan.io/address/0xc778417E063141139Fce010982780140Aa0cD5Ab) | [0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6](https://goerli.etherscan.io/address/0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6)                |
 | L2 Weth               | [0x82aF49447D8a07e3bd95BD0d56f35241523fBab1](https://arbiscan.io/address/0x82aF49447D8a07e3bd95BD0d56f35241523fBab1)  | [0x722E8BdD2ce80A4422E880164f2079488e115365](https://a4ba-explorer.arbitrum.io/address/0x722E8BdD2ce80A4422E880164f2079488e115365) | [0xB47e6A5f8b33b3F17603C83a0535A9dcD7E32681](https://arbiscan.io/address/0xB47e6A5f8b33b3F17603C83a0535A9dcD7E32681)          | [0xe39Ab88f8A4777030A534146A9Ca3B52bd5D43A3](https://goerli-rollup-explorer.arbitrum.io/address/0xe39Ab88f8A4777030A534146A9Ca3B52bd5D43A3) |
 
+</em>
 #### Third party gateways
 
 These are the addresses of some other gateways that have been deployed and integrated with the token bridge
@@ -59,6 +64,8 @@ These are the addresses of some other gateways that have been deployed and integ
 | L2 Livepeer Gateway | [0x6d2457a4ad276000a615295f7a80f79e48ccd318](https://arbiscan.io/address/0x6D2457a4ad276000A615295f7A80F79E48CcD318)  | [0x7e0ba3791b23d0d577cf8d09c4fdd5821222208c](https://testnet.arbiscan.io/address/0x7e0ba3791b23d0d577cf8d09c4fdd5821222208c)  |
 
 ### Arbitrum Precompiles (L2, same on all Arb-chains)
+<em class="arb-docs-table useful-address-table" id="precompile-table">
+
 
 |                  | Address                                                                                                              |
 | ---------------- | -------------------------------------------------------------------------------------------------------------------- |
@@ -73,8 +80,12 @@ These are the addresses of some other gateways that have been deployed and integ
 | ArbAggregator    | [0x000000000000000000000000000000000000006D](https://arbiscan.io/address/0x000000000000000000000000000000000000006D) |
 | ArbFunctionTable | [0x0000000000000000000000000000000000000068](https://arbiscan.io/address/0x0000000000000000000000000000000000000068) |
 
+</em> 
 ### Misc
+<em class="arb-docs-table useful-address-table" id="misc-addresses-table">
 
 |              | Mainnet: Arbitrum One                                                                                                | Mainnet: Arbitrum Nova                                                                                                             | Arb-Rinkeby                                                                                                                  | Nitro Goerli Rollup                                                                                                                         |
 | ------------ | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | L2 Multicall | [0x7ecfbaa8742fdf5756dac92fbc8b90a19b8815bf](https://arbiscan.io/address/0x7ecfbaa8742fdf5756dac92fbc8b90a19b8815bf) | [0x5e1eE626420A354BbC9a95FeA1BAd4492e3bcB86](https://a4ba-explorer.arbitrum.io/address/0x5e1eE626420A354BbC9a95FeA1BAd4492e3bcB86) | [0x7ecfbaa8742fdf5756dac92fbc8b90a19b8815bf](https://testnet.arbiscan.io/address/0x7ecfbaa8742fdf5756dac92fbc8b90a19b8815bf) | [0x108B25170319f38DbED14cA9716C54E5D1FF4623](https://goerli-rollup-explorer.arbitrum.io/address/0x108B25170319f38DbED14cA9716C54E5D1FF4623) |
+
+</em> 
