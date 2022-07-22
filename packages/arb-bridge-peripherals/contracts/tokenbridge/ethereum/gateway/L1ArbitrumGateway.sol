@@ -31,11 +31,12 @@ import "../L1ArbitrumMessenger.sol";
 import "../../libraries/gateway/GatewayMessageHandler.sol";
 import "../../libraries/gateway/TokenGateway.sol";
 import "../../libraries/ITransferAndCall.sol";
+import "../../libraries/ERC165.sol";
 
 /**
  * @title Common interface for gatways on L1 messaging to Arbitrum.
  */
-abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway {
+abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, ERC165 {
     using SafeERC20 for IERC20;
     using Address for address;
 
