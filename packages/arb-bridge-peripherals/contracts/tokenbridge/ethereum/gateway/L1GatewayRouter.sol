@@ -24,12 +24,13 @@ import { ArbitrumEnabledToken } from "../ICustomToken.sol";
 import "../L1ArbitrumMessenger.sol";
 import "../../libraries/gateway/GatewayRouter.sol";
 import "../../arbitrum/gateway/L2GatewayRouter.sol";
+import "../../libraries/ERC165.sol";
 
 /**
  * @title Handles deposits from Erhereum into Arbitrum. Tokens are routered to their appropriate L1 gateway (Router itself also conforms to the Gateway itnerface).
  * @notice Router also serves as an L1-L2 token address oracle.
  */
-contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRouter {
+contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRouter, ERC165 {
     address public owner;
     address public inbox;
 
@@ -296,5 +297,13 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         // don't expect messages from L2 router
         revert("ONLY_COUNTERPART_GATEWAY");
         _;
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        // registering interfaces that is added after arb-bridge-peripherals >1.0.11
+        // using function selector instead of single function interfaces to reduce bloat
+        return
+            interfaceId == this.outboundTransferCustomRefund.selector ||
+            super.supportsInterface(interfaceId);
     }
 }
