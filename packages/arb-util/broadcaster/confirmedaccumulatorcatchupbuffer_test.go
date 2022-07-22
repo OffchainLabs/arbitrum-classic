@@ -36,95 +36,31 @@ func TestGetEmptyCacheMessages(t *testing.T) {
 	}
 }
 
+func createDummyBroadcastMessages(lastSeqNums []int) []*BroadcastFeedMessage {
+	broadcastMessages := make([]*BroadcastFeedMessage, 0, len(lastSeqNums))
+	for _, lastSeqNum := range lastSeqNums {
+		broadcastMessage := &BroadcastFeedMessage{
+			FeedItem: SequencerFeedItem{
+				BatchItem: inbox.SequencerBatchItem{
+					LastSeqNum:        big.NewInt(int64(lastSeqNum)),
+					Accumulator:       common.Hash{},
+					TotalDelayedCount: big.NewInt(0),
+					SequencerMessage:  []byte{},
+				},
+				PrevAcc: common.Hash{},
+			},
+			Signature: []byte{},
+		}
+		broadcastMessages = append(broadcastMessages, broadcastMessage)
+	}
+
+	return broadcastMessages
+}
+
 func TestGetCacheMessages(t *testing.T) {
 	buffer := ConfirmedAccumulatorCatchupBuffer{
-		broadcastMessages: []*BroadcastFeedMessage{
-			&BroadcastFeedMessage{
-				FeedItem: SequencerFeedItem{
-					BatchItem: inbox.SequencerBatchItem{
-						LastSeqNum:        big.NewInt(40),
-						Accumulator:       common.Hash{},
-						TotalDelayedCount: big.NewInt(0),
-						SequencerMessage:  []byte{},
-					},
-					PrevAcc: common.Hash{},
-				},
-				Signature: []byte{},
-			},
-			&BroadcastFeedMessage{
-				FeedItem: SequencerFeedItem{
-					BatchItem: inbox.SequencerBatchItem{
-						LastSeqNum:        big.NewInt(40),
-						Accumulator:       common.Hash{},
-						TotalDelayedCount: big.NewInt(0),
-						SequencerMessage:  []byte{},
-					},
-					PrevAcc: common.Hash{},
-				},
-				Signature: []byte{},
-			},
-			&BroadcastFeedMessage{
-				FeedItem: SequencerFeedItem{
-					BatchItem: inbox.SequencerBatchItem{
-						LastSeqNum:        big.NewInt(41),
-						Accumulator:       common.Hash{},
-						TotalDelayedCount: big.NewInt(0),
-						SequencerMessage:  []byte{},
-					},
-					PrevAcc: common.Hash{},
-				},
-				Signature: []byte{},
-			},
-			&BroadcastFeedMessage{
-				FeedItem: SequencerFeedItem{
-					BatchItem: inbox.SequencerBatchItem{
-						LastSeqNum:        big.NewInt(45),
-						Accumulator:       common.Hash{},
-						TotalDelayedCount: big.NewInt(0),
-						SequencerMessage:  []byte{},
-					},
-					PrevAcc: common.Hash{},
-				},
-				Signature: []byte{},
-			},
-			&BroadcastFeedMessage{
-				FeedItem: SequencerFeedItem{
-					BatchItem: inbox.SequencerBatchItem{
-						LastSeqNum:        big.NewInt(46),
-						Accumulator:       common.Hash{},
-						TotalDelayedCount: big.NewInt(0),
-						SequencerMessage:  []byte{},
-					},
-					PrevAcc: common.Hash{},
-				},
-				Signature: []byte{},
-			},
-			&BroadcastFeedMessage{
-				FeedItem: SequencerFeedItem{
-					BatchItem: inbox.SequencerBatchItem{
-						LastSeqNum:        big.NewInt(47),
-						Accumulator:       common.Hash{},
-						TotalDelayedCount: big.NewInt(0),
-						SequencerMessage:  []byte{},
-					},
-					PrevAcc: common.Hash{},
-				},
-				Signature: []byte{},
-			},
-			&BroadcastFeedMessage{
-				FeedItem: SequencerFeedItem{
-					BatchItem: inbox.SequencerBatchItem{
-						LastSeqNum:        big.NewInt(48),
-						Accumulator:       common.Hash{},
-						TotalDelayedCount: big.NewInt(0),
-						SequencerMessage:  []byte{},
-					},
-					PrevAcc: common.Hash{},
-				},
-				Signature: []byte{},
-			},
-		},
-		cacheSize: 10,
+		broadcastMessages: createDummyBroadcastMessages([]int{40, 40, 41, 45, 46, 47, 48}),
+		cacheSize:         10,
 	}
 
 	// Get everything
@@ -169,6 +105,7 @@ func TestGetCacheMessages(t *testing.T) {
 		t.Errorf("expected lastSeqNum 45, got %d", bm.Messages[0].FeedItem.BatchItem.LastSeqNum.Int64())
 	}
 
+	// Test when duplicate message
 	bm = buffer.getCacheMessages(big.NewInt(42))
 	if len(bm.Messages) != 5 {
 		t.Errorf("expected only 5 messages, got %d messages", len(bm.Messages))
