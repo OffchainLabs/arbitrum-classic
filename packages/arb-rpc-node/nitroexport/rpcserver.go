@@ -83,7 +83,7 @@ func (r *ExportRPCServer) ExportState(blockNumber rpc.BlockNumber) error {
 	if err != nil {
 		return err
 	}
-	err = ExportState(r.arbcore, blockU64, path.Join(r.pathPrefix, "state", hexutil.EncodeUint64(uint64(blockNumber))))
+	err = ExportState(r.arbcore, blockU64, path.Join(r.pathPrefix, "state", hexutil.EncodeUint64(blockU64)))
 	if err != nil {
 		log.Error().Err(err).Uint64("blockNumber", blockU64).Msg("export state failed")
 		return err
