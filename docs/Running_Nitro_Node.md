@@ -70,7 +70,7 @@ Note: If you’re interested in accessing the Arbitrum Goerli network but you do
   The arb-relay is in the same docker image.
 - Here is an example of how to run nitro-relay for goerli:
   ```
-  docker run --rm -it  -p 0.0.0.0:9642:9642 --entrypoint relay offchainlabs/nitro-node:v2.0.0-beta.3-ed75bf5 --node.feed.input.url wss://nitro-devnet.arbitrum.io/feed --l2.chain-id=421613
+  docker run --rm -it  -p 0.0.0.0:9642:9642 --entrypoint relay offchainlabs/nitro-node:v2.0.0-beta.3-ed75bf5 --node.feed.input.url wss://goerli-rollup.arbitrum.io/feed --l2.chain-id=421613
   ```
 - Here is an example of how to run nitro-node for goerli with custom relay:
   ```
