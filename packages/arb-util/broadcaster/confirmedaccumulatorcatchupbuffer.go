@@ -45,16 +45,12 @@ func (q *ConfirmedAccumulatorCatchupBuffer) OnRegisterClient(ctx context.Context
 			startingIndex = int(new(big.Int).Sub(requestedLastSeqNum, q.broadcastMessages[0].FeedItem.BatchItem.LastSeqNum).Uint64())
 			comparison := q.broadcastMessages[startingIndex].FeedItem.BatchItem.LastSeqNum.Cmp(requestedLastSeqNum)
 			if comparison < 0 {
-				startingIndex++
-				for ; startingIndex < len(q.broadcastMessages); startingIndex++ {
+				for ; startingIndex < len(q.broadcastMessages)-1; startingIndex++ {
 					if q.broadcastMessages[startingIndex].FeedItem.BatchItem.LastSeqNum.Cmp(requestedLastSeqNum) >= 0 {
 						break
 					}
 				}
 			} else if comparison > 0 {
-				if startingIndex > 0 {
-					startingIndex--
-				}
 				for ; startingIndex > 0; startingIndex-- {
 					if q.broadcastMessages[startingIndex].FeedItem.BatchItem.LastSeqNum.Cmp(requestedLastSeqNum) <= 0 {
 						break
