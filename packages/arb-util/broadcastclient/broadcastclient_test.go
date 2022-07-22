@@ -308,8 +308,9 @@ func TestBadBroadcasterSendsCachedMessagesOnClientConnect(t *testing.T) {
 
 func connectAndGetCachedMessages(ctx context.Context, t *testing.T, clientIndex int, wg *sync.WaitGroup, chainId uint64, connectShouldFail bool) error {
 	broadcastClientErrChan := make(chan error)
-	requestedSeqNum := big.NewInt(42)
-	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9842/", chainId, requestedSeqNum, 60*time.Second, broadcastClientErrChan)
+	startingMessageCount := big.NewInt(43)
+	expectedNewLastSeqNum := new(big.Int).Sub(startingMessageCount, big.NewInt(1))
+	broadcastClient := NewBroadcastClient("ws://127.0.0.1:9842/", chainId, startingMessageCount, 60*time.Second, broadcastClientErrChan)
 	testClient, err := broadcastClient.Connect(ctx)
 	if err != nil {
 		if !connectShouldFail {
@@ -331,8 +332,8 @@ func connectAndGetCachedMessages(ctx context.Context, t *testing.T, clientIndex 
 		case err := <-broadcastClientErrChan:
 			t.Errorf("broadcast client error: %s", err.Error())
 		case receivedMsg := <-testClient:
-			if receivedMsg.FeedItem.BatchItem.LastSeqNum.Cmp(requestedSeqNum) != 0 {
-				t.Errorf("expected seqnum %d but got %d instead", requestedSeqNum, receivedMsg.FeedItem.BatchItem.LastSeqNum)
+			if receivedMsg.FeedItem.BatchItem.LastSeqNum.Cmp(expectedNewLastSeqNum) != 0 {
+				t.Errorf("expected seqnum %d but got %d instead", expectedNewLastSeqNum, receivedMsg.FeedItem.BatchItem.LastSeqNum)
 			}
 			t.Logf("client %d received first message: (%v) %v\n", clientIndex, receivedMsg.FeedItem.BatchItem.LastSeqNum, receivedMsg.FeedItem.BatchItem.SequencerMessage)
 		case <-time.After(10 * time.Second):
