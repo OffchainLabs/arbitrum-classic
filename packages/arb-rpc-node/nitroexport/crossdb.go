@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
+	"math"
 	"math/big"
 	"path/filepath"
 	"reflect"
@@ -48,9 +49,8 @@ type CrossDB struct {
 	err error
 
 	// atomic reads / writes:
-	targetBlock       uint64
-	targetMsgBatch    uint64
-	latestStoredBlock uint64
+	targetBlockPlusOne    uint64
+	targetMsgBatchPlusOne uint64
 
 	targetChangedChan chan struct{}
 }
@@ -223,7 +223,7 @@ func (c *CrossDB) mainThread(ctx context.Context) {
 		flag := true
 		for flag {
 			flag = false
-			if batchNum < atomic.LoadUint64(&c.targetMsgBatch) {
+			if batchNum < atomic.LoadUint64(&c.targetMsgBatchPlusOne) {
 				batchFound, err := c.importMsgBatch(ctx, batchNum)
 				if err != nil {
 					c.err = err
@@ -241,7 +241,7 @@ func (c *CrossDB) mainThread(ctx context.Context) {
 					flag = true
 				}
 			}
-			if blockCount < atomic.LoadUint64(&c.targetBlock) {
+			if blockCount < atomic.LoadUint64(&c.targetBlockPlusOne) {
 				err := c.importBlock(ctx, blockCount)
 				if err != nil {
 					c.err = err
@@ -261,7 +261,10 @@ func (c *CrossDB) mainThread(ctx context.Context) {
 }
 
 func (c *CrossDB) UpdateTargetBatch(target uint64) {
-	atomic.StoreUint64(&c.targetMsgBatch, target)
+	if target != math.MaxUint64 {
+		target += 1
+	}
+	atomic.StoreUint64(&c.targetMsgBatchPlusOne, target)
 	select {
 	case c.targetChangedChan <- struct{}{}:
 	default:
@@ -269,7 +272,7 @@ func (c *CrossDB) UpdateTargetBatch(target uint64) {
 }
 
 func (c *CrossDB) UpdateTargetBlock(target uint64) {
-	atomic.StoreUint64(&c.targetBlock, target)
+	atomic.StoreUint64(&c.targetBlockPlusOne, target+1)
 	select {
 	case c.targetChangedChan <- struct{}{}:
 	default:
