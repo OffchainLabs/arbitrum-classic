@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.6.11;
+// solhint-disable-next-line compiler-version
+pragma solidity >=0.6.9 <0.9.0;
 
-import "../../libraries/IERC165.sol";
 import "../../libraries/gateway/ITokenGateway.sol";
+import "../../libraries/IERC165.sol";
 
 /**
  * @title Common interface for gatways on L1 messaging to Arbitrum.

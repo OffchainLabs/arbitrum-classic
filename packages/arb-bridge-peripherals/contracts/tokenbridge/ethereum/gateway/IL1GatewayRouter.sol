@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-pragma solidity ^0.6.11;
+// solhint-disable-next-line compiler-version
+pragma solidity >=0.6.9 <0.9.0;
 
 import "../../libraries/gateway/ITokenGateway.sol";
 import "../../libraries/IERC165.sol";
