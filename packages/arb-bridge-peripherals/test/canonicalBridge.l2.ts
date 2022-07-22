@@ -392,9 +392,4 @@ describe('Bridge peripherals layer 2', () => {
       expect(res.toLowerCase()).to.equal(expectedOutput.toLowerCase())
     }
   })
-
-  it('should support ERC165 interface', async function () {
-    expect(await testBridge.supportsInterface('0x01ffc9a7')).is.true
-    expect(await testBridge.supportsInterface('0xffffffff')).is.false
-  })
 })
