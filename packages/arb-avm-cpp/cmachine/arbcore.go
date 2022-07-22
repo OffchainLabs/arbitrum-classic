@@ -504,14 +504,14 @@ func (ac *ArbCore) DumpArbosState(m machine.Machine, blockNum uint64, dirname st
 	defer runtime.KeepAlive(mach)
 
 	type ArbosInitFileContents struct {
-		PreinitBlocks            uint64
+		NextBlockNumber          uint64
 		AddressTableContentsPath string
 		RetryableDataPath        string
 		AccountsPath             string
 	}
 
 	indexJson := ArbosInitFileContents{
-		PreinitBlocks:            blockNum,
+		NextBlockNumber:          blockNum + 1,
 		AddressTableContentsPath: "addresstable.json",
 		RetryableDataPath:        "retryables.json",
 		AccountsPath:             "accounts.json",

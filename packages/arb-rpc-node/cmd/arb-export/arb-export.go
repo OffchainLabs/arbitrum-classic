@@ -133,7 +133,7 @@ func startup() error {
 
 	if !*skipBlocks {
 		crossDB.Start(ctx)
-		crossDB.UpdateTarget(*blockNum + 1)
+		crossDB.UpdateTargetBlock(*blockNum)
 		logger.Info().Msg("starting history export")
 	}
 
