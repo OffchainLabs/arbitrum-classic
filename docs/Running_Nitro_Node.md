@@ -54,9 +54,9 @@ Note: If you’re interested in accessing the Arbitrum Goerli network but you do
 - `--node.archive`
   - Retain past block state
 - `--node.feed.input.url=<feed address>`
-  - Defaults to `wss://nitro-devnet.arbitrum.io/feed`. If running more than a couple nodes, you will want to provide one feed relay per datacenter, see further instructions below.
+  - Defaults to `wss://goerli-rollup.arbitrum.io/feed`. If running more than a couple nodes, you will want to provide one feed relay per datacenter, see further instructions below.
 - `--node.forwarding-target=<sequencer RPC>`
-  - Defaults to `https://nitro-devnet.arbitrum.io/rpc`
+  - Defaults to `https://goerli-rollup.arbitrum.io/rpc`
 - `--node.rpc.evm-timeout`
   - Defaults to `5s`, timeout used for `eth_call` (0 == no timeout)
 - `--node.rpc.gas-cap`
