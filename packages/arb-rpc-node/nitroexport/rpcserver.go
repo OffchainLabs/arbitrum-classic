@@ -70,12 +70,20 @@ func (r *ExportRPCServer) ExportOutboxStatus() (hexutil.Uint64, error) {
 	return hexutil.Uint64(batches), r.db.CurrentError()
 }
 
-func (r *ExportRPCServer) ExportHistoryStatus() (hexutil.Uint64, error) {
+func (r *ExportRPCServer) ExportHistoryStatus() (*hexutil.Uint64, error) {
 	blocks, err := r.db.BlocksExported()
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return hexutil.Uint64(blocks), r.db.CurrentError()
+	err = r.db.CurrentError()
+	if err != nil {
+		return nil, err
+	}
+	if blocks == 0 {
+		return nil, nil
+	}
+	hexLastBlock := hexutil.Uint64(blocks - 1)
+	return &hexLastBlock, nil
 }
 
 func (r *ExportRPCServer) ExportState(blockNumber rpc.BlockNumber) error {
