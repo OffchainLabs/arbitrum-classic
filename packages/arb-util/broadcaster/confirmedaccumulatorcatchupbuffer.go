@@ -34,44 +34,67 @@ func NewConfirmedAccumulatorCatchupBuffer() *ConfirmedAccumulatorCatchupBuffer {
 	return &ConfirmedAccumulatorCatchupBuffer{}
 }
 
-func (q *ConfirmedAccumulatorCatchupBuffer) OnRegisterClient(ctx context.Context, clientConnection *wsbroadcastserver.ClientConnection) error {
-	start := time.Now()
-	// send the newly connected client any messages starting with requested sequence number
+func (q *ConfirmedAccumulatorCatchupBuffer) getCacheMessages(requestedSeqNum *big.Int) *BroadcastMessage {
+	if len(q.broadcastMessages) == 0 {
+		return nil
+	}
 	startingIndex := 0
 	// Ignore messages older than requested sequence number
-	if clientConnection.RequestedSeqNum().Cmp(big.NewInt(0)) > 0 {
-		requestedLastSeqNum := new(big.Int).Sub(clientConnection.RequestedSeqNum(), big.NewInt(1))
+	if requestedSeqNum.Cmp(big.NewInt(0)) > 0 {
+		requestedLastSeqNum := new(big.Int).Sub(requestedSeqNum, big.NewInt(1))
 		if q.broadcastMessages[0].FeedItem.BatchItem.LastSeqNum.Cmp(requestedLastSeqNum) < 0 {
 			startingIndex = int(new(big.Int).Sub(requestedLastSeqNum, q.broadcastMessages[0].FeedItem.BatchItem.LastSeqNum).Uint64())
+			if startingIndex >= len(q.broadcastMessages) {
+				startingIndex = len(q.broadcastMessages) - 1
+			}
 			comparison := q.broadcastMessages[startingIndex].FeedItem.BatchItem.LastSeqNum.Cmp(requestedLastSeqNum)
-			if comparison < 0 {
-				for ; startingIndex < len(q.broadcastMessages)-1; startingIndex++ {
-					if q.broadcastMessages[startingIndex].FeedItem.BatchItem.LastSeqNum.Cmp(requestedLastSeqNum) >= 0 {
+			if comparison > 0 {
+				for startingIndex > 1 {
+					comparison2 := q.broadcastMessages[startingIndex-1].FeedItem.BatchItem.LastSeqNum.Cmp(requestedLastSeqNum)
+					if comparison2 < 0 {
+						// Found messages to broadcast
 						break
 					}
+					startingIndex--
 				}
-			} else if comparison > 0 {
-				for ; startingIndex > 0; startingIndex-- {
-					if q.broadcastMessages[startingIndex].FeedItem.BatchItem.LastSeqNum.Cmp(requestedLastSeqNum) <= 0 {
+			} else if comparison < 0 {
+				for {
+					startingIndex++
+					if startingIndex >= len(q.broadcastMessages) {
+						// End of array with nothing found
+						return nil
+					}
+					if q.broadcastMessages[startingIndex].FeedItem.BatchItem.LastSeqNum.Cmp(requestedLastSeqNum) >= 0 {
+						// Found messages to broadcast
 						break
 					}
 				}
 			}
 		}
 	}
-	if startingIndex < len(q.broadcastMessages) {
-		messagesToSend := q.broadcastMessages[startingIndex:]
-		if len(messagesToSend) > 0 {
-			bm := BroadcastMessage{
-				Version:  1,
-				Messages: messagesToSend,
-			}
 
-			err := clientConnection.Write(bm)
-			if err != nil {
-				logger.Error().Err(err).Str("client", clientConnection.Name).Str("elapsed", time.Since(start).String()).Msg("error sending client cached messages")
-				return err
-			}
+	messagesToSend := q.broadcastMessages[startingIndex:]
+	if len(messagesToSend) > 0 {
+		bm := BroadcastMessage{
+			Version:  1,
+			Messages: messagesToSend,
+		}
+
+		return &bm
+	}
+
+	return nil
+}
+
+func (q *ConfirmedAccumulatorCatchupBuffer) OnRegisterClient(ctx context.Context, clientConnection *wsbroadcastserver.ClientConnection) error {
+	start := time.Now()
+	// send the newly connected client any messages starting with requested sequence number
+	bm := q.getCacheMessages(clientConnection.RequestedSeqNum())
+	if bm != nil {
+		err := clientConnection.Write(bm)
+		if err != nil {
+			logger.Error().Err(err).Str("client", clientConnection.Name).Str("elapsed", time.Since(start).String()).Msg("error sending client cached messages")
+			return err
 		}
 	}
 
