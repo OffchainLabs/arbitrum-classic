@@ -39,8 +39,8 @@ contract L1GatewayRouter is
     ERC165,
     IL1GatewayRouter
 {
-    address public owner;
-    address public inbox;
+    address public override owner;
+    address public override inbox;
 
     modifier onlyOwner() {
         require(msg.sender == owner, "ONLY_OWNER");
@@ -153,11 +153,10 @@ contract L1GatewayRouter is
 
     /**
      * @notice Allows L1 Token contract to trustlessly register its gateway. (other setGateway method allows excess eth recovery from _maxSubmissionCost and is recommended)
-
      * @param _gateway l1 gateway address
-     * @param _maxGas max gas for L2 retryable exrecution 
-     * @param _gasPriceBid gas price for L2 retryable ticket 
-     * @param  _maxSubmissionCost base submission cost  L2 retryable tick3et 
+     * @param _maxGas max gas for L2 retryable exrecution
+     * @param _gasPriceBid gas price for L2 retryable ticket
+     * @param  _maxSubmissionCost base submission cost  L2 retryable tick3et
      * @return Retryable ticket ID
      */
     function setGateway(
@@ -165,18 +164,18 @@ contract L1GatewayRouter is
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
-    ) external payable returns (uint256) {
+    ) external payable override returns (uint256) {
         return setGateway(_gateway, _maxGas, _gasPriceBid, _maxSubmissionCost, msg.sender);
     }
 
     /**
      * @notice Allows L1 Token contract to trustlessly register its gateway.
-     * param _gateway l1 gateway address
-     * param _maxGas max gas for L2 retryable exrecution
-     * param _gasPriceBid gas price for L2 retryable ticket
-     * param  _maxSubmissionCost base submission cost  L2 retryable tick3et
-     * param _creditBackAddress address for crediting back overpayment of _maxSubmissionCost
-     * return Retryable ticket ID
+     * @param _gateway l1 gateway address
+     * @param _maxGas max gas for L2 retryable exrecution
+     * @param _gasPriceBid gas price for L2 retryable ticket
+     * @param  _maxSubmissionCost base submission cost  L2 retryable tick3et
+     * @param _creditBackAddress address for crediting back overpayment of _maxSubmissionCost
+     * @return Retryable ticket ID
      */
     function setGateway(
         address _gateway,
@@ -184,7 +183,7 @@ contract L1GatewayRouter is
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost,
         address _creditBackAddress
-    ) public payable returns (uint256) {
+    ) public payable override returns (uint256) {
         require(
             ArbitrumEnabledToken(msg.sender).isArbitrumEnabled() == uint8(0xa4b1),
             "NOT_ARB_ENABLED"
