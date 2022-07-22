@@ -19,6 +19,7 @@ package wsbroadcastserver
 import (
 	"context"
 	"encoding/json"
+	"math/big"
 	"math/rand"
 	"net"
 	"strconv"
@@ -36,23 +37,31 @@ type ClientConnection struct {
 	ioMutex sync.Mutex
 	conn    net.Conn
 
-	desc          *netpoll.Desc
-	Name          string
-	clientManager *ClientManager
+	desc            *netpoll.Desc
+	Name            string
+	clientManager   *ClientManager
+	requestedSeqNum *big.Int
 
 	lastHeardUnix int64
 	cancelFunc    context.CancelFunc
 	out           chan []byte
 }
 
-func NewClientConnection(conn net.Conn, desc *netpoll.Desc, clientManager *ClientManager) *ClientConnection {
+func NewClientConnection(conn net.Conn, desc *netpoll.Desc, clientManager *ClientManager, newRequestedSeqNum *big.Int) *ClientConnection {
+	var requestedSeqNum *big.Int
+	if newRequestedSeqNum != nil {
+		requestedSeqNum = newRequestedSeqNum
+	} else {
+		requestedSeqNum = big.NewInt(0)
+	}
 	return &ClientConnection{
-		conn:          conn,
-		desc:          desc,
-		Name:          conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10)),
-		clientManager: clientManager,
-		lastHeardUnix: time.Now().Unix(),
-		out:           make(chan []byte, clientManager.settings.MaxSendQueue),
+		conn:            conn,
+		desc:            desc,
+		Name:            conn.RemoteAddr().String() + strconv.Itoa(rand.Intn(10)),
+		clientManager:   clientManager,
+		requestedSeqNum: requestedSeqNum,
+		lastHeardUnix:   time.Now().Unix(),
+		out:             make(chan []byte, clientManager.settings.MaxSendQueue),
 	}
 }
 
@@ -93,6 +102,10 @@ func (cc *ClientConnection) Stop() {
 		// If client connection never started, need to close channel
 		close(cc.out)
 	}
+}
+
+func (cc *ClientConnection) RequestedSeqNum() *big.Int {
+	return cc.requestedSeqNum
 }
 
 func (cc *ClientConnection) GetLastHeard() time.Time {
