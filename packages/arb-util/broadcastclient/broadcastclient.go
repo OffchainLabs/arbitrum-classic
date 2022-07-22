@@ -41,8 +41,7 @@ import (
 type BroadcastClient struct {
 	websocketUrl string
 
-	// sequence number of the previous message
-	lastInboxSeqNum *big.Int
+	mostRecentSeqNum *big.Int
 
 	chainId uint64
 
@@ -64,25 +63,25 @@ var logger = arblog.Logger.With().Str("component", "broadcaster").Logger()
 func NewBroadcastClient(
 	websocketUrl string,
 	chainId uint64,
-	requestedInboxSeqNum *big.Int,
+	currentMessageCount *big.Int,
 	idleTimeout time.Duration,
 	broadcastClientErrChan chan error,
 ) *BroadcastClient {
-	var lastSeqNum *big.Int
-	if requestedInboxSeqNum == nil || requestedInboxSeqNum.Cmp(big.NewInt(0)) <= 0 {
-		lastSeqNum = big.NewInt(0)
+	var mostRecentSeqNum *big.Int
+	if currentMessageCount == nil || currentMessageCount.Cmp(big.NewInt(0)) <= 0 {
+		mostRecentSeqNum = nil
 	} else {
-		lastSeqNum = new(big.Int).Sub(requestedInboxSeqNum, big.NewInt(1))
+		mostRecentSeqNum = new(big.Int).Sub(currentMessageCount, big.NewInt(1))
 	}
 
 	return &BroadcastClient{
-		websocketUrl:    websocketUrl,
-		chainId:         chainId,
-		lastInboxSeqNum: lastSeqNum,
-		connMutex:       &sync.Mutex{},
-		errChan:         broadcastClientErrChan,
-		retryMutex:      &sync.Mutex{},
-		idleTimeout:     idleTimeout,
+		websocketUrl:     websocketUrl,
+		chainId:          chainId,
+		mostRecentSeqNum: mostRecentSeqNum,
+		connMutex:        &sync.Mutex{},
+		errChan:          broadcastClientErrChan,
+		retryMutex:       &sync.Mutex{},
+		idleTimeout:      idleTimeout,
 	}
 }
 
@@ -97,7 +96,7 @@ func (bc *BroadcastClient) Connect(ctx context.Context) (chan broadcaster.Broadc
 }
 
 func (bc *BroadcastClient) ConnectWithChannel(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage) error {
-	earlyFrameData, _, err := bc.connect(ctx, messageReceiver, bc.lastInboxSeqNum)
+	earlyFrameData, _, err := bc.connect(ctx, messageReceiver, bc.mostRecentSeqNum)
 	if err != nil {
 		return err
 	}
@@ -128,7 +127,7 @@ func (bc *BroadcastClient) ConnectInBackground(ctx context.Context, messageRecei
 var ErrIncorrectFeedServerVersion = errors.New("incorrect feed server version")
 var ErrIncorrectChainId = errors.New("incorrect chain id")
 
-func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage, previousSequenceNumber *big.Int) (io.Reader, chan broadcaster.BroadcastFeedMessage, error) {
+func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan broadcaster.BroadcastFeedMessage, mostRecentSequenceNumber *big.Int) (io.Reader, chan broadcaster.BroadcastFeedMessage, error) {
 
 	if len(bc.websocketUrl) == 0 {
 		// Nothing to do
@@ -136,11 +135,10 @@ func (bc *BroadcastClient) connect(ctx context.Context, messageReceiver chan bro
 	}
 
 	var requestedSequenceNumber string
-	if previousSequenceNumber.Cmp(big.NewInt(0)) > 0 {
-		// previousSequenceNumber is 1 before current, and we want 1 after current, so add 2.
-		requestedSequenceNumber = new(big.Int).Add(previousSequenceNumber, big.NewInt(2)).String()
-	} else {
+	if mostRecentSequenceNumber == nil {
 		requestedSequenceNumber = "0"
+	} else {
+		requestedSequenceNumber = new(big.Int).Add(mostRecentSequenceNumber, big.NewInt(1)).String()
 	}
 	header := ws.HandshakeHeaderHTTP(http.Header{
 		wsbroadcastserver.HTTPHeaderFeedClientVersion:       []string{strconv.Itoa(wsbroadcastserver.FeedClientVersion)},
@@ -261,7 +259,7 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 						currentLastSeqNum = message.FeedItem.BatchItem.LastSeqNum
 						messageReceiver <- *message
 					}
-					bc.lastInboxSeqNum = new(big.Int).Add(currentLastSeqNum, big.NewInt(1))
+					bc.mostRecentSeqNum = new(big.Int).Add(currentLastSeqNum, big.NewInt(1))
 
 					if res.ConfirmedAccumulator.IsConfirmed && bc.ConfirmedAccumulatorListener != nil {
 						bc.ConfirmedAccumulatorListener <- res.ConfirmedAccumulator.Accumulator
@@ -300,7 +298,7 @@ func (bc *BroadcastClient) RetryConnect(ctx context.Context, messageReceiver cha
 		}
 
 		bc.retryCount++
-		earlyFrameData, _, err := bc.connect(ctx, messageReceiver, bc.lastInboxSeqNum)
+		earlyFrameData, _, err := bc.connect(ctx, messageReceiver, bc.mostRecentSeqNum)
 		if err == nil {
 			bc.retrying = false
 			return earlyFrameData
