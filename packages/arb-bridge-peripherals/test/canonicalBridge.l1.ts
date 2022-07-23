@@ -15,7 +15,7 @@
  */
 
 /* eslint-env node, mocha */
-import { ethers } from 'hardhat'
+import { ethers, network } from 'hardhat'
 import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import {
@@ -115,7 +115,7 @@ describe('Bridge peripherals layer 1', () => {
     const value = ethers.utils.parseUnits("1.0", 18);
     const deadline = ethers.constants.MaxUint256;
 
-    const signature = await getCorrectPermitSig(wallet, tokenPermit, testBridge.address, value, deadline);
+    const signature = await getCorrectPermitSig(wallet, tokenPermit, testBridge.address, tokenAmount, deadline);
     const { v, r, s } = ethers.utils.splitSignature(signature);
 
     const permitData = {

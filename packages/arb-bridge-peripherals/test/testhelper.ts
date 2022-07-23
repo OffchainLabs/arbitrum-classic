@@ -130,7 +130,7 @@ export async function getCorrectPermitSig(
       optional?.nonce ?? token.nonces(wallet.address),
       optional?.name ?? token.name(),
       optional?.version ?? '1',
-      optional?.chainId ?? wallet.getChainId(),
+      optional?.chainId ?? network.config.chainId,
   ])
   
   const domain = {
