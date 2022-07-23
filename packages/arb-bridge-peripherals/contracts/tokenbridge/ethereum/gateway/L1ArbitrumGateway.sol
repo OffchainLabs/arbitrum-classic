@@ -17,12 +17,14 @@
  */
 
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/drafts/ERC20Permit.sol";
 
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "arb-bridge-eth/contracts/libraries/ProxyUtil.sol";
@@ -283,6 +285,29 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, ERC165
         }
         emit DepositInitiated(_l1Token, _from, _to, seqNum, _amount);
         return abi.encode(seqNum);
+    }
+
+    function outboundTransferCustomRefundWithPermit(
+        address _l1Token,
+        address _refundTo,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data,
+        PermitData memory permitData
+    ) public payable virtual override returns (bytes memory res) {
+        address _from;
+        if (super.isRouter(msg.sender)) {
+                // router encoded
+                (_from, ) = GatewayMessageHandler.parseFromRouterToGateway(_data);
+            } else {
+                _from = msg.sender;
+        }
+        // address gateway = l1TokenToGateway[_l1Token];
+        ERC20Permit(_l1Token).permit(_from, address(this), _amount, permitData.deadline, permitData.v, permitData.r, permitData.s);
+
+        return outboundTransferCustomRefund(_l1Token, _refundTo, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
 
     function outboundEscrowTransfer(

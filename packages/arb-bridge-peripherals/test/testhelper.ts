@@ -16,7 +16,7 @@
 
 /* eslint-env node, mocha */
 import { ethers, network } from 'hardhat'
-import { ContractTransaction } from 'ethers'
+import { ContractTransaction, Wallet } from 'ethers'
 import {
   InboxMock,
   InboxMock__factory,
@@ -116,4 +116,48 @@ export const processL2ToL1Tx = async (
       )
   })
   return Promise.all(l2ToL1Logs)
+}
+
+export async function getCorrectPermitSig(
+  wallet: Wallet,
+  token: any,
+  spender: string,
+  value: any,
+  deadline: any,
+  optional?: { nonce?: number; name?: string; chainId?: number; version?: string }
+  ) { 
+  const [nonce, name, version, chainId] = await Promise.all([
+      optional?.nonce ?? token.nonces(wallet.address),
+      optional?.name ?? token.name(),
+      optional?.version ?? '1',
+      optional?.chainId ?? wallet.getChainId(),
+  ])
+  
+  const domain = {
+      "name": name,
+      "version": version,
+      "chainId": chainId,
+      "verifyingContract": token.address
+  };
+  
+  const types = {
+      Permit: [
+      { name: 'owner', type: 'address' },
+      { name: 'spender', type: 'address' },
+      { name: 'value', type: 'uint256' },
+      { name: 'nonce', type: 'uint256'},
+      { name: 'deadline', type: 'uint256' },
+  ],
+  }
+  
+  const message = {
+          owner: wallet.address,
+          spender: spender,
+          value: value,
+          nonce: nonce,
+          deadline: deadline
+  };
+  
+  const sig = await wallet._signTypedData(domain, types, message);
+  return sig;
 }

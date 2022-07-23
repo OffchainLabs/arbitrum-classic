@@ -17,6 +17,7 @@
  */
 
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";

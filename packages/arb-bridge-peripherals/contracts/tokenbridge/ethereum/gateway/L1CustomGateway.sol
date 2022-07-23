@@ -17,6 +17,7 @@
  */
 
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 
 import { ArbitrumEnabledToken } from "../ICustomToken.sol";
 import "./L1ArbitrumExtendedGateway.sol";
@@ -78,6 +79,29 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
                 _maxGas,
                 _gasPriceBid,
                 _data
+            );
+    }
+
+    function outboundTransferCustomRefundWithPermit(
+        address _l1Token,
+        address _refundTo,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data,
+        PermitData memory permitData
+    ) public payable override nonReentrant returns (bytes memory res) {
+        return
+            super.outboundTransferCustomRefundWithPermit(
+                _l1Token,
+                _refundTo,
+                _to,
+                _amount,
+                _maxGas,
+                _gasPriceBid,
+                _data, 
+                permitData
             );
     }
 

@@ -17,6 +17,7 @@
  */
 
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 
 import "./ITokenGateway.sol";
 import "@openzeppelin/contracts/utils/Address.sol";

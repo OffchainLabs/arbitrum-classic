@@ -17,6 +17,7 @@
  */
 
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 
 import "arb-bridge-eth/contracts/libraries/Whitelist.sol";
 
@@ -27,7 +28,7 @@ import "../../arbitrum/gateway/L2GatewayRouter.sol";
 import "../../libraries/ERC165.sol";
 
 /**
- * @title Handles deposits from Erhereum into Arbitrum. Tokens are routered to their appropriate L1 gateway (Router itself also conforms to the Gateway itnerface).
+ * @title Handles deposits from Ethereum into Arbitrum. Tokens are routered to their appropriate L1 gateway (Router itself also conforms to the Gateway itnerface).
  * @notice Router also serves as an L1-L2 token address oracle.
  */
 contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRouter, ERC165 {
@@ -290,6 +291,29 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
                 _maxGas,
                 _gasPriceBid,
                 _data
+            );
+    }
+
+    function outboundTransferCustomRefundWithPermit(
+        address _l1Token,
+        address _refundTo,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data,
+        PermitData memory permitData
+    ) public payable override returns (bytes memory) {
+        return
+            super.outboundTransferCustomRefundWithPermit(
+                _l1Token,
+                _refundTo,
+                _to,
+                _amount,
+                _maxGas,
+                _gasPriceBid,
+                _data, 
+                permitData
             );
     }
 

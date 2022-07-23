@@ -17,6 +17,7 @@
  */
 
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 
 import "../../libraries/gateway/GatewayRouter.sol";
 import "../../ethereum/gateway/L1GatewayRouter.sol";

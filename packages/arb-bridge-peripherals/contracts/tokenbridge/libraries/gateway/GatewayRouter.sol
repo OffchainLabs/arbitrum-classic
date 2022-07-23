@@ -17,11 +17,13 @@
  */
 
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 
 import "arb-bridge-eth/contracts/libraries/ProxyUtil.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./TokenGateway.sol";
 import "./GatewayMessageHandler.sol";
+import "@openzeppelin/contracts/drafts/ERC20Permit.sol";
 
 /**
  * @title Common interface for L1 and L2 Gateway Routers
@@ -41,6 +43,13 @@ abstract contract GatewayRouter is TokenGateway {
         address indexed _userTo,
         address gateway
     );
+
+    // struct PermitData {
+    //     uint256 deadline;
+    //     uint8 v;
+    //     bytes32 r;
+    //     bytes32 s;
+    // }
 
     event GatewaySet(address indexed l1Token, address indexed gateway);
     event DefaultGatewayUpdated(address newDefaultGateway);
@@ -140,6 +149,45 @@ abstract contract GatewayRouter is TokenGateway {
                 _maxGas,
                 _gasPriceBid,
                 gatewayData
+            );
+    }
+
+    function outboundTransferCustomRefundWithPermit(
+        address _token,
+        address _refundTo,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data,
+        PermitData memory permitData
+    ) public payable virtual override returns (bytes memory) {
+        // {
+            
+            
+        //     emit TransferRouted(_token, msg.sender, _to, gateway);
+        // }
+
+        address gateway = getGateway(_token);
+        
+        bytes memory gatewayData = GatewayMessageHandler.encodeFromRouterToGateway(
+            msg.sender,
+            _data
+        );
+
+        emit TransferRouted(_token, msg.sender, _to, gateway);
+        
+        
+        return
+            ITokenGateway(gateway).outboundTransferCustomRefundWithPermit{ value: msg.value }(
+                _token,
+                _refundTo,
+                _to,
+                _amount,
+                _maxGas,
+                _gasPriceBid,
+                gatewayData,
+                permitData
             );
     }
 
