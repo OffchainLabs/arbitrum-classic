@@ -34,6 +34,7 @@ import "../../libraries/gateway/GatewayMessageHandler.sol";
 import "../../libraries/gateway/TokenGateway.sol";
 import "../../libraries/ITransferAndCall.sol";
 import "../../libraries/ERC165.sol";
+import "hardhat/console.sol";
 
 /**
  * @title Common interface for gatways on L1 messaging to Arbitrum.
@@ -304,7 +305,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, ERC165
             } else {
                 _from = msg.sender;
         }
-        // address gateway = l1TokenToGateway[_l1Token];
+        
         ERC20Permit(_l1Token).permit(_from, address(this), _amount, permitData.deadline, permitData.v, permitData.r, permitData.s);
 
         return outboundTransferCustomRefund(_l1Token, _refundTo, _to, _amount, _maxGas, _gasPriceBid, _data);

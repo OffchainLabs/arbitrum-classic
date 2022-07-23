@@ -236,13 +236,9 @@ describe('Bridge peripherals layer 1', () => {
       [maxSubmissionCost, '0x']
     );
 
-    const wallet = ethers.Wallet.createRandom();
-
-    const spender = ethers.Wallet.createRandom();
-    const value = ethers.utils.parseUnits("1.0", 18);
     const deadline = ethers.constants.MaxUint256;
 
-    const signature = await getCorrectPermitSig(wallet, tokenPermit, l1ERC20Gateway.address, value, deadline);
+    const signature = await getCorrectPermitSig(accounts[0], tokenPermit, l1ERC20Gateway.address, tokenAmount, deadline);
     const { v, r, s } = ethers.utils.splitSignature(signature);
 
     const permitData = {
@@ -252,7 +248,7 @@ describe('Bridge peripherals layer 1', () => {
       s: s
     };
 
-    const tx = await testBridge.outboundTransferCustomRefundPermit(
+    const tx = await testBridge.outboundTransferCustomRefundWithPermit(
       tokenPermit.address,
       accounts[1].address,
       accounts[0].address,

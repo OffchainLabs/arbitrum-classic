@@ -93,10 +93,7 @@ describe('Bridge peripherals layer 1', () => {
   it('should escrow deposited tokens with permit', async function () {
     const TokenPermit = await ethers.getContractFactory('TestERC20Permit');
     const tokenPermit = await TokenPermit.deploy("TestPermit", "TPP");
-    // send escrowed tokens to bridge
     const tokenAmount = 100;
-
-    // await token.approve(testBridge.address, tokenAmount)
 
     let data = ethers.utils.defaultAbiCoder.encode(
       ['uint256', 'bytes'],
@@ -109,13 +106,10 @@ describe('Bridge peripherals layer 1', () => {
       [accounts[0].address, data]
     );
 
-    const wallet = ethers.Wallet.createRandom();
-
-    // const spender = ethers.Wallet.createRandom();
-    const value = ethers.utils.parseUnits("1.0", 18);
+    const value = 100;
     const deadline = ethers.constants.MaxUint256;
 
-    const signature = await getCorrectPermitSig(wallet, tokenPermit, testBridge.address, tokenAmount, deadline);
+    const signature = await getCorrectPermitSig(accounts[0], tokenPermit, testBridge.address, tokenAmount, deadline);
     const { v, r, s } = ethers.utils.splitSignature(signature);
 
     const permitData = {
@@ -125,6 +119,7 @@ describe('Bridge peripherals layer 1', () => {
       s: s
     };
 
+    console.log(permitData);
     await testBridge.outboundTransferCustomRefundWithPermit(
       tokenPermit.address,
       accounts[1].address,

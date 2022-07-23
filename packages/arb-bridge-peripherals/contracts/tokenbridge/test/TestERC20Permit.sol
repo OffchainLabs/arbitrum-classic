@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- 
+
 pragma solidity ^0.6.11;
 
 // Import this file to use console.log
@@ -29,6 +29,6 @@ contract TestERC20Permit is ERC20, ERC20Permit {
         // Similar to how
         // 1 dollar = 100 cents
         // 1 token = 1 * (10 ** decimals)
-        _mint(msg.sender, 100 * 10**uint(decimals()));
+        _mint(msg.sender, 1000 * 10**uint(decimals()));
     }
 }

@@ -22,6 +22,7 @@ import {
   InboxMock__factory,
   ArbSysMock__factory,
 } from '../build/types'
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 
 export const processL1ToL2Tx = async (
   tx: Promise<ContractTransaction> | ContractTransaction
@@ -119,7 +120,7 @@ export const processL2ToL1Tx = async (
 }
 
 export async function getCorrectPermitSig(
-  wallet: Wallet,
+  signer: SignerWithAddress,
   token: any,
   spender: string,
   value: any,
@@ -127,7 +128,7 @@ export async function getCorrectPermitSig(
   optional?: { nonce?: number; name?: string; chainId?: number; version?: string }
   ) { 
   const [nonce, name, version, chainId] = await Promise.all([
-      optional?.nonce ?? token.nonces(wallet.address),
+      optional?.nonce ?? token.nonces(signer.address),
       optional?.name ?? token.name(),
       optional?.version ?? '1',
       optional?.chainId ?? network.config.chainId,
@@ -151,13 +152,13 @@ export async function getCorrectPermitSig(
   }
   
   const message = {
-          owner: wallet.address,
+          owner: signer.address,
           spender: spender,
           value: value,
           nonce: nonce,
           deadline: deadline
   };
   
-  const sig = await wallet._signTypedData(domain, types, message);
+  const sig = await signer._signTypedData(domain, types, message);
   return sig;
 }
