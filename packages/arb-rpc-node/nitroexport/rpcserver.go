@@ -65,9 +65,13 @@ func (r *ExportRPCServer) ExportOutbox(batchNumber hexutil.Uint64) error {
 	return r.db.CurrentError()
 }
 
-func (r *ExportRPCServer) ExportOutboxStatus() (hexutil.Uint64, error) {
+func (r *ExportRPCServer) ExportOutboxStatus() (*hexutil.Uint64, error) {
 	batches := r.db.BatchesExported()
-	return hexutil.Uint64(batches), r.db.CurrentError()
+	if batches == 0 {
+		return nil, r.db.CurrentError()
+	}
+	res := hexutil.Uint64(batches - 1)
+	return &res, r.db.CurrentError()
 }
 
 func (r *ExportRPCServer) ExportHistoryStatus() (*hexutil.Uint64, error) {
