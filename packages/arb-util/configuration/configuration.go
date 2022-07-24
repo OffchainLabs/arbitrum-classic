@@ -127,7 +127,6 @@ type FeedOutput struct {
 	Ping           time.Duration `koanf:"ping"`
 	ClientTimeout  time.Duration `koanf:"client-timeout"`
 	Queue          int           `koanf:"queue"`
-	RequireChainId bool          `koanf:"require-chain-id"`
 	RequireVersion bool          `koanf:"require-version"`
 	Workers        int           `koanf:"workers"`
 	MaxSendQueue   int           `koanf:"max-send-queue"`
@@ -883,7 +882,6 @@ func AddFeedOutputOptions(f *flag.FlagSet) {
 	f.String("feed.output.port", "9642", "port to bind the relay feed output to")
 	f.Duration("feed.output.ping", 5*time.Second, "duration for ping interval")
 	f.Duration("feed.output.client-timeout", 15*time.Second, "duration to wait before timing out connections to client")
-	f.Bool("feed.output.require-chain-id", false, "disconnect if Chain-Id HTTP header not present")
 	f.Int("feed.output.workers", 100, "Number of threads to reserve for HTTP to WS upgrade")
 	f.Int("feed.output.max-send-queue", 4096, "Maximum number of messages allowed to accumulate before client is disconnected")
 }
