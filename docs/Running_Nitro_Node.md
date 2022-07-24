@@ -1,6 +1,6 @@
 ---
 id: Running_Nitro_Node
-title: Running full Nitro node for Arbitrum Goerli DevNet
+title: Running full Nitro node for Arbitrum Goerli TestNet
 sidebar_label: Running a Nitro Node
 ---
 
