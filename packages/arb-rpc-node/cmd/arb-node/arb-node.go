@@ -176,20 +176,18 @@ func startup() error {
 		return errors.Errorf("Missing --rollup.machine.filename")
 	}
 
-	var rpcMode web3.RpcMode
+	rpcMode := config.Node.Forwarder.RpcMode()
 	if config.Node.Type() == configuration.ForwarderNodeType {
-		if config.Node.Forwarder.Target == "" {
-			return errors.New("Forwarder node needs --node.forwarder.target")
-		}
-
-		if config.Node.Forwarder.RpcMode == "full" {
-			rpcMode = web3.NormalMode
-		} else if config.Node.Forwarder.RpcMode == "non-mutating" {
-			rpcMode = web3.NonMutatingMode
-		} else if config.Node.Forwarder.RpcMode == "forwarding-only" {
-			rpcMode = web3.ForwardingOnlyMode
+		if rpcMode == configuration.NonMutatingRpcMode {
+			config.Node.Forwarder.Target = ""
 		} else {
-			return errors.Errorf("Unrecognized RPC mode %s", config.Node.Forwarder.RpcMode)
+			if config.Node.Forwarder.Target == "" {
+				return errors.New("Forwarder node needs --node.forwarder.target")
+			}
+
+			if rpcMode == configuration.GanacheRpcMode || rpcMode == configuration.UnknownRpcMode {
+				return errors.Errorf("Unrecognized RPC mode %s", config.Node.Forwarder.RpcModeImpl)
+			}
 		}
 	} else if config.Node.Type() == configuration.AggregatorNodeType {
 		if config.Node.Aggregator.InboxAddress == "" {
@@ -282,7 +280,14 @@ func startup() error {
 		}()
 	}
 
+	// Message count is 1 based, seqNum is 0 based, so next seqNum to request is same as current message count
+	currentMessageCount, err := mon.Core.GetMessageCount()
+	if err != nil {
+		return errors.Wrap(err, "can't get message count")
+	}
+
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
+	broadcastClientErrChan := make(chan error)
 	if len(config.Feed.Input.URLs) == 0 {
 		logger.Warn().Msg("Missing --feed.input.url so not subscribing to feed")
 	} else if config.Node.Type() == configuration.ValidatorNodeType {
@@ -290,7 +295,13 @@ func startup() error {
 	} else {
 		sequencerFeed = make(chan broadcaster.BroadcastFeedMessage, 4096)
 		for _, url := range config.Feed.Input.URLs {
-			broadcastClient := broadcastclient.NewBroadcastClient(url, nil, config.Feed.Input.Timeout)
+			broadcastClient := broadcastclient.NewBroadcastClient(
+				url,
+				config.Node.ChainID,
+				currentMessageCount,
+				config.Feed.Input.Timeout,
+				broadcastClientErrChan,
+			)
 			broadcastClient.ConnectInBackground(ctx, sequencerFeed)
 		}
 	}
@@ -548,6 +559,8 @@ func startup() error {
 	case err := <-broadcasterErrChan:
 		return err
 	case err := <-errChan:
+		return err
+	case err := <-broadcastClientErrChan:
 		return err
 	case <-stakerDone:
 		return nil
