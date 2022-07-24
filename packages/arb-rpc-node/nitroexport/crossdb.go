@@ -39,7 +39,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/hashing"
 )
 
-var batchNumKey = hashing.SoliditySHA3([]byte("msgBatch"))
+var batchNumKey = hashing.SoliditySHA3([]byte("NextMsgBatch"))
 
 type CrossDB struct {
 	txDB  *txdb.TxDB
