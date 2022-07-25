@@ -276,7 +276,14 @@ func startup() error {
 		}()
 	}
 
+	// Message count is 1 based, seqNum is 0 based, so next seqNum to request is same as current message count
+	currentMessageCount, err := mon.Core.GetMessageCount()
+	if err != nil {
+		return errors.Wrap(err, "can't get message count")
+	}
+
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
+	broadcastClientErrChan := make(chan error)
 	if len(config.Feed.Input.URLs) == 0 {
 		logger.Warn().Msg("Missing --feed.input.url so not subscribing to feed")
 	} else if config.Node.Type() == configuration.ValidatorNodeType {
@@ -284,7 +291,13 @@ func startup() error {
 	} else {
 		sequencerFeed = make(chan broadcaster.BroadcastFeedMessage, 4096)
 		for _, url := range config.Feed.Input.URLs {
-			broadcastClient := broadcastclient.NewBroadcastClient(url, nil, config.Feed.Input.Timeout)
+			broadcastClient := broadcastclient.NewBroadcastClient(
+				url,
+				config.Node.ChainID,
+				currentMessageCount,
+				config.Feed.Input.Timeout,
+				broadcastClientErrChan,
+			)
 			broadcastClient.ConnectInBackground(ctx, sequencerFeed)
 		}
 	}
@@ -526,6 +539,8 @@ func startup() error {
 	case err := <-broadcasterErrChan:
 		return err
 	case err := <-errChan:
+		return err
+	case err := <-broadcastClientErrChan:
 		return err
 	case <-stakerDone:
 		return nil

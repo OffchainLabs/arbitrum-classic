@@ -36,7 +36,7 @@ func TestRelayRebroadcasts(t *testing.T) {
 	broadcasterSettings := configuration.DefaultFeedOutput()
 	broadcasterSettings.Port = "9742"
 
-	bc := broadcaster.NewBroadcaster(broadcasterSettings)
+	bc := broadcaster.NewBroadcaster(broadcasterSettings, 9742)
 
 	_, err := bc.Start(ctx)
 	if err != nil {
@@ -44,17 +44,19 @@ func TestRelayRebroadcasts(t *testing.T) {
 	}
 	defer bc.Stop()
 
-	relaySettings := configuration.Feed{
-		Input: configuration.FeedInput{
-			Timeout: 20 * time.Second,
-			URLs:    []string{"ws://127.0.0.1:9742"},
+	relayConfig := configuration.Config{
+		Feed: configuration.Feed{
+			Input: configuration.FeedInput{
+				Timeout: 20 * time.Second,
+				URLs:    []string{"ws://127.0.0.1:9742"},
+			},
+			Output: *configuration.DefaultFeedOutput(),
 		},
-		Output: *configuration.DefaultFeedOutput(),
 	}
-	relaySettings.Output.Port = "7429"
+	relayConfig.Feed.Output.Port = "7429"
 
 	// Start up an arbitrum sequencer relay
-	arbRelay := NewArbRelay(relaySettings)
+	arbRelay, broadcastClientErrorChan := NewArbRelay(&relayConfig)
 	_, err = arbRelay.Start(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -77,12 +79,15 @@ func TestRelayRebroadcasts(t *testing.T) {
 	select {
 	case err := <-errChan:
 		t.Fatal(err)
+	case err := <-broadcastClientErrorChan:
+		t.Fatal(err)
 	default:
 	}
 }
 
 func makeRelayClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
-	broadcastClient := broadcastclient.NewBroadcastClient("ws://127.0.0.1:7429/", nil, 20*time.Second)
+	broadcastClientErrChan := make(chan error)
+	broadcastClient := broadcastclient.NewBroadcastClient("ws://127.0.0.1:9742/", 9742, nil, 20*time.Second, broadcastClientErrChan)
 	broadcastClient.ConfirmedAccumulatorListener = make(chan common.Hash, 1)
 	defer wg.Done()
 	messageCount := 0
@@ -106,6 +111,9 @@ func makeRelayClient(t *testing.T, expectedCount int, wg *sync.WaitGroup) {
 			}
 		case confirmedAccumulator := <-broadcastClient.ConfirmedAccumulatorListener:
 			t.Logf("Received confirmedAccumulator, Sequence Message: %v\n", confirmedAccumulator.ShortString())
+		case err := <-broadcastClientErrChan:
+			t.Errorf("broadcase feed encountered error: %s", err.Error())
+			return
 		}
 	}
 }
