@@ -30,13 +30,19 @@ import "arb-bridge-eth/contracts/libraries/ProxyUtil.sol";
 import "../L1ArbitrumMessenger.sol";
 import "../../libraries/gateway/GatewayMessageHandler.sol";
 import "../../libraries/gateway/TokenGateway.sol";
+import "./IL1ArbitrumGateway.sol";
 import "../../libraries/ITransferAndCall.sol";
 import "../../libraries/ERC165.sol";
 
 /**
  * @title Common interface for gatways on L1 messaging to Arbitrum.
  */
-abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, ERC165 {
+abstract contract L1ArbitrumGateway is
+    L1ArbitrumMessenger,
+    TokenGateway,
+    ERC165,
+    IL1ArbitrumGateway
+{
     using SafeERC20 for IERC20;
     using Address for address;
 
@@ -323,7 +329,13 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, ERC165
         return outboundCalldata;
     }
 
-    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC165, IERC165)
+        returns (bool)
+    {
         // registering interfaces that is added after arb-bridge-peripherals >1.0.11
         // using function selector instead of single function interfaces to reduce bloat
         return

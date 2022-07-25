@@ -25,14 +25,22 @@ import "../L1ArbitrumMessenger.sol";
 import "../../libraries/gateway/GatewayRouter.sol";
 import "../../arbitrum/gateway/L2GatewayRouter.sol";
 import "../../libraries/ERC165.sol";
+import "./IL1GatewayRouter.sol";
+import "./IL1ArbitrumGateway.sol";
 
 /**
  * @title Handles deposits from Erhereum into Arbitrum. Tokens are routered to their appropriate L1 gateway (Router itself also conforms to the Gateway itnerface).
  * @notice Router also serves as an L1-L2 token address oracle.
  */
-contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRouter, ERC165 {
-    address public owner;
-    address public inbox;
+contract L1GatewayRouter is
+    WhitelistConsumer,
+    L1ArbitrumMessenger,
+    GatewayRouter,
+    ERC165,
+    IL1GatewayRouter
+{
+    address public override owner;
+    address public override inbox;
 
     modifier onlyOwner() {
         require(msg.sender == owner, "ONLY_OWNER");
@@ -145,11 +153,10 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
 
     /**
      * @notice Allows L1 Token contract to trustlessly register its gateway. (other setGateway method allows excess eth recovery from _maxSubmissionCost and is recommended)
-
      * @param _gateway l1 gateway address
-     * @param _maxGas max gas for L2 retryable exrecution 
-     * @param _gasPriceBid gas price for L2 retryable ticket 
-     * @param  _maxSubmissionCost base submission cost  L2 retryable tick3et 
+     * @param _maxGas max gas for L2 retryable exrecution
+     * @param _gasPriceBid gas price for L2 retryable ticket
+     * @param  _maxSubmissionCost base submission cost  L2 retryable tick3et
      * @return Retryable ticket ID
      */
     function setGateway(
@@ -157,18 +164,18 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
-    ) external payable returns (uint256) {
+    ) external payable override returns (uint256) {
         return setGateway(_gateway, _maxGas, _gasPriceBid, _maxSubmissionCost, msg.sender);
     }
 
     /**
      * @notice Allows L1 Token contract to trustlessly register its gateway.
-     * param _gateway l1 gateway address
-     * param _maxGas max gas for L2 retryable exrecution
-     * param _gasPriceBid gas price for L2 retryable ticket
-     * param  _maxSubmissionCost base submission cost  L2 retryable tick3et
-     * param _creditBackAddress address for crediting back overpayment of _maxSubmissionCost
-     * return Retryable ticket ID
+     * @param _gateway l1 gateway address
+     * @param _maxGas max gas for L2 retryable exrecution
+     * @param _gasPriceBid gas price for L2 retryable ticket
+     * @param  _maxSubmissionCost base submission cost  L2 retryable tick3et
+     * @param _creditBackAddress address for crediting back overpayment of _maxSubmissionCost
+     * @return Retryable ticket ID
      */
     function setGateway(
         address _gateway,
@@ -176,7 +183,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost,
         address _creditBackAddress
-    ) public payable returns (uint256) {
+    ) public payable override returns (uint256) {
         require(
             ArbitrumEnabledToken(msg.sender).isArbitrumEnabled() == uint8(0xa4b1),
             "NOT_ARB_ENABLED"
@@ -244,7 +251,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) public payable override returns (bytes memory) {
+    ) public payable override(GatewayRouter, ITokenGateway) returns (bytes memory) {
         _outboundTransferChecks(_maxGas, _gasPriceBid, _data);
 
         return super.outboundTransfer(_token, _to, _amount, _maxGas, _gasPriceBid, _data);
@@ -276,20 +283,24 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) public payable override returns (bytes memory) {
-        // _refundTo will be rewritten to L2 alias if the address have code in L1
-        require(_refundTo != address(0), "INVALID_REFUND_ADDR");
-        _outboundTransferChecks(_maxGas, _gasPriceBid, _data);
+    ) public payable virtual override returns (bytes memory) {
+        address gateway = getGateway(_token);
+        bytes memory gatewayData = GatewayMessageHandler.encodeFromRouterToGateway(
+            msg.sender,
+            _data
+        );
 
+        emit TransferRouted(_token, msg.sender, _to, gateway);
+        // here we use `IL1ArbitrumGateway` since we don't assume all ITokenGateway implements `outboundTransferCustomRefund`
         return
-            super.outboundTransferCustomRefund(
+            IL1ArbitrumGateway(gateway).outboundTransferCustomRefund{ value: msg.value }(
                 _token,
                 _refundTo,
                 _to,
                 _amount,
                 _maxGas,
                 _gasPriceBid,
-                _data
+                gatewayData
             );
     }
 
@@ -299,7 +310,13 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         _;
     }
 
-    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+    function supportsInterface(bytes4 interfaceId)
+        public
+        view
+        virtual
+        override(ERC165, IERC165)
+        returns (bool)
+    {
         // registering interfaces that is added after arb-bridge-peripherals >1.0.11
         // using function selector instead of single function interfaces to reduce bloat
         return
