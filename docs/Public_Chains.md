@@ -46,7 +46,7 @@ You'll need a chain's native currency to transact. You can either acquire funds 
 - [Rinkeby](https://faucet.rinkeby.io/)
 - [Nitro Goerli Rollup](https://twitter.com/intent/tweet?text=ok%20I%20need%20@arbitrum%20to%20give%20me%20Nitro%20testnet%20gas.%20like%20VERY%20SOON.%20I%20cant%20take%20this,%20I%E2%80%99ve%20been%20waiting%20for%20@nitro_devnet%20release.%20I%20just%20want%20to%20start%20developing.%20but%20I%20need%20the%20gas%20IN%20MY%20WALLET%20NOW.%20can%20devs%20DO%20SOMETHING??%20%20SEND%20HERE:%200xAddA0B73Fe69a6E3e7c1072Bb9523105753e08f8)
 
-[Supported centralized exchanges](https://portal.arbitrum.one/#centralizedexchanges) allow you purchase (mainnet) Ether and withdraw it directly onto Arbitrum one.
+[Supported centralized exchanges](https://portal.arbitrum.one/#centralizedexchanges) allow you to purchase (mainnet) Ether and withdraw it directly onto Arbitrum one.
 
 ### Deposit And Withdraw
 
