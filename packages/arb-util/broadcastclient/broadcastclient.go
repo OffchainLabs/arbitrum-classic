@@ -254,12 +254,16 @@ func (bc *BroadcastClient) startBackgroundReader(ctx context.Context, messageRec
 				}
 
 				if res.Version == 1 {
-					var currentLastSeqNum *big.Int
-					for _, message := range res.Messages {
-						currentLastSeqNum = message.FeedItem.BatchItem.LastSeqNum
-						messageReceiver <- *message
+					messageCount := len(res.Messages)
+					if messageCount > 0 {
+						for _, message := range res.Messages {
+							messageReceiver <- *message
+						}
+						lastLastSeqNum := res.Messages[messageCount-1].FeedItem.BatchItem.LastSeqNum
+						if lastLastSeqNum != nil {
+							bc.mostRecentSeqNum = new(big.Int).Add(lastLastSeqNum, big.NewInt(1))
+						}
 					}
-					bc.mostRecentSeqNum = new(big.Int).Add(currentLastSeqNum, big.NewInt(1))
 
 					if res.ConfirmedAccumulator.IsConfirmed && bc.ConfirmedAccumulatorListener != nil {
 						bc.ConfirmedAccumulatorListener <- res.ConfirmedAccumulator.Accumulator
