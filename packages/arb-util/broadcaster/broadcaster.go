@@ -38,10 +38,10 @@ type Broadcaster struct {
 	prevConfirmedAcc common.Hash
 }
 
-func NewBroadcaster(settings *configuration.FeedOutput) *Broadcaster {
+func NewBroadcaster(settings *configuration.FeedOutput, chainId uint64) *Broadcaster {
 	catchupBuffer := NewConfirmedAccumulatorCatchupBuffer()
 	return &Broadcaster{
-		server:        wsbroadcastserver.NewWSBroadcastServer(settings, catchupBuffer),
+		server:        wsbroadcastserver.NewWSBroadcastServer(settings, catchupBuffer, chainId),
 		catchupBuffer: catchupBuffer,
 	}
 }
@@ -57,7 +57,7 @@ func (b *Broadcaster) Start(ctx context.Context) (chan error, error) {
 func (b *Broadcaster) BroadcastSingle(prevAcc common.Hash, batchItem inbox.SequencerBatchItem, signature []byte) error {
 	var broadcastMessages []*BroadcastFeedMessage
 
-	logger.Debug().Hex("acc", batchItem.Accumulator.Bytes()).Msg("sending batch Item")
+	logger.Debug().Hex("acc", batchItem.Accumulator.Bytes()).Str("lastseqnum", batchItem.LastSeqNum.String()).Msg("sending batch Item")
 
 	msg := BroadcastFeedMessage{
 		FeedItem: SequencerFeedItem{

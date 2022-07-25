@@ -24,8 +24,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/pkg/errors"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
 const nonMutatingModeError = "mutating transactions are disabled on this node"
@@ -33,13 +35,13 @@ const nonMutatingModeError = "mutating transactions are disabled on this node"
 type ForwarderServer struct {
 	srv    *aggregator.Server
 	ethSrv *Server
-	mode   RpcMode
+	mode   configuration.RpcMode
 }
 
 func NewForwarderServer(
 	srv *aggregator.Server,
 	ethSrv *Server,
-	mode RpcMode,
+	mode configuration.RpcMode,
 ) *ForwarderServer {
 	return &ForwarderServer{
 		srv:    srv,
@@ -49,11 +51,11 @@ func NewForwarderServer(
 }
 
 func (f *ForwarderServer) GetTransactionCount(ctx context.Context, address *common.Address, blockNum rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
-	return f.ethSrv.getTransactionCountInner(ctx, address, blockNum, f.mode == ForwardingOnlyMode)
+	return f.ethSrv.getTransactionCountInner(ctx, address, blockNum, f.mode == configuration.ForwardingOnlyRpcMode)
 }
 
 func (f *ForwarderServer) SendRawTransaction(ctx context.Context, data hexutil.Bytes) (hexutil.Bytes, error) {
-	if f.mode == NonMutatingMode {
+	if f.mode == configuration.NonMutatingRpcMode {
 		return nil, errors.New(nonMutatingModeError)
 	}
 
