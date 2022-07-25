@@ -175,4 +175,8 @@ contract Bridge is OwnableUpgradeable, IBridge {
     function setReplacementBridge(address newReplacementBridge) external override onlyOwner {
         replacementBridge = IBridge(newReplacementBridge);
     }
+
+    function isNitroReady() external pure returns (uint8) {
+        return uint8(0xa4b1);
+    }
 }
