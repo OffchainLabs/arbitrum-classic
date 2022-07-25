@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"math/big"
 	"net"
 	"sync/atomic"
 	"time"
@@ -85,9 +86,9 @@ func (cm *ClientManager) registerClient(ctx context.Context, clientConnection *C
 }
 
 // Register registers new connection as a Client.
-func (cm *ClientManager) Register(conn net.Conn, desc *netpoll.Desc) *ClientConnection {
+func (cm *ClientManager) Register(conn net.Conn, desc *netpoll.Desc, requestedSeqNum *big.Int) *ClientConnection {
 	createClient := ClientConnectionAction{
-		NewClientConnection(conn, desc, cm),
+		NewClientConnection(conn, desc, cm, requestedSeqNum),
 		true,
 	}
 

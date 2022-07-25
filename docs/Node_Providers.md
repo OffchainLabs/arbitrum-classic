@@ -14,26 +14,34 @@ Next, depending one which network you want to interact with, you can choose betw
 
 Alchemy provides 300M compute units per month for free, or the equivalent of 30M getLatestBlock requests. Additional usage requires upgrading to a Growth Tier ($49 / month).
 
-## Infura
+## [Infura](https://infura.io/)
 
 Infura is a node service provider that provides access to Arbitrum One (Mainnet) and Rinkeby testnet. To start interacting with either of these networks, you need to set up an Infura account and create a project. Next, you will be given a ***Project ID*** (for detailed steps, check out the [Infura's documentation](https://blog.infura.io/getting-started-with-infura-28e41844cc89/)). You can now select which endpoint you want to connect to, this could be Arbitrum One, or it could be Rinkeby testnet. 
 
 Infura provides access to Arbitrum up to 100k requests per day for free. Once Arbitrum leaves beta in Infura, it will be charged as an addon of $200 / month.
 
-## QuickNode
+## [QuickNode](https://www.quicknode.com/)
 
 QuickNode supports both Arbitrum One (Mainnet) and Rinkeby testnet and allows users to interact with these chains. For a full guide of how to set up an Arbitrum node on QuickNode, see the [QuickNode's Arbitrum RPC documentation](https://www.quicknode.com/docs/arbitrum).
 
 Quicknode provides 300k Arbitrum requests per month at a rate of $9 / month.
 
-## Moralis
+## [Moralis](https://moralis.io/)
 
 Moralis allows Arbitrum users and developers to connect to both Arbitrum One (Mainnet) and Rinkeby testnet. To do so, you need to create an account and choose the node you wish to connect to. You will then be presented with a pair of URLs (Arbitrum Mainnet and Testnet) with which you can interact with directly in the command line or point your [wallet's](https://portal.arbitrum.one/#wallets) RPC endpoints to them. For full guide and more explanation, see the [Moralis's documentation](https://moralis.io/full-guide-how-to-connect-to-arbitrum-nodes/).
 
-## Ankr
+## [Ankr](https://www.ankr.com/)
 
 Ankr provides access to both Arbitrum One (Mainnet) and Rinkeby Testnet. After creating an Ankr account, you will be presented with a pair of URLs which you can use to connect to any of our networks. For more details, see the [Ankr's documentation](https://docs.ankr.com/blockchains/arbitrum/develop-on-arbitrum).
 
-## BlockVision
+## [BlockVision](https://blockvision.org/)
 
 BlockVision provides Arbitrum One mainnet and Rinkeby node services. See [BlockVision Dashboard](https://dashboard.blockvision.org/connect).
+
+## [GetBlock](https://getblock.io/)
+
+GetBlock is a service that provides instant API connection to full nodes of many leading blockchain networks, including Arbitrum One (Mainnet) available for shared and dedicated nodes and Rinkeby Testnet available for dedicated nodes.
+
+For detailed steps on how to set up an Arbitrum node, check [GetBlock’s documentation](https://getblock.io/docs/)
+
+GetBlock’s pricing for Arbitrum starts from $6 for 500K requests. Also, GetBlock offers a free plan for testing.

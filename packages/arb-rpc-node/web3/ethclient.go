@@ -43,9 +43,9 @@ type EthClient struct {
 }
 
 func NewEthClient(srv *aggregator.Server, ganacheMode bool) *EthClient {
-	mode := NormalMode
+	mode := configuration.NormalRpcMode
 	if ganacheMode {
-		mode = GanacheMode
+		mode = configuration.GanacheRpcMode
 	}
 	config := ServerConfig{
 		Mode:          mode,

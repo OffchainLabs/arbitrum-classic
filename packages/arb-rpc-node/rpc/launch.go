@@ -152,7 +152,7 @@ func SetupBatcher(
 		if err != nil {
 			return nil, nil, err
 		}
-		feedBroadcaster := broadcaster.NewBroadcaster(&config.Feed.Output)
+		feedBroadcaster := broadcaster.NewBroadcaster(&config.Feed.Output, config.L2.ChainID)
 		seqBatcher, err := batcher.NewSequencerBatcher(
 			ctx,
 			batcherMode.Core,
@@ -160,6 +160,7 @@ func SetupBatcher(
 			batcherMode.InboxReader,
 			client,
 			seqInbox,
+			common.NewAddressFromEth(seqInboxAddr),
 			batcherMode.Auth,
 			dataSigner,
 			feedBroadcaster,

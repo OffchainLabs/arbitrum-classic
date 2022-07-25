@@ -381,7 +381,7 @@ contract Inbox is IInbox, WhitelistConsumer, Cloneable {
         uint256 maxGas,
         uint256 gasPriceBid,
         bytes calldata data
-    ) external payable virtual returns (uint256) {
+    ) external payable virtual override returns (uint256) {
         return
             createRetryableTicketNoRefundAliasRewrite(
                 destAddr,
