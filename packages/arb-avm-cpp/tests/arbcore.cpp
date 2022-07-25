@@ -17,6 +17,8 @@
 #include "config.hpp"
 #include "helper.hpp"
 
+#include <fstream>
+
 #include <data_storage/arbstorage.hpp>
 #include <data_storage/storageresult.hpp>
 
