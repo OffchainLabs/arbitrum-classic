@@ -50,7 +50,7 @@ You'll need a chain's native currency to transact. You can either acquire funds 
 
 ### Deposit And Withdraw
 
-To move your Ether and Tokens between Arbitrum and Ethereum chains at [bridge.arbitrum.io](https://bridge.arbitrum.io/).
+To move your Ether and Tokens between Arbitrum and Ethereum chains, visit [bridge.arbitrum.io](https://bridge.arbitrum.io/).
 
 ### Use L2 Dapps!
 
