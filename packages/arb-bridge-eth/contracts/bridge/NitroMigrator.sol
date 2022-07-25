@@ -37,13 +37,12 @@ interface INitroRollup {
     function bridge() external view returns (INitroBridge.IBridge);
 
     function inbox() external view returns (INitroInbox.IInbox);
-
     function setInbox(IInbox newInbox) external;
 
     function setOwner(address newOwner) external;
 
+    function paused() external view returns (bool);
     function pause() external;
-
     function resume() external;
 
     function latestNodeCreated() external returns (uint64);
@@ -154,7 +153,9 @@ contract NitroMigrator is Ownable, IMessageProvider {
         nitroBridge.setDelayedInbox(address(oldNitroInbox), false);
 
         require(nitroRollup.latestNodeCreated() == 0, "NITRO_ROLLUP_HAS_NODES");
-        nitroRollup.pause();
+        if (!nitroRollup.paused()) {
+            nitroRollup.pause();
+        }
 
         latestCompleteStep = NitroMigrationSteps.Step0;
     }
