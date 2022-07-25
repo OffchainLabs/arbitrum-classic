@@ -2,17 +2,9 @@
 # yarn lockfile v1
 
 
-"@arbitrum/nitro-contracts@https://gitpkg.now.sh/OffchainLabs/nitro/contracts?678866136ca917ed20dd3f0ee23176bb7bb7bd49":
+"@arbitrum/nitro-contracts@https://gitpkg.now.sh/OffchainLabs/nitro/contracts?54d7a96cfa47dded93c198c2a4cccdab46fb5974":
   version "1.0.0-beta.8"
-  resolved "https://gitpkg.now.sh/OffchainLabs/nitro/contracts?678866136ca917ed20dd3f0ee23176bb7bb7bd49#ccacdf6e00feb1a8af23c0938b2f00ead2ee69fd"
-  dependencies:
-    "@openzeppelin/contracts" "4.5.0"
-    "@openzeppelin/contracts-upgradeable" "4.5.2"
-    hardhat "^2.6.6"
-
-"@arbitrum/nitro-contracts@https://gitpkg.now.sh/OffchainLabs/nitro/contracts?b705200c4d9ca90e82579057e1b155c3913562db":
-  version "1.0.0-beta.8"
-  resolved "https://gitpkg.now.sh/OffchainLabs/nitro/contracts?b705200c4d9ca90e82579057e1b155c3913562db#388f31134598b44d9265b08b9129341e42a0c70b"
+  resolved "https://gitpkg.now.sh/OffchainLabs/nitro/contracts?54d7a96cfa47dded93c198c2a4cccdab46fb5974#a5f53c9c9631e6753a8a4d182a42509912b770d4"
   dependencies:
     "@openzeppelin/contracts" "4.5.0"
     "@openzeppelin/contracts-upgradeable" "4.5.2"
