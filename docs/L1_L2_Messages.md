@@ -76,7 +76,7 @@ If an L1 transaction underpays for a retryable ticket's base submission free, th
 
 In a future release, the base submission fee will be calculated using the 1559 `BASE_FEE` and collected directly at L1; underpayment will simply result in the L1 transaction reverting, thus avoiding the complications above entirely.
 
-###  Ticket Creation Failure: L2 Callvalue
+### Ticket Creation Failure: L2 Callvalue
 Likewise, a retryable ticket will fail to be created if insufficient callvalue is provided to L2 for execution. Note that this value can be supplied from the L1 transaction (recommended) or, if not supplied from L1, will be deducted from the sender's L2 account.
 
 ### Retryable Transaction Lifecycle:
