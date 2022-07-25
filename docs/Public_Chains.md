@@ -60,7 +60,7 @@ Interacting with Arbitrum chains will feel very similar to using Ethereum, just 
 
 Dapp developers can build on Arbitrum seamlessly using their favorite Ethereum tooling; see [here](Contract_Deployment.md) for contract deployment and [here](Frontend_Integration.md) for frontend integration.
 
-### What Next
+### What's Next
 
 The team working on Arbitrum is always interested and looking forward to engage with its users.  
 Why not follow us on [Twitter](https://twitter.com/arbitrum) or join our community on [Discord](https://discord.gg/5KE54JwyTs)?
