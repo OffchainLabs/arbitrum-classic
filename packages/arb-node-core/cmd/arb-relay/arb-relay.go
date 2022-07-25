@@ -19,13 +19,14 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	golog "log"
+	"math/big"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/pkg/errors"
 
@@ -34,6 +35,7 @@ import (
 	"github.com/rs/zerolog/pkgerrors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/cmdhelp"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcastclient"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/broadcaster"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
@@ -46,6 +48,8 @@ var pprofMux *http.ServeMux
 type ArbRelay struct {
 	broadcastClients         []*broadcastclient.BroadcastClient
 	broadcaster              *broadcaster.Broadcaster
+	chainIdBig               *big.Int
+	chainIdHex               hexutil.Uint64
 	confirmedAccumulatorChan chan common.Hash
 }
 
@@ -76,10 +80,10 @@ func startup() error {
 	defer cancelFunc()
 
 	config, err := configuration.ParseRelay()
-	if err != nil || len(config.Feed.Input.URLs) == 0 {
+	if err != nil || len(config.Feed.Input.URLs) == 0 || config.L2.ChainID == 0 {
 		fmt.Printf("\n")
 		fmt.Printf("Sample usage: arb-relay --conf=<filename> \n")
-		fmt.Printf("          or: arb-relay --feed.input.url=<feed websocket>\n\n")
+		fmt.Printf("          or: arb-relay --feed.input.url=<feed websocket> --l2.chain-id=<chain id>\n\n")
 		if err != nil && !strings.Contains(err.Error(), "help requested") {
 			fmt.Printf("%s\n", err.Error())
 		}
@@ -101,7 +105,7 @@ func startup() error {
 	}
 
 	// Start up an arbitrum sequencer relay
-	arbRelay := NewArbRelay(config.Feed)
+	arbRelay, broadcastClientErrChan := NewArbRelay(config)
 	relayDone, err := arbRelay.Start(ctx)
 	if err != nil {
 		return err
@@ -111,24 +115,30 @@ func startup() error {
 	select {
 	case <-cancelChan:
 		return nil
+	case err := <-broadcastClientErrChan:
+		return err
 	case <-relayDone:
 		return nil
 	}
 }
 
-func NewArbRelay(settings configuration.Feed) *ArbRelay {
+func NewArbRelay(config *configuration.Config) (*ArbRelay, chan error) {
 	var broadcastClients []*broadcastclient.BroadcastClient
 	confirmedAccumulatorChan := make(chan common.Hash, 10)
-	for _, address := range settings.Input.URLs {
-		client := broadcastclient.NewBroadcastClient(address, nil, settings.Input.Timeout)
+	broadcastClientErrChan := make(chan error, 1)
+	for _, address := range config.Feed.Input.URLs {
+		client := broadcastclient.NewBroadcastClient(address, config.L2.ChainID, nil, config.Feed.Input.Timeout, broadcastClientErrChan)
 		client.ConfirmedAccumulatorListener = confirmedAccumulatorChan
 		broadcastClients = append(broadcastClients, client)
 	}
-	return &ArbRelay{
-		broadcaster:              broadcaster.NewBroadcaster(&settings.Output),
+	arbRelay := &ArbRelay{
+		broadcaster:              broadcaster.NewBroadcaster(&config.Feed.Output, 0),
 		broadcastClients:         broadcastClients,
 		confirmedAccumulatorChan: confirmedAccumulatorChan,
 	}
+	arbRelay.chainIdBig = new(big.Int).SetUint64(config.L2.ChainID)
+	arbRelay.chainIdHex = hexutil.Uint64(config.L2.ChainID)
+	return arbRelay, broadcastClientErrChan
 }
 
 const RECENT_FEED_ITEM_TTL time.Duration = time.Second * 10
@@ -137,16 +147,16 @@ func (ar *ArbRelay) Start(parentContext context.Context) (chan bool, error) {
 	ctx, cancelFunc := context.WithCancel(parentContext)
 	done := make(chan bool)
 
-	broadcasterErrChan, err := ar.broadcaster.Start(ctx)
-	if err != nil {
-		cancelFunc()
-		return nil, errors.New("broadcast unable to start")
-	}
-
 	// connect returns
 	messages := make(chan broadcaster.BroadcastFeedMessage, 10)
 	for _, client := range ar.broadcastClients {
 		client.ConnectInBackground(ctx, messages)
+	}
+
+	broadcasterErrChan, err := ar.broadcaster.Start(ctx)
+	if err != nil {
+		cancelFunc()
+		return nil, errors.New("broadcast unable to start")
 	}
 
 	recentFeedItems := make(map[common.Hash]time.Time)

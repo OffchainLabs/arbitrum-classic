@@ -1,6 +1,6 @@
 ---
 id: Running_Nitro_Node
-title: Running full Nitro node for Arbitrum Goerli DevNet
+title: Running full Nitro node for Arbitrum Goerli TestNet
 sidebar_label: Running a Nitro Node
 ---
 
@@ -8,12 +8,14 @@ Note: If you’re interested in accessing the Arbitrum Goerli network but you do
 
 ### Required Artifacts
 
-- Latest Docker Image: `offchainlabs/nitro-node:v2.0.0-alpha.2`
+- Latest Docker Image: `offchainlabs/nitro-node:v2.0.0-beta.3-ed75bf5`
 
 ### Required parameter
 
 - `--l1.url=<Layer 1 Ethereum RPC URL>`
   - Must provide standard Ethereum node RPC endpoint.
+- `--l2.chain-id=421613`
+  - Used to select Goerli Nitro Rollup Testnet
 
 ### Important ports
 
@@ -27,7 +29,7 @@ Note: If you’re interested in accessing the Arbitrum Goerli network but you do
 - Here is an example of how to run nitro-node for goerli:
 
   ```
-  docker run --rm -it  -v /some/local/dir/arbitrum-goerli/:/home/user/.arbitrum/goerli -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-alpha.2 --l1.url https://l1-goerli-node:8545
+  docker run --rm -it  -v /some/local/dir/arbitrum-goerli/:/home/user/.arbitrum/goerli -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-beta.3-ed75bf5 --l1.url https://l1-goerli-node:8545 --l2.chain-id=421613
   ```
 
   - Note that if you are running L1 node on localhost, you may need to add `--network host` right after `docker run` to use docker host-based networking
@@ -52,9 +54,9 @@ Note: If you’re interested in accessing the Arbitrum Goerli network but you do
 - `--node.archive`
   - Retain past block state
 - `--node.feed.input.url=<feed address>`
-  - Defaults to `wss://nitro-devnet.arbitrum.io/feed`. If running more than a couple nodes, you will want to provide one feed relay per datacenter, see further instructions below.
+  - Defaults to `wss://goerli-rollup.arbitrum.io/feed`. If running more than a couple nodes, you will want to provide one feed relay per datacenter, see further instructions below.
 - `--node.forwarding-target=<sequencer RPC>`
-  - Defaults to `https://nitro-devnet.arbitrum.io/rpc`
+  - Defaults to `https://goerli-rollup.arbitrum.io/rpc`
 - `--node.rpc.evm-timeout`
   - Defaults to `5s`, timeout used for `eth_call` (0 == no timeout)
 - `--node.rpc.gas-cap`
@@ -68,9 +70,9 @@ Note: If you’re interested in accessing the Arbitrum Goerli network but you do
   The arb-relay is in the same docker image.
 - Here is an example of how to run nitro-relay for goerli:
   ```
-  docker run --rm -it  -p 0.0.0.0:9642:9642 --entrypoint relay offchainlabs/nitro-node:v2.0.0-alpha.2 --node.feed.input.url wss://nitro-devnet.arbitrum.io/feed
+  docker run --rm -it  -p 0.0.0.0:9642:9642 --entrypoint relay offchainlabs/nitro-node:v2.0.0-beta.3-ed75bf5 --node.feed.input.url wss://goerli-rollup.arbitrum.io/feed --l2.chain-id=421613
   ```
 - Here is an example of how to run nitro-node for goerli with custom relay:
   ```
-  docker run --rm -it  -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-alpha.2 --l1.url https://l1-goeri-node:8545 --feed.input.url ws://local-relay-address:9642
+  docker run --rm -it  -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-beta.3-ed75bf5 --l1.url https://l1-goeri-node:8545 --feed.input.url ws://local-relay-address:9642 --l2.chain-id=421613
   ```

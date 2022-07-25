@@ -152,7 +152,7 @@ func SetupBatcher(
 		if err != nil {
 			return nil, nil, err
 		}
-		feedBroadcaster := broadcaster.NewBroadcaster(&config.Feed.Output)
+		feedBroadcaster := broadcaster.NewBroadcaster(&config.Feed.Output, config.L2.ChainID)
 		seqBatcher, err := batcher.NewSequencerBatcher(
 			ctx,
 			batcherMode.Core,
