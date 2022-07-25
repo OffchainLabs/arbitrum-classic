@@ -70,7 +70,7 @@ Intuitively: if a user does not desire immediate redemption, they should provide
   `Calldata:` data encoding the L2 contract call.
   `Calldata Size:` CallData size.
 
-###  Ticket Creation Failure: Base Submission Fee (IMPORTANT)
+### Ticket Creation Failure: Base Submission Fee (IMPORTANT)
 
 If an L1 transaction underpays for a retryable ticket's base submission free, the retryable ticket creation on L2 simply fails. Given that this potentially breaks the atomicity of the L1 / L2 transactions, applications should avoid this scenario. The current base submission fee returned by `ArbRetryableTx.getSubmissionPrice` increases once every 24 hour period by at most 50% of its current value. Since any amount overpaid will be credited to the `credit-back-address`, it is highly recommended that applications judiciously overpay relative to the current price.
 
