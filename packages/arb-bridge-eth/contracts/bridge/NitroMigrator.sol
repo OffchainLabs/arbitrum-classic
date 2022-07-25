@@ -28,12 +28,35 @@ import "../libraries/NitroReadyQuery.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
-import "@arbitrum/nitro-contracts/src/bridge/IBridgeNoErrors.sol" as INitroBridge;
-import "@arbitrum/nitro-contracts/src/bridge/IInboxNoErrors.sol" as INitroInbox;
+import "@arbitrum/nitro-contracts/src/bridge/IBridge.sol" as INitroBridge;
+import "@arbitrum/nitro-contracts/src/bridge/IInbox.sol" as INitroInbox;
 
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 
 interface INitroRollup {
+    struct GlobalState {
+        bytes32[2] bytes32Vals;
+        uint64[2] u64Vals;
+    }
+
+    enum MachineStatus {
+        RUNNING,
+        FINISHED,
+        ERRORED,
+        TOO_FAR
+    }
+
+    struct ExecutionState {
+        GlobalState globalState;
+        MachineStatus machineStatus;
+    }
+    struct NitroRollupAssertion {
+        ExecutionState beforeState;
+        ExecutionState afterState;
+        uint64 numBlocks;
+    }
+
     function bridge() external view returns (INitroBridge.IBridge);
 
     function inbox() external view returns (INitroInbox.IInbox);
@@ -48,8 +71,7 @@ interface INitroRollup {
 
     function latestNodeCreated() external returns (uint64);
 
-    function createNitroMigrationGenesis(uint64 genesisBlockNumber, bytes32 genesisBlockHash)
-        external;
+    function createNitroMigrationGenesis(NitroRollupAssertion calldata assertion) external;
 }
 
 interface IArbOwner {
@@ -225,10 +247,11 @@ contract NitroMigrator is Ownable, IMessageProvider {
     }
 
     // CHRIS: TODO: remove skipCheck
-    function nitroStep3(uint64 nitroGenesisBlockNumber, bytes32 nitroGenesisHash, bool skipCheck)
-        external
-        onlyOwner
-    {
+    function nitroStep3(
+        uint64 nitroGenesisBlockNumber,
+        bytes32 nitroGenesisHash,
+        bool skipCheck
+    ) external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Step2, "WRONG_STEP");
         // CHRIS: TODO: destroying the node in the previous steps does not reset latestConfirmed/latestNodeCreated
         require(
@@ -259,7 +282,27 @@ contract NitroMigrator is Ownable, IMessageProvider {
         // we don't enable sequencer inbox and the rollup event bridge in nitro bridge as they are already configured in the deployment
         nitroBridge.setDelayedInbox(address(inbox), true);
 
-        nitroRollup.createNitroMigrationGenesis(nitroGenesisBlockNumber, nitroGenesisHash);
+        bytes32[2] memory newStateBytes32;
+        newStateBytes32[0] = nitroGenesisHash;
+        uint64[2] memory newStateU64;
+        newStateU64[0] = 1;
+        INitroRollup.GlobalState memory emptyGlobalState;
+        INitroRollup.NitroRollupAssertion memory assertion = INitroRollup.NitroRollupAssertion({
+            beforeState: INitroRollup.ExecutionState({
+                globalState: emptyGlobalState,
+                machineStatus: INitroRollup.MachineStatus.FINISHED
+            }),
+            afterState: INitroRollup.ExecutionState({
+                globalState: INitroRollup.GlobalState({
+                    bytes32Vals: newStateBytes32,
+                    u64Vals: newStateU64
+                }),
+                machineStatus: INitroRollup.MachineStatus.FINISHED
+            }),
+            numBlocks: nitroGenesisBlockNumber + 1
+        });
+
+        nitroRollup.createNitroMigrationGenesis(assertion);
         nitroRollup.resume();
 
         // the migration is complete, relinquish ownership back to the
