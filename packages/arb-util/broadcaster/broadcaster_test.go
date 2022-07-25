@@ -31,12 +31,14 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
+var chainId = uint64(5555)
+
 func TestBroadcasterSendsConfirmedAccumulatorMessages(t *testing.T) {
 	ctx := context.Background()
 
 	broadcasterSettings := configuration.DefaultFeedOutput()
 
-	b := NewBroadcaster(broadcasterSettings)
+	b := NewBroadcaster(broadcasterSettings, chainId)
 
 	_, err := b.Start(ctx)
 	if err != nil {
@@ -150,7 +152,7 @@ func TestBroadcasterRespondsToPing(t *testing.T) {
 	broadcasterSettings := configuration.DefaultFeedOutput()
 	broadcasterSettings.Port = "9643"
 
-	b := NewBroadcaster(broadcasterSettings)
+	b := NewBroadcaster(broadcasterSettings, chainId)
 
 	_, err := b.Start(ctx)
 	if err != nil {
@@ -201,7 +203,7 @@ func TestBroadcasterReorganizesCacheBasedOnAccumulator(t *testing.T) {
 	broadcasterSettings := configuration.DefaultFeedOutput()
 	broadcasterSettings.ClientTimeout = 30
 
-	b := NewBroadcaster(broadcasterSettings)
+	b := NewBroadcaster(broadcasterSettings, chainId)
 
 	_, err := b.Start(ctx)
 	if err != nil {
