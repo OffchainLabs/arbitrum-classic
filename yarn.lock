@@ -10534,9 +10534,9 @@ underscore@1.9.1:
   integrity sha512-5/4etnCkd9c8gwgowi5/om/mYO5ajCaOgdzj/oW+0eQV9WxKBDZw5+ycmKmeaTXjInS/W0BzpGLo2xR2aBwZdg==
 
 undici@^5.4.0:
-  version "5.7.0"
-  resolved "https://registry.yarnpkg.com/undici/-/undici-5.7.0.tgz#979f89229c01505573cb274d0e11ea8d82b4004f"
-  integrity sha512-ORgxwDkiPS+gK2VxE7iyVeR7JliVn5DqhZ4LgQqYLBXsuK+lwOEmnJ66dhvlpLM0tC3fC7eYF1Bti2frbw2eAA==
+  version "5.8.0"
+  resolved "https://registry.yarnpkg.com/undici/-/undici-5.8.0.tgz#dec9a8ccd90e5a1d81d43c0eab6503146d649a4f"
+  integrity sha512-1F7Vtcez5w/LwH2G2tGnFIihuWUlc58YidwLiCv+jR2Z50x0tNXpRRw7eOIJ+GvqCqIkg9SB7NWAJ/T9TLfv8Q==
 
 union-value@^1.0.0:
   version "1.0.1"
