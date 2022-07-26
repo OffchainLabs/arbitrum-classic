@@ -21,6 +21,7 @@
   "scripts": {
     "build": "./scripts/build.bash",
     "test": "yarn run hardhat test test/*.spec.ts",
+    "gen:abi": "node ./scripts/genAbi.js",
     "test:ci": "CI=true $npm_execpath run test",
     "test:gas": "REPORT_GAS=true $npm_execpath run test",
     "test:fork": "SHOULD_FORK=1 yarn run hardhat test test/*.fork.ts",
@@ -44,6 +45,7 @@
     "hardhat": "hardhat --config hardhat.config.ts"
   },
   "dependencies": {
+    "@arbitrum/nitro-contracts": "https://gitpkg.now.sh/OffchainLabs/nitro/contracts?54d7a96cfa47dded93c198c2a4cccdab46fb5974",
     "@openzeppelin/contracts": "3.4.2",
     "@openzeppelin/contracts-0.8": "npm:@openzeppelin/contracts@^4.3.2",
     "@openzeppelin/contracts-upgradeable": "3.4.2",

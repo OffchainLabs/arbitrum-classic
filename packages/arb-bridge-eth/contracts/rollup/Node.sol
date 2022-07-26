@@ -67,7 +67,7 @@ contract Node is Cloneable, INode {
     /// @dev nodes can be confirmed instantly after shutdownForNitroBlock
     function deadlineBlock() public view override returns (uint256) {
         uint256 shutdownForNitroBlock = Rollup(payable(rollup)).shutdownForNitroBlock();
-        return shutdownForNitroBlock >= block.number ? shutdownForNitroBlock : deadlineBlock_;
+        return block.number >= shutdownForNitroBlock ? shutdownForNitroBlock : deadlineBlock_;
     }
 
     /**
