@@ -565,6 +565,10 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         require(currentChallenge(stakerAddress) == address(0), "IN_CHAL");
     }
 
+    function isNitroReady() external pure returns (uint8) {
+        return uint8(0xa4b1);
+    }
+
     function withdrawStakerFunds(address payable destination) external virtual returns (uint256);
 }
 
@@ -606,10 +610,6 @@ contract RollupUserFacet is AbsRollupUserFacet {
         // This is safe because it occurs after all checks and effects
         destination.transfer(amount);
         return amount;
-    }
-
-    function isNitroReady() external pure returns (uint8) {
-        return uint8(0xa4b1);
     }
 }
 
