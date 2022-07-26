@@ -8,7 +8,7 @@ Note: If you’re interested in accessing the Arbitrum Goerli network but you do
 
 ### Required Artifacts
 
-- Latest Docker Image: `offchainlabs/nitro-node:v2.0.0-beta.3-ed75bf5`
+- Latest Docker Image: `offchainlabs/nitro-node:v2.0.0-beta.5-8e0bfbc`
 
 ### Required parameter
 
@@ -29,7 +29,7 @@ Note: If you’re interested in accessing the Arbitrum Goerli network but you do
 - Here is an example of how to run nitro-node for goerli:
 
   ```
-  docker run --rm -it  -v /some/local/dir/arbitrum-goerli/:/home/user/.arbitrum/goerli -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-beta.3-ed75bf5 --l1.url https://l1-goerli-node:8545 --l2.chain-id=421613
+  docker run --rm -it  -v /some/local/dir/arbitrum-goerli/:/home/user/.arbitrum/goerli -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-beta.5-8e0bfbc --l1.url https://l1-goerli-node:8545 --l2.chain-id=421613
   ```
 
   - Note that if you are running L1 node on localhost, you may need to add `--network host` right after `docker run` to use docker host-based networking
@@ -48,7 +48,7 @@ Note: If you’re interested in accessing the Arbitrum Goerli network but you do
   - APIs offered over the HTTP-RPC interface (default `net,web3,eth`)
   - Add `debug` to enable tracing
 - `--http.corsdomain`
-  - Comma separated list of domains from which to accept cross origin requests (browser enforced)
+  - Comma separated list of domains from which to accept cross origin requests, or `*` for all domains (browser enforced)
 - `--http.vhosts`
   - Comma separated list of virtual hostnames from which to accept requests (server enforced). Accepts `*` wildcard (default `localhost`)
 - `--node.archive`
@@ -70,9 +70,9 @@ Note: If you’re interested in accessing the Arbitrum Goerli network but you do
   The arb-relay is in the same docker image.
 - Here is an example of how to run nitro-relay for goerli:
   ```
-  docker run --rm -it  -p 0.0.0.0:9642:9642 --entrypoint relay offchainlabs/nitro-node:v2.0.0-beta.3-ed75bf5 --node.feed.input.url wss://goerli-rollup.arbitrum.io/feed --l2.chain-id=421613
+  docker run --rm -it  -p 0.0.0.0:9642:9642 --entrypoint relay offchainlabs/nitro-node:v2.0.0-beta.5-8e0bfbc --node.feed.input.url wss://goerli-rollup.arbitrum.io/feed --l2.chain-id=421613
   ```
 - Here is an example of how to run nitro-node for goerli with custom relay:
   ```
-  docker run --rm -it  -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-beta.3-ed75bf5 --l1.url https://l1-goeri-node:8545 --feed.input.url ws://local-relay-address:9642 --l2.chain-id=421613
+  docker run --rm -it  -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-beta.5-8e0bfbc  --l1.url https://l1-goeri-node:8545 --feed.input.url ws://local-relay-address:9642 --l2.chain-id=421613
   ```
