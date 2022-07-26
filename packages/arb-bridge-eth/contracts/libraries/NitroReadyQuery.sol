@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2021, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,22 +18,13 @@
 
 pragma solidity ^0.6.11;
 
-import "../bridge/Bridge.sol";
+interface NitroReadyContract {
+    function isNitroReady() external pure returns (uint8);
+}
 
-contract BridgeMock is Bridge {
-    constructor() public {
-        localActiveOutbox = msg.sender;
-    }
-
-    function deliverMessageToInboxTest(
-        uint8 kind,
-        address sender,
-        uint256 blockNumber,
-        uint256 blockTimestamp,
-        uint256 gasPrice,
-        bytes32 messageDataHash
-    ) external payable returns (uint256) {
-        return
-            addMessageToInbox(kind, sender, blockNumber, blockTimestamp, gasPrice, messageDataHash);
+contract NitroReadyQuery {
+    /// @dev queries a contract to know if its ready for the nitro upgrade
+    function isNitroReady(address target) external pure returns (uint8) {
+        return NitroReadyContract(target).isNitroReady();
     }
 }
