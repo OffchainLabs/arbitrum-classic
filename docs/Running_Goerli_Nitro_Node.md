@@ -1,7 +1,7 @@
 ---
 id: Running_Goerli_Nitro_Node
 title: Running full Nitro node for Arbitrum Goerli TestNet
-sidebar_label: Running a Nitro Node
+sidebar_label: Running a Goerli Nitro Node
 ---
 
 Note: If you’re interested in accessing the Arbitrum Goerli network but you don’t want to setup your own node, see our [Node Providers](https://developer.offchainlabs.com/docs/node_providers) to get RPC access to fully-managed nodes hosted by one of our partners!
