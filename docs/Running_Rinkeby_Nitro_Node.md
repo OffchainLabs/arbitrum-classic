@@ -4,7 +4,7 @@ title: Running full Nitro node for Arbitrum Rinkeby TestNet after Nitro upgrade
 sidebar_label: Running a Rinkeby Nitro Node
 ---
 
-Note: Rinkeby Nitro will not work until after the Nitro upgrade scheduled for Thursday, July 28th.
+Note: Rinkeby Nitro nodes will only work after the Nitro upgrade scheduled for Thursday, July 28th. After the update, Rinkeby Classic nodes will stop updating, and only useful for archive requests for pre-Nitro blocks.
 
 Note: If you’re interested in accessing the Arbitrum Rinkeby network but you don’t want to setup your own node, see our [Node Providers](https://developer.offchainlabs.com/docs/node_providers) to get RPC access to fully-managed nodes hosted by one of our partners!
 
