@@ -4,7 +4,7 @@ title: Running full Nitro node for Arbitrum Rinkeby TestNet after Nitro upgrade
 sidebar_label: Running a Rinkeby Nitro Node
 ---
 
-Note: This Rinkeby Nitro image will not work until after the Nitro upgrade scheduled for Thursday, July 28th.
+Note: Rinkeby Nitro will not work until after the Nitro upgrade scheduled for Thursday, July 28th.
 
 Note: If you’re interested in accessing the Arbitrum Rinkeby network but you don’t want to setup your own node, see our [Node Providers](https://developer.offchainlabs.com/docs/node_providers) to get RPC access to fully-managed nodes hosted by one of our partners!
 
@@ -33,7 +33,7 @@ Note: If you’re interested in accessing the Arbitrum Rinkeby network but you d
 
 ### Putting it all together
 
-- When running docker image, an external volume should be mounted to persist the database across restarts. The mount point should be `/home/user/.arbitrum/rinkeby-nitro`.
+- When running docker image, an external volume should be mounted to persist the database across restarts. The mount point inside the docker image should be `/home/user/.arbitrum/rinkeby-nitro`.
 - Here is an example of how to run nitro-node for Rinkeby:
 
   ```
@@ -52,10 +52,10 @@ Note: If you’re interested in accessing the Arbitrum Rinkeby network but you d
 
 ### Optional parameters
 
-- `--node.rpc.classic-redirect=<classic node RPC`
-  - If set, will redirect archive requests for pre-nitro blocks to the designated RPC, which should be a Arbitrum Classic node with archive database
-- `--init.url`
+- `--init.url=<seed database URL>`
   - URL to download seed database from. Only needed when starting without database
+- `--node.rpc.classic-redirect=<classic node RPC>`
+  - If set, will redirect archive requests for pre-nitro blocks to the designated RPC, which should be an Arbitrum Classic node with archive database
 - `--http.api`
   - APIs offered over the HTTP-RPC interface (default `net,web3,eth`)
   - Add `debug` to enable tracing

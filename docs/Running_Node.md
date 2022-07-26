@@ -4,7 +4,7 @@ title: Running full node for Arbitrum One
 sidebar_label: Running a Node
 ---
 
-Note: On Thursday July 28th, the Arbitrum Rinkeby testnet will be upgrade to Nitro, and the classic node will only be useful for archive requests.
+Note: On Thursday July 28th, the Arbitrum Rinkeby testnet will be upgrade to Nitro, and the classic node will only be useful for archive requests on Rinkeby. Mainnet Nitro upgrade date will be announced at a later date
 
 Note: If you’re interested in accessing the Arbitrum network but you don’t want to setup your own node, see our [Node Providers](https://developer.offchainlabs.com/docs/node_providers) to get RPC access to fully-managed nodes hosted by one of our partners!
 
@@ -30,9 +30,13 @@ Note: If you’re interested in accessing the Arbitrum network but you don’t w
   ```
   docker run --rm -it  -v /some/local/dir/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.4.0-f4bbe91 --l1.url https://l1-node:8545
   ```
-- Here is an example of how to run arb-node for rinkeby:
+- Here is an example of how to run arb-node for rinkeby before July 28th:
   ```
   docker run --rm -it  -v /some/local/dir/arbitrum-rinkeby/:/home/user/.arbitrum/rinkeby -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.4.0-f4bbe91 --l1.url https://l1-rinkeby-node:8545
+  ```
+- Here is an example of how to run arb-node for rinkeby after July 28th, disabling feed to reduce log error messages (only good for archive requests on pre-Nitro blocks, so probably want to enable archive as well):
+  ```
+  docker run --rm -it  -v /some/local/dir/arbitrum-rinkeby/:/home/user/.arbitrum/rinkeby -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.4.0-f4bbe91 --l1.url https://l1-rinkeby-node:8545 --feed.input.url=""
   ```
 
 ### Note on permissions
