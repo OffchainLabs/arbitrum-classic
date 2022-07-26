@@ -30,21 +30,12 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-util/configuration"
 )
 
-type RpcMode int
-
-const (
-	NormalMode RpcMode = iota
-	GanacheMode
-	ForwardingOnlyMode
-	NonMutatingMode
-)
-
 var (
 	logger = log.With().Caller().Str("component", "web3").Logger()
 )
 
 type ServerConfig struct {
-	Mode          RpcMode
+	Mode          configuration.RpcMode
 	MaxCallAVMGas uint64
 	Tracing       configuration.Tracing
 	DevopsStubs   bool
@@ -65,7 +56,7 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 		return nil, err
 	}
 
-	if config.Mode != ForwardingOnlyMode {
+	if config.Mode != configuration.ForwardingOnlyRpcMode {
 		if err := s.RegisterName("eth", ethServer); err != nil {
 			return nil, err
 		}
@@ -74,7 +65,7 @@ func GenerateWeb3Server(server *aggregator.Server, privateKeys []*ecdsa.PrivateK
 			return nil, err
 		}
 
-		if err := s.RegisterName("eth", NewAccounts(ethServer, privateKeys, config.Mode == NonMutatingMode)); err != nil {
+		if err := s.RegisterName("eth", NewAccounts(ethServer, privateKeys, config.Mode == configuration.NonMutatingRpcMode)); err != nil {
 			return nil, err
 		}
 
