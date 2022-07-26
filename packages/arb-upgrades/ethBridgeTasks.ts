@@ -149,35 +149,179 @@ task('set-outbox', 'deploy and set a new outbox')
 
 task('configure-migration', 'configure nitro migrator contract')
   .addParam('migrator', '')
-  .addParam('oldoutboxproxy', '')
   .addParam('nitrorollupproxy', '')
 
   .setAction(async (args, hre) => {
     const { getDeployments } = initUpgrades(hre, process.cwd())
     const { data } = await getDeployments()
 
-    const proxyAdmin = await getAdminFromProxyStorage(hre, data.contracts.Inbox.proxyAddress)
-    const newProxyAdmin = await getAdminFromProxyStorage(hre, args.nitrorollupproxy.proxyAddress)
-    if (proxyAdmin != newProxyAdmin) {
-      throw new Error(
-        'Classic proxy admin ' + proxyAdmin + ' differs from nitro proxy admin ' + newProxyAdmin
-      )
-    }
+    const NewRollupUser = (await hre.ethers.getContractAt('INitroRollupCore', args.nitrorollupproxy))
+      .connect('0x1111111111111111111111111111111111111111');
+    const replacingInbox = await NewRollupUser.inbox();
+
+    const oldProxyAdmin = await getAdminFromProxyStorage(hre, data.contracts.Inbox.proxyAddress)
+    const newProxyAdmin = await getAdminFromProxyStorage(hre, replacingInbox)
+
+    const NewProxyAdmin = (await hre.ethers.getContractFactory('ProxyAdmin'))
+      .attach(newProxyAdmin)
+      .connect(hre.ethers.provider)
+    const owner = await NewProxyAdmin.owner();
 
     const Migrator = (await hre.ethers.getContractFactory('NitroMigrator'))
       .attach(args.migrator)
-      .connect(hre.ethers.provider)
+      .connect(hre.ethers.provider.getSigner(owner))
+    const migratorOwner = await Migrator.owner()
+    if (migratorOwner != owner) {
+      throw new Error('Migrator has wrong owner. Expected ' + owner + ' but got ' + migratorOwner)
+    }
+
+    const OldProxyAdmin = (await hre.ethers.getContractFactory('ProxyAdmin'))
+      .attach(oldProxyAdmin)
+      .connect(hre.ethers.provider.getSigner(owner))
+    const OldRollup = (await hre.ethers.getContractFactory('RollupAdminFacet'))
+      .attach(data.contracts.Rollup.proxyAddress)
+      .connect(hre.ethers.provider.getSigner(owner))
+    const NewRollup = (await hre.ethers.getContractFactory('RollupAdminFacet'))
+      .attach(args.nitrorollupproxy)
+      .connect(hre.ethers.provider.getSigner(owner))
+    if (await OldProxyAdmin.owner() != Migrator.address) {
+      console.log('Transferring ownership of old proxy admin')
+      await (await OldProxyAdmin.transferOwnership(args.migrator)).wait()
+    }
+    if (await OldRollup.owner() != Migrator.address) {
+      console.log('Transferring ownership of classic rollup')
+      await (await OldRollup.setOwner(args.migrator)).wait()
+    }
+    if (await NewRollupUser.owner() != Migrator.address) {
+      console.log('Transferring ownership of nitro rollup')
+      await (await NewRollup.setOwner(args.migrator)).wait()
+    }
+
+    console.log('Configuring deployment on nitro migrator')
     const initializeRes = await Migrator.configureDeployment(
       data.contracts.Inbox.proxyAddress,
       data.contracts.SequencerInbox.proxyAddress,
       data.contracts.Bridge.proxyAddress,
       data.contracts.RollupEventBridge.proxyAddress,
-      args.oldoutboxproxy,
+      data.contracts.OldOutbox.proxyAddress,
       data.contracts.Outbox.proxyAddress,
       data.contracts.Rollup.proxyAddress,
+      oldProxyAdmin,
       args.nitrorollupproxy,
-      proxyAdmin,
+      newProxyAdmin,
     )
     const initializeRec = await initializeRes.wait()
-    console.log('Nitro migrator configured', initializeRec)
+    console.log('Nitro migrator configured:', initializeRec)
+  })
+
+task('migration-step-1', 'run nitro migration step 1')
+  .addParam('migrator', '')
+
+  .setAction(async (args, hre) => {
+    let Migrator = (await hre.ethers.getContractFactory('NitroMigrator'))
+      .attach(args.migrator)
+      .connect(hre.ethers.provider)
+    const owner = await Migrator.owner()
+    Migrator = Migrator.connect(hre.ethers.provider.getSigner(owner))
+
+    console.log('Running migration step 1')
+    const receipt = await (await Migrator.nitroStep1()).wait()
+    console.log('Ran migration step 1:', receipt)
+  })
+
+task('migration-step-2', 'run nitro migration step 2')
+  .addParam('migrator', '')
+  .addOptionalParam('finalNodeNum')
+  .addFlag('destroyAlternatives')
+  .addFlag('destroyChallenges')
+
+  .setAction(async (args, hre) => {
+    const { getDeployments } = initUpgrades(hre, process.cwd())
+    const { data } = await getDeployments()
+
+    let Migrator = (await hre.ethers.getContractFactory('NitroMigrator'))
+      .attach(args.migrator)
+      .connect(hre.ethers.provider)
+    const owner = await Migrator.owner()
+    Migrator = Migrator.connect(hre.ethers.provider.getSigner(owner))
+
+    let finalNodeNum: any = parseInt(args.finalNodeNum)
+    if (!finalNodeNum) {
+      const Rollup = (await hre.ethers.getContractFactory('RollupUserFacet'))
+        .attach(data.contracts.Rollup.proxyAddress)
+        .connect(hre.ethers.provider)
+      finalNodeNum = await Rollup.latestNodeCreated();
+      console.log('Resolved final node number', finalNodeNum)
+    }
+
+    console.log('Running migration step 2')
+    const receipt = await (await Migrator.nitroStep2(finalNodeNum, args.destroyAlternatives, args.destroyChallenges)).wait()
+    console.log('Ran migration step 2:', receipt)
+  })
+
+task('migration-step-3', 'run nitro migration step 3')
+  .addParam('migrator', '')
+  .addParam('genesisnumber', 'The nitro genesis block number')
+  .addParam('genesishash', 'The nitro genesis block hash')
+
+  .setAction(async (args, hre) => {
+    let Migrator = (await hre.ethers.getContractFactory('NitroMigrator'))
+      .attach(args.migrator)
+      .connect(hre.ethers.provider)
+    const owner = await Migrator.owner()
+    Migrator = Migrator.connect(hre.ethers.provider.getSigner(owner))
+
+    console.log('Running migration step 3')
+    const receipt = await (await Migrator.nitroStep3(args.genesisnumber, args.genesishash, false)).wait()
+    console.log('Ran migration step 3:', receipt)
+  })
+
+task('migrator-transfer-child-ownership', 'transfer the ownership of a contract owned by the nitro migrator')
+  .addParam('migrator', '')
+  .addParam('child', '')
+  .addParam('newowner', '')
+
+  .setAction(async (args, hre) => {
+    let Migrator = (await hre.ethers.getContractFactory('NitroMigrator'))
+      .attach(args.migrator)
+      .connect(hre.ethers.provider)
+    const owner = await Migrator.owner()
+    Migrator = Migrator.connect(hre.ethers.provider.getSigner(owner))
+
+    const receipt = await (await Migrator.transferOtherContractOwnership(args.child, args.newowner)).wait()
+    console.log('Transferred ownership:', receipt)
+  })
+
+task('migrator-transfer-rollup-ownership', 'transfer the ownership a rollup owned by the nitro migrator')
+  .addParam('migrator', '')
+  .addParam('rollup', '')
+  .addParam('newowner', '')
+
+  .setAction(async (args, hre) => {
+    let Migrator = (await hre.ethers.getContractFactory('NitroMigrator'))
+      .attach(args.migrator)
+      .connect(hre.ethers.provider)
+    const owner = await Migrator.owner()
+    Migrator = Migrator.connect(hre.ethers.provider.getSigner(owner))
+
+    const setOwnerData = (await hre.ethers.getContractFactory('RollupAdminFacet'))
+      .interface
+      .encodeFunctionData("setOwner", [args.newowner]);
+    const receipt = await (await Migrator.executeTransaction(setOwnerData, args.rollup, 0)).wait()
+    console.log('Transferred ownership:', receipt)
+  })
+
+task('migrator-add-arbos-owner', 'adds an ArbOS chain owner via the nitro migrator')
+  .addParam('migrator', '')
+  .addParam('newowner', '')
+
+  .setAction(async (args, hre) => {
+    let Migrator = (await hre.ethers.getContractFactory('NitroMigrator'))
+      .attach(args.migrator)
+      .connect(hre.ethers.provider)
+    const owner = await Migrator.owner()
+    Migrator = Migrator.connect(hre.ethers.provider.getSigner(owner))
+
+    const receipt = await (await Migrator.addArbosOwner(args.newowner)).wait()
+    console.log('Added owner:', receipt)
   })

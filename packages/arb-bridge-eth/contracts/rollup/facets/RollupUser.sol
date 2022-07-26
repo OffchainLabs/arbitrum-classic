@@ -414,7 +414,11 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
      * @notice Remove any zombies whose latest stake is earlier than the first unresolved node
      * @param startIndex Index in the zombie list to start removing zombies from (to limit the cost of this transaction)
      */
-    function removeOldZombies(uint256 startIndex) public onlyValidator whenNotPaused {
+    function removeOldZombies(uint256 startIndex)
+        public
+        onlyValidator
+        whenInShutdownModeOrNotPaused
+    {
         uint256 currentZombieCount = zombieCount();
         uint256 firstUnresolved = firstUnresolvedNode();
         for (uint256 i = startIndex; i < currentZombieCount; i++) {

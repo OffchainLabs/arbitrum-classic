@@ -52,6 +52,15 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
     uint256 public override maxDelayBlocks;
     uint256 public override maxDelaySeconds;
 
+    bool public isShutdownForNitro;
+
+    string internal constant SHUTDOWN_FOR_NITRO = "SHUTDOWN_FOR_NITRO";
+
+    modifier whenNotShutdownForNitro() {
+        require(!isShutdownForNitro, SHUTDOWN_FOR_NITRO);
+        _;
+    }
+
     function initialize(
         IBridge _delayedInbox,
         address _sequencer,
@@ -105,7 +114,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         address sender,
         bytes32 messageDataHash,
         bytes32 delayedAcc
-    ) external {
+    ) external whenNotShutdownForNitro {
         {
             bytes32 messageHash = Messages.messageHash(
                 kind,
@@ -137,9 +146,8 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
     /// @dev this function is intended to force include the delayed inbox a final time in the nitro migration
     function shutdownForNitro(
         uint256 _totalDelayedMessagesRead,
-        bytes32 delayedAcc,
-        address[] calldata seqAddresses
-    ) external {
+        bytes32 delayedAcc
+    ) external whenNotShutdownForNitro {
         // no delay on force inclusion, triggered only by rollup's owner
         require(Rollup(payable(rollup)).owner() == msg.sender, "ONLY_ROLLUP_OWNER");
 
@@ -150,19 +158,13 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
             forceInclusionImpl(_totalDelayedMessagesRead, delayedAcc);
         }
 
-        // the delayed inbox has all inboxes disabled, so state won't progress there.
-        // if there are no delayed inboxes and no sequencer addresses, the state can't progress anymore.
-        for (uint64 i = 0; i < seqAddresses.length; ++i) {
-            require(isSequencer[seqAddresses[i]], "UNKNOWN_SEQUENCER");
-            isSequencer[seqAddresses[i]] = false;
-        }
-        deprecatedSequencer = address(0);
+        isShutdownForNitro = true;
     }
 
-    /// @dev allows anyone to disable sequencer addresses from the inbox in case the addresses provided in `shutdownForNitro` weren't exhaustive
-    function disableSequencer(address seqAddress) external {
-        require(deprecatedSequencer == address(0), "ONLY_AFTER_NITRO_SHUTDOWN");
-        isSequencer[seqAddress] = false;
+    function undoShutdownForNitro() external {
+        require(Rollup(payable(rollup)).owner() == msg.sender, "ONLY_ROLLUP_OWNER");
+        require(isShutdownForNitro, "NOT_SHUTDOWN");
+        isShutdownForNitro = false;
     }
 
     function forceInclusionImpl(uint256 _totalDelayedMessagesRead, bytes32 delayedAcc) internal {
@@ -199,7 +201,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         uint256[] calldata lengths,
         uint256[] calldata sectionsMetadata,
         bytes32 afterAcc
-    ) external {
+    ) external whenNotShutdownForNitro {
         // solhint-disable-next-line avoid-tx-origin
         require(msg.sender == tx.origin, "origin only");
         uint256 startNum = messageCount;
@@ -224,7 +226,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         uint256[] calldata sectionsMetadata,
         bytes32 afterAcc,
         IGasRefunder gasRefunder
-    ) external {
+    ) external whenNotShutdownForNitro {
         // solhint-disable-next-line avoid-tx-origin
         require(msg.sender == tx.origin, "origin only");
 
@@ -267,7 +269,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         uint256[] calldata lengths,
         uint256[] calldata sectionsMetadata,
         bytes32 afterAcc
-    ) external {
+    ) external whenNotShutdownForNitro {
         uint256 startNum = messageCount;
         bytes32 beforeAcc = addSequencerL2BatchImpl(
             transactions,

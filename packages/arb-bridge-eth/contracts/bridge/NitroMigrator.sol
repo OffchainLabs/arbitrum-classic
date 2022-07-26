@@ -28,20 +28,56 @@ import "../libraries/NitroReadyQuery.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
-import "@arbitrum/nitro-contracts/src/bridge/IBridgeNoErrors.sol" as INitroBridge;
-import "@arbitrum/nitro-contracts/src/bridge/IInboxNoErrors.sol" as INitroInbox;
+import "@arbitrum/nitro-contracts/src/bridge/IBridge.sol" as INitroBridge;
+import "@arbitrum/nitro-contracts/src/bridge/IInbox.sol" as INitroInbox;
 
 pragma solidity ^0.6.11;
+pragma experimental ABIEncoderV2;
 
 interface INitroRollup {
+    struct GlobalState {
+        bytes32[2] bytes32Vals;
+        uint64[2] u64Vals;
+    }
+
+    enum MachineStatus {
+        RUNNING,
+        FINISHED,
+        ERRORED,
+        TOO_FAR
+    }
+
+    struct ExecutionState {
+        GlobalState globalState;
+        MachineStatus machineStatus;
+    }
+    struct NitroRollupAssertion {
+        ExecutionState beforeState;
+        ExecutionState afterState;
+        uint64 numBlocks;
+    }
+
     function bridge() external view returns (INitroBridge.IBridge);
 
     function inbox() external view returns (INitroInbox.IInbox);
-
     function setInbox(IInbox newInbox) external;
+
+    function setOwner(address newOwner) external;
+
+    function paused() external view returns (bool);
+    function pause() external;
+    function resume() external;
+
+    function latestNodeCreated() external returns (uint64);
+
+    function createNitroMigrationGenesis(NitroRollupAssertion calldata assertion) external;
 }
 
-contract NitroMigrator is Ownable {
+interface IArbOwner {
+    function addChainOwner(address newOwner) external;
+}
+
+contract NitroMigrator is Ownable, IMessageProvider {
     uint8 internal constant L1MessageType_shutdownForNitro = 128;
 
     Inbox public inbox;
@@ -52,8 +88,11 @@ contract NitroMigrator is Ownable {
     Outbox public outboxV2;
     // assumed this contract is now the rollup admin
     RollupAdminFacet public rollup;
+    ProxyAdmin public classicProxyAdmin;
 
+    INitroRollup public nitroRollup;
     INitroBridge.IBridge public nitroBridge;
+    ProxyAdmin public nitroProxyAdmin;
 
     /// @dev The nitro migration includes various steps.
     ///
@@ -94,8 +133,9 @@ contract NitroMigrator is Ownable {
         OldOutbox _outboxV1,
         Outbox _outboxV2,
         RollupAdminFacet _rollup,
-        INitroRollup nitroRollup,
-        ProxyAdmin proxyAdmin
+        ProxyAdmin _classicProxyAdmin,
+        INitroRollup _nitroRollup,
+        ProxyAdmin _nitroProxyAdmin
     ) external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Uninitialized, "WRONG_STEP");
 
@@ -106,8 +146,11 @@ contract NitroMigrator is Ownable {
         rollup = _rollup;
         outboxV1 = _outboxV1;
         outboxV2 = _outboxV2;
+        classicProxyAdmin = _classicProxyAdmin;
 
+        nitroRollup = _nitroRollup;
         nitroBridge = nitroRollup.bridge();
+        nitroProxyAdmin = _nitroProxyAdmin;
 
         {
             // this contract is the rollup admin, and we want to check if the user facet is upgraded
@@ -121,27 +164,21 @@ contract NitroMigrator is Ownable {
         // this returns a different magic value so we can differentiate the user and admin facets
         require(_rollup.isNitroReady() == uint8(0xa4b2), "ADMIN_ROLLUP_NOT_NITRO_READY");
 
+        require(_bridge.isNitroReady() == uint8(0xa4b1), "BRIDGE_NOT_UPGRADED");
         require(_inbox.isNitroReady() == uint8(0xa4b1), "INBOX_NOT_UPGRADED");
         require(_sequencerInbox.isNitroReady() == uint8(0xa4b1), "SEQINBOX_NOT_UPGRADED");
 
         // we check that the new contracts that will receive permissions are actually contracts
         require(Address.isContract(address(nitroBridge)), "NITRO_BRIDGE_NOT_CONTRACT");
 
-        // Upgrade the classic inbox to the nitro inbox's impl,
-        // and configure nitro to use the classic inbox's address.
-        INitroInbox.IInbox oldNitroInbox = nitroRollup.inbox();
         // The nitro deployment script already configured a delayed inbox, so we disable it here
+        INitroInbox.IInbox oldNitroInbox = nitroRollup.inbox();
         nitroBridge.setDelayedInbox(address(oldNitroInbox), false);
-        // the nitro inbox is initialised to a paused state so users can't post txs
-        address nitroInboxImpl = proxyAdmin.getProxyImplementation(
-            TransparentUpgradeableProxy(payable(address(oldNitroInbox)))
-        );
-        proxyAdmin.upgradeAndCall(
-            TransparentUpgradeableProxy(payable(address(inbox))),
-            nitroInboxImpl,
-            abi.encodeWithSelector(INitroInbox.IInbox.postUpgradeInit.selector, nitroBridge)
-        );
-        nitroRollup.setInbox(inbox);
+
+        require(nitroRollup.latestNodeCreated() == 0, "NITRO_ROLLUP_HAS_NODES");
+        if (!nitroRollup.paused()) {
+            nitroRollup.pause();
+        }
 
         latestCompleteStep = NitroMigrationSteps.Step0;
     }
@@ -150,12 +187,14 @@ contract NitroMigrator is Ownable {
     /// this will create the final input in the inbox, but there won't be the final assertion available yet.
     /// it is assumed that at this point the sequencer has stopped receiving txs and has posted its final batch on-chain
     /// Before this step the ownership of the Rollup and Bridge  must have been transferred to this contract
-    function nitroStep1(address[] calldata seqAddresses) external onlyOwner {
+    function nitroStep1() external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Step0, "WRONG_STEP");
 
         // check that ownership of the bridge and rollup has been transferred
         require(rollup.owner() == address(this), "ROLLUP_OWNER_NOT_SET");
-        require(bridge.owner() == address(this), "BRIDGE_OWNER_NOT_SET");
+        if (bridge.owner() != address(this)) {
+            rollup.transferOwnership(Ownable(address(bridge)), address(this));
+        }
 
         uint256 delayedMessageCount = inbox.shutdownForNitro();
 
@@ -163,27 +202,24 @@ contract NitroMigrator is Ownable {
         // the rollup event bridge will update the delayed accumulator after the final rollup shutdown events, but this
         // shouldn't be an issue
         bridge.setInbox(address(inbox), false);
-        bridge.setOutbox(address(outboxV1), false);
-        bridge.setOutbox(address(outboxV2), false);
 
         // we disable the rollupEventBridge later since its needed in order to create/confirm assertions
         // the rollup event bridge will still add messages to the Bridge's accumulator, but these will never be included into the sequencer inbox
         // it is not a problem that these messages will be lost, as long as classic shutdown and nitro boot are deterministic
 
-        bridge.setOutbox(address(this), true);
-
-        {
-            uint256 bal = address(bridge).balance;
-            // TODO: import nitro contracts and use interface
-            (bool success, ) = bridge.executeCall(
-                address(nitroBridge),
-                bal,
-                abi.encodeWithSelector(INitroBridge.IBridge.acceptFundsFromOldBridge.selector)
-            );
-            require(success, "ESCROW_TRANSFER_FAIL");
-        }
-
-        bridge.setOutbox(address(this), false);
+        // Upgrade the classic inbox to the nitro inbox's impl,
+        // and configure nitro to use the classic inbox's address.
+        // Right now the inbox isn't authorized on the nitro bridge, so users can't post txs.
+        INitroInbox.IInbox oldNitroInbox = nitroRollup.inbox();
+        address nitroInboxImpl = nitroProxyAdmin.getProxyImplementation(
+            TransparentUpgradeableProxy(payable(address(oldNitroInbox)))
+        );
+        classicProxyAdmin.upgradeAndCall(
+            TransparentUpgradeableProxy(payable(address(inbox))),
+            nitroInboxImpl,
+            abi.encodeWithSelector(INitroInbox.IInbox.postUpgradeInit.selector, nitroBridge)
+        );
+        nitroRollup.setInbox(inbox);
 
         // if the sequencer posted its final batch and was shutdown before `nitroStep1` there shouldn't be any reorgs
         // even though we remove the seqAddr from the sequencer inbox with `shutdownForNitro` this wouldnt stop a reorg from
@@ -191,8 +227,7 @@ contract NitroMigrator is Ownable {
         // `nitroStep2` will only enforce inclusion of assertions that read up to this current point.
         sequencerInbox.shutdownForNitro(
             delayedMessageCount,
-            bridge.inboxAccs(delayedMessageCount - 1),
-            seqAddresses
+            bridge.inboxAccs(delayedMessageCount - 1)
         );
 
         // this speeds up the process allowing validators to post assertions more frequently
@@ -210,22 +245,74 @@ contract NitroMigrator is Ownable {
     ) external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Step1, "WRONG_STEP");
         rollup.shutdownForNitro(finalNodeNum, destroyAlternatives, destroyChallenges);
-        bridge.setInbox(address(rollupEventBridge), false);
         latestCompleteStep = NitroMigrationSteps.Step2;
     }
 
-    function nitroStep3() external onlyOwner {
+    // CHRIS: TODO: remove skipCheck
+    function nitroStep3(
+        uint64 nitroGenesisBlockNumber,
+        bytes32 nitroGenesisHash,
+        bool skipCheck
+    ) external onlyOwner {
         require(latestCompleteStep == NitroMigrationSteps.Step2, "WRONG_STEP");
         // CHRIS: TODO: destroying the node in the previous steps does not reset latestConfirmed/latestNodeCreated
         require(
-            rollup.latestConfirmed() == rollup.latestNodeCreated(),
+            skipCheck || rollup.latestConfirmed() == rollup.latestNodeCreated(),
             "ROLLUP_SHUTDOWN_NOT_COMPLETE"
         );
 
+        bridge.setInbox(address(rollupEventBridge), false);
+
+        // Move the classic bridge funds to the nitro bridge
+        bridge.setOutbox(address(this), true);
+        {
+            uint256 bal = address(bridge).balance;
+            // TODO: import nitro contracts and use interface
+            (bool success, ) = bridge.executeCall(
+                address(nitroBridge),
+                bal,
+                abi.encodeWithSelector(INitroBridge.IBridge.acceptFundsFromOldBridge.selector)
+            );
+            require(success, "ESCROW_TRANSFER_FAIL");
+        }
+        bridge.setOutbox(address(this), false);
+
+        // the bridge will proxy executeCall calls from the classic outboxes
+        nitroBridge.setOutbox(address(bridge), true);
+        bridge.setReplacementBridge(address(nitroBridge));
+
         // we don't enable sequencer inbox and the rollup event bridge in nitro bridge as they are already configured in the deployment
         nitroBridge.setDelayedInbox(address(inbox), true);
-        nitroBridge.setOutbox(address(outboxV1), true);
-        nitroBridge.setOutbox(address(outboxV2), true);
+
+        bytes32[2] memory newStateBytes32;
+        newStateBytes32[0] = nitroGenesisHash;
+        uint64[2] memory newStateU64;
+        newStateU64[0] = 1;
+        INitroRollup.GlobalState memory emptyGlobalState;
+        INitroRollup.NitroRollupAssertion memory assertion = INitroRollup.NitroRollupAssertion({
+            beforeState: INitroRollup.ExecutionState({
+                globalState: emptyGlobalState,
+                machineStatus: INitroRollup.MachineStatus.FINISHED
+            }),
+            afterState: INitroRollup.ExecutionState({
+                globalState: INitroRollup.GlobalState({
+                    bytes32Vals: newStateBytes32,
+                    u64Vals: newStateU64
+                }),
+                machineStatus: INitroRollup.MachineStatus.FINISHED
+            }),
+            numBlocks: nitroGenesisBlockNumber + 1
+        });
+
+        nitroRollup.createNitroMigrationGenesis(assertion);
+        nitroRollup.resume();
+
+        // the migration is complete, relinquish ownership back to the
+        // nitro proxy admin owner
+        address nitroProxyAdminOwner = nitroProxyAdmin.owner();
+        rollup.setOwner(nitroProxyAdminOwner);
+        classicProxyAdmin.transferOwnership(nitroProxyAdminOwner);
+        nitroRollup.setOwner(address(nitroProxyAdminOwner));
 
         latestCompleteStep = NitroMigrationSteps.Step3;
     }
@@ -252,11 +339,38 @@ contract NitroMigrator is Ownable {
         }
     }
 
-    function transferOtherContractOwnership(Ownable ownable, address newOwner)
-        external
-        payable
-        onlyOwner
-    {
+    function transferOtherContractOwnership(Ownable ownable, address newOwner) external onlyOwner {
         ownable.transferOwnership(newOwner);
+    }
+
+    uint8 internal constant L2_MSG = 3;
+    uint8 internal constant L2MessageType_unsignedContractTx = 1;
+
+    function addArbosOwner(address newOwner) external onlyOwner {
+        require(latestCompleteStep != NitroMigrationSteps.Uninitialized, "UNINITIALIZED");
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
+        require(chainId > 100, "SHADOW_FORKS_ONLY");
+        address bridgeOwner = bridge.owner();
+        if (bridgeOwner != address(this)) {
+            rollup.transferOwnership(Ownable(address(bridge)), address(this));
+        }
+        bridge.setInbox(address(this), true);
+        bytes memory msgData = abi.encodePacked(
+            L2MessageType_unsignedContractTx,
+            uint256(1000000),
+            uint256(2000000000),
+            uint256(0x6B), // ArbOwner
+            uint256(0),
+            abi.encodeWithSelector(IArbOwner.addChainOwner.selector, newOwner)
+        );
+        uint256 seqNum = bridge.deliverMessageToInbox(L2_MSG, address(0), keccak256(msgData));
+        emit InboxMessageDelivered(seqNum, msgData);
+        bridge.setInbox(address(this), false);
+        if (bridgeOwner != address(this)) {
+            bridge.transferOwnership(bridgeOwner);
+        }
     }
 }
