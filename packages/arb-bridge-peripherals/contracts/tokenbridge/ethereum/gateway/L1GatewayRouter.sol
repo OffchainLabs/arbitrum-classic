@@ -283,7 +283,7 @@ contract L1GatewayRouter is
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
-    ) public payable virtual override returns (bytes memory) {
+    ) public payable override returns (bytes memory) {
         address gateway = getGateway(_token);
         bytes memory gatewayData = GatewayMessageHandler.encodeFromRouterToGateway(
             msg.sender,
@@ -313,7 +313,6 @@ contract L1GatewayRouter is
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        virtual
         override(ERC165, IERC165)
         returns (bool)
     {
