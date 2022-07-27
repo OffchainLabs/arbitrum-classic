@@ -100,7 +100,7 @@ func (c *CrossDB) importBlock(ctx context.Context, blockNumber uint64) error {
 	outputReceipts := make([]*types.Receipt, 0)
 	processedTxes := evm.FilterEthTxResults(txResults)
 
-	for _, processedTx := range processedTxes {
+	for i, processedTx := range processedTxes {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -114,7 +114,12 @@ func (c *CrossDB) importBlock(ctx context.Context, blockNumber uint64) error {
 		}
 
 		outputTxs = append(outputTxs, tx)
-		outputReceipts = append(outputReceipts, txRes.ToEthReceipt(arbcommon.NewHashFromEth(machineBlockInfo.Header.Hash())))
+		receipt := txRes.ToEthReceipt(arbcommon.NewHashFromEth(machineBlockInfo.Header.Hash()))
+		receipt.TransactionIndex = uint(i)
+		for _, log := range receipt.Logs {
+			log.TxIndex = uint(i)
+		}
+		outputReceipts = append(outputReceipts, receipt)
 	}
 	header := types.CopyHeader(machineBlockInfo.Header)
 
