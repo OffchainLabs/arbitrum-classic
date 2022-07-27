@@ -161,6 +161,11 @@ contract NitroMigrator is Ownable, IMessageProvider {
         // this returns a different magic value so we can differentiate the user and admin facets
         require(_rollup.isNitroReady() == 0xa4b2, "ADMIN_ROLLUP_NOT_NITRO_READY");
 
+        uint256 numOutboxes = bridge.allowedOutboxListLength();
+        for (uint256 i = 0; i < numOutboxes; i++) {
+            address currOutbox = bridge.allowedOutboxList(i);
+            require(IOutbox(currOutbox).isNitroReady() == 0xa4b1, "OUTBOX_NOT_NITRO_READY");
+        }
         require(_bridge.isNitroReady() == 0xa4b1, "BRIDGE_NOT_UPGRADED");
         require(_inbox.isNitroReady() == 0xa4b1, "INBOX_NOT_UPGRADED");
         require(_sequencerInbox.isNitroReady() == 0xa4b1, "SEQINBOX_NOT_UPGRADED");
@@ -274,9 +279,13 @@ contract NitroMigrator is Ownable, IMessageProvider {
         }
         bridge.setOutbox(address(this), false);
 
-        address[] memory oldOutboxes = bridge.setReplacementBridge(IBridge(address(nitroBridge)));
-        for (uint256 i = 0; i < oldOutboxes.length; i++) {
-            nitroBridge.setOutbox(oldOutboxes[i], true);
+        uint256 numOutboxes = bridge.allowedOutboxListLength();
+        for (uint256 i = 0; i < numOutboxes; i++) {
+            // when we disable the list, it always shrinks by 1, so first index should always be a new one
+            address currOutbox = bridge.allowedOutboxList(0);
+            IOutbox(currOutbox).setBridge(IBridge(address(nitroBridge)));
+            bridge.setOutbox(currOutbox, false);
+            nitroBridge.setOutbox(currOutbox, true);
         }
 
         // we don't enable sequencer inbox and the rollup event bridge in nitro bridge as they are already configured in the deployment

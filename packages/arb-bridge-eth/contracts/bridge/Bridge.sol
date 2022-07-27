@@ -133,10 +133,6 @@ contract Bridge is OwnableUpgradeable, IBridge {
     }
 
     function setOutbox(address outbox, bool enabled) external override onlyOwner {
-        return setOutboxImpl(outbox, enabled);
-    }
-
-    function setOutboxImpl(address outbox, bool enabled) internal {
         InOutInfo storage info = allowedOutboxesMap[outbox];
         bool alreadyEnabled = info.allowed;
         emit OutboxToggle(outbox, enabled);
@@ -158,28 +154,11 @@ contract Bridge is OwnableUpgradeable, IBridge {
         return inboxAccs.length;
     }
 
-    function setReplacementBridge(IBridge replacementBridge)
-        external
-        override
-        onlyOwner
-        returns (address[] memory oldOutboxes)
-    {
-        oldOutboxes = allowedOutboxList;
-        while (allowedOutboxList.length > 0) {
-            address outbox = allowedOutboxList[0];
-            IOutbox(outbox).setBridge(replacementBridge);
-            setOutboxImpl(outbox, false);
-        }
+    function allowedOutboxListLength() external view returns (uint256) {
+        return allowedOutboxList.length;
     }
 
     function isNitroReady() external view override returns (uint256) {
-        uint256 numOutboxes = allowedOutboxList.length;
-        for (uint256 i = 0; i < numOutboxes; i++) {
-            require(
-                IOutbox(allowedOutboxList[i]).isNitroReady() == 0xa4b1,
-                "OUTBOX_NOT_NITRO_READY"
-            );
-        }
         return 0xa4b1;
     }
 }
