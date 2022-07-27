@@ -17,11 +17,12 @@
 package evm
 
 import (
+	"math/big"
+
 	"github.com/offchainlabs/arbitrum/packages/arb-util/common"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/inbox"
 	"github.com/offchainlabs/arbitrum/packages/arb-util/value"
 	"github.com/pkg/errors"
-	"math/big"
 )
 
 type SendResult struct {

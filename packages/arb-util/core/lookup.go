@@ -72,6 +72,7 @@ type ExecutionCursor interface {
 	TotalSteps() *big.Int
 	TotalSendCount() *big.Int
 	TotalLogCount() *big.Int
+	L2BlockNumber() *big.Int
 }
 
 type ArbCoreLookup interface {
@@ -91,6 +92,7 @@ type ArbCoreLookup interface {
 	GetLastMachine() (machine.Machine, error)
 
 	GetLastMachineTotalGas() (*big.Int, error)
+	GetLastMachineL2BlockNumber() (*big.Int, error)
 
 	// GetExecutionCursor returns a cursor containing the machine after executing totalGasUsed
 	// from the original machine
@@ -113,6 +115,8 @@ type ArbCoreLookup interface {
 
 	// SaveRocksdbCheckpoint tells rocksdb to save a copy of the current database state
 	SaveRocksdbCheckpoint()
+
+	DumpArbosState(mach machine.Machine, blockNum uint64, dirname string) error
 }
 
 type ArbCoreInbox interface {
