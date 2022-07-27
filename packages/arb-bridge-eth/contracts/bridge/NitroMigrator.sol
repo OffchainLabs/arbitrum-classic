@@ -274,9 +274,12 @@ contract NitroMigrator is Ownable, IMessageProvider {
         }
         bridge.setOutbox(address(this), false);
 
-        address[] memory oldOutboxes = bridge.setReplacementBridge(IBridge(address(nitroBridge)));
-        for (uint256 i = 0; i < oldOutboxes.length; i++) {
-            nitroBridge.setOutbox(oldOutboxes[i], true);
+        uint256 numOutboxes = bridge.allowedOutboxListLength();
+        for (uint256 i = 0; i < numOutboxes; i++) {
+            address currOutbox = bridge.allowedOutboxList(i);
+            IOutbox(currOutbox).setBridge(IBridge(address(nitroBridge)));
+            bridge.setOutbox(currOutbox, false);
+            nitroBridge.setOutbox(currOutbox, true);
         }
 
         // we don't enable sequencer inbox and the rollup event bridge in nitro bridge as they are already configured in the deployment

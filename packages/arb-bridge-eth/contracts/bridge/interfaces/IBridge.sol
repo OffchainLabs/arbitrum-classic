@@ -57,8 +57,6 @@ interface IBridge {
 
     function setOutbox(address inbox, bool enabled) external;
 
-    function setReplacementBridge(IBridge newReplacementBridge) external returns (address[] memory);
-
     // View functions
 
     function activeOutbox() external view returns (address);
