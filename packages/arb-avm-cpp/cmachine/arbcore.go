@@ -18,13 +18,17 @@ package cmachine
 
 /*
 #include "../cavm/carbcore.h"
+#include "../cavm/cmachine.h"
 #include <stdio.h>
 #include <stdlib.h>
 */
 import "C"
 import (
 	"bytes"
+	"encoding/json"
+	"io/ioutil"
 	"math/big"
+	"path/filepath"
 	"runtime"
 	"unsafe"
 
@@ -489,6 +493,61 @@ func (ac *ArbCore) TakeMachine(executionCursor core.ExecutionCursor) (machine.Ma
 
 	runtime.SetFinalizer(ret, cdestroyVM)
 	return ret, nil
+}
+
+func (ac *ArbCore) DumpArbosState(m machine.Machine, blockNum uint64, dirname string) error {
+	defer runtime.KeepAlive(ac)
+	mach, ok := m.(*Machine)
+	if !ok {
+		return errors.Errorf("bad machine")
+	}
+	defer runtime.KeepAlive(mach)
+
+	type ArbosInitFileContents struct {
+		NextBlockNumber          uint64
+		AddressTableContentsPath string
+		RetryableDataPath        string
+		AccountsPath             string
+	}
+
+	indexJson := ArbosInitFileContents{
+		NextBlockNumber:          blockNum + 1,
+		AddressTableContentsPath: "addresstable.json",
+		RetryableDataPath:        "retryables.json",
+		AccountsPath:             "accounts.json",
+	}
+
+	caccountspath := C.CString(filepath.Join(dirname, indexJson.AccountsPath))
+	defer C.free(unsafe.Pointer(caccountspath))
+	retval := C.dumpAccounts(ac.c, mach.c, caccountspath)
+	if retval != 0 {
+		return errors.Errorf("dumpAccounts failed")
+	}
+
+	cretryablespath := C.CString(filepath.Join(dirname, indexJson.RetryableDataPath))
+	defer C.free(unsafe.Pointer(cretryablespath))
+	retval = C.dumpRetryables(ac.c, mach.c, cretryablespath)
+	if retval != 0 {
+		return errors.Errorf("dumpRetryables failed")
+	}
+
+	caddresstablepath := C.CString(filepath.Join(dirname, indexJson.AddressTableContentsPath))
+	defer C.free(unsafe.Pointer(caddresstablepath))
+	retval = C.dumpAddressTable(ac.c, mach.c, caddresstablepath)
+	if retval != 0 {
+		return errors.Errorf("dumpAddressTable failed")
+	}
+
+	indexPath := filepath.Join(dirname, "index.json")
+	indexBytes, err := json.Marshal(indexJson)
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(indexPath, indexBytes, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (ac *ArbCore) LogsCursorPosition(cursorIndex *big.Int) (*big.Int, error) {
