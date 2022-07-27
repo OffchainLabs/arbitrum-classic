@@ -39,7 +39,7 @@ func TestBroadcasterLoad(t *testing.T) {
 	broadcasterSettings := configuration.DefaultFeedOutput()
 	broadcasterSettings.Port = "9942"
 
-	b := NewBroadcaster(broadcasterSettings)
+	b := NewBroadcaster(broadcasterSettings, chainId)
 
 	_, err := b.Start(ctx)
 	if err != nil {
