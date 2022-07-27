@@ -81,7 +81,7 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) public payable virtual override nonReentrant {
+    ) public payable override nonReentrant {
         // the superclass checks onlyCounterpartGateway
         super.finalizeInboundTransfer(_token, _from, _to, _amount, _data);
     }
