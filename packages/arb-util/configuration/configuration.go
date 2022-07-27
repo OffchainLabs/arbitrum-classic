@@ -215,6 +215,7 @@ type SequencerDangerous struct {
 	RewriteSequencerAddress         bool `koanf:"rewrite-sequencer-address" json:"rewrite-sequencer-address"`
 	DisableBatchPosting             bool `koanf:"disable-batch-posting" json:"disable-batch-posting"`
 	DisableDelayedMessageSequencing bool `koanf:"disable-delayed-message-sequencing" json:"disable-delayed-message-sequencing"`
+	DisableUserMessageSequencing    bool `koanf:"disable-user-message-sequencing" json:"disable-user-message-sequencing"`
 }
 
 type Sequencer struct {
@@ -626,6 +627,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Bool("node.sequencer.dangerous.rewrite-sequencer-address", false, "reorganize to rewrite the sequencer address if it's not the loaded wallet (DANGEROUS)")
 	f.Bool("node.sequencer.dangerous.disable-batch-posting", false, "disable posting batches to L1 (DANGEROUS)")
 	f.Bool("node.sequencer.dangerous.disable-delayed-message-sequencing", false, "disable sequencing delayed messages (DANGEROUS)")
+	f.Bool("node.sequencer.dangerous.disable-user-message-sequencing", false, "disable sequencing user messages (DANGEROUS)")
 	f.Bool("node.sequencer.debug-timing", false, "log elapsed time throughout core sequencing loop")
 
 	f.String("node.type", "forwarder", "forwarder, aggregator, sequencer or validator")

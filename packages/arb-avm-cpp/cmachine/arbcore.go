@@ -472,6 +472,16 @@ func (ac *ArbCore) GetLastMachineTotalGas() (*big.Int, error) {
 	return receiveBigInt(result.value), nil
 }
 
+func (ac *ArbCore) GetLastMachineL2BlockNumber() (*big.Int, error) {
+	defer runtime.KeepAlive(ac)
+	result := C.arbCoreGetLastMachineL2BlockNumber(ac.c)
+	if result.found == 0 {
+		return nil, errors.New("failed to get last machine l2 block number")
+	}
+
+	return receiveBigInt(result.value), nil
+}
+
 func (ac *ArbCore) UpdateCheckpointPruningGas(gas *big.Int) {
 	defer runtime.KeepAlive(ac)
 	gasData := math.U256Bytes(gas)
