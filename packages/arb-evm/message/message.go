@@ -39,6 +39,7 @@ const (
 	RetryableType     inbox.Type = 9
 	GasEstimationType inbox.Type = 10
 	InitType          inbox.Type = 11
+	ShutdownType      inbox.Type = 128
 )
 
 type Message interface {
@@ -88,6 +89,20 @@ func CalculateRequestId(chainId *big.Int, msgCount *big.Int) common.Hash {
 
 func RetryableId(requestId common.Hash) common.Hash {
 	return hashing.SoliditySHA3(hashing.Bytes32(requestId), hashing.Uint256(big.NewInt(0)))
+}
+
+type ShutdownMessage struct{}
+
+func (m ShutdownMessage) Type() inbox.Type {
+	return ShutdownType
+}
+
+func (m ShutdownMessage) AsData() []byte {
+	return nil
+}
+
+func (m ShutdownMessage) AsDataSafe() []byte {
+	return nil
 }
 
 type GasEstimationMessage struct {

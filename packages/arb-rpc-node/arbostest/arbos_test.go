@@ -242,7 +242,7 @@ func TestBlocks(t *testing.T) {
 	t.Log("results", resultTypes)
 
 	// Last value returned is not an error type
-	results, sends, _, _ := runBasicAssertion(t, ib.Messages)
+	results, sends, _, _ := runBasicAssertionWithSnap(t, ib.Messages)
 	for i, res := range results {
 		switch res := res.(type) {
 		case *evm.TxResult:
