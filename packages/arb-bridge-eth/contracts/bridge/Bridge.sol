@@ -158,7 +158,13 @@ contract Bridge is OwnableUpgradeable, IBridge {
         return inboxAccs.length;
     }
 
-    function setReplacementBridge(IBridge replacementBridge) external override onlyOwner {
+    function setReplacementBridge(IBridge replacementBridge)
+        external
+        override
+        onlyOwner
+        returns (address[] memory oldOutboxes)
+    {
+        oldOutboxes = allowedOutboxList;
         while (allowedOutboxList.length > 0) {
             address outbox = allowedOutboxList[0];
             IOutbox(outbox).setBridge(replacementBridge);

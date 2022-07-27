@@ -274,9 +274,10 @@ contract NitroMigrator is Ownable, IMessageProvider {
         }
         bridge.setOutbox(address(this), false);
 
-        // the bridge will proxy executeCall calls from the classic outboxes
-        nitroBridge.setOutbox(address(bridge), true);
-        bridge.setReplacementBridge(IBridge(address(nitroBridge)));
+        address[] memory oldOutboxes = bridge.setReplacementBridge(IBridge(address(nitroBridge)));
+        for (uint256 i = 0; i < oldOutboxes.length; i++) {
+            nitroBridge.setOutbox(oldOutboxes[i], true);
+        }
 
         // we don't enable sequencer inbox and the rollup event bridge in nitro bridge as they are already configured in the deployment
         nitroBridge.setDelayedInbox(address(inbox), true);
