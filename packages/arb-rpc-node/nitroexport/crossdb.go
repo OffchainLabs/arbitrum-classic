@@ -137,10 +137,6 @@ func (c *CrossDB) importBlock(ctx context.Context, blockNumber uint64) error {
 	return err
 }
 
-func (c *CrossDB) OutboxBatchesExported() (uint64, error) {
-	return c.ethDB.Ancients()
-}
-
 func (c *CrossDB) storeMerkle(ctx context.Context, node evm.MerkleNode, batch ethdb.Batch) error {
 	key := node.Hash().Bytes()
 	if ctx.Err() != nil {
