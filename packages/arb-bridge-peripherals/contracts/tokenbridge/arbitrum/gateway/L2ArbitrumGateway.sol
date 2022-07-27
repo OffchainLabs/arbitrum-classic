@@ -33,7 +33,7 @@ import "../../libraries/gateway/GatewayMessageHandler.sol";
 import "../../libraries/gateway/TokenGateway.sol";
 
 /**
- * @title Common interface for gatways on Arbitrum messaging to L1.
+ * @title Common interface for gateways on Arbitrum messaging to L1.
  */
 abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
     using Address for address;
@@ -138,19 +138,18 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
     }
 
-    // Should outboundTransfer also use permit?
-    function outboundTransferCustomRefundWithPermit(
-        address _l1Token,
-        address _to,
-        address, /* _refundTo */
-        uint256 _amount,
-        uint256, /* _maxGas */
-        uint256, /* _gasPriceBid */
-        bytes calldata _data,
-        PermitData memory permitData
-    ) public payable override returns (bytes memory res) {
-        return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
-    }
+    // function outboundTransferCustomRefundWithPermit(
+    //     address _l1Token,
+    //     address _to,
+    //     address, /* _refundTo */
+    //     uint256 _amount,
+    //     uint256, /* _maxGas */
+    //     uint256, /* _gasPriceBid */
+    //     bytes calldata _data,
+    //     PermitData memory permitData
+    // ) public payable override returns (bytes memory res) {
+    //     return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
+    // }
 
     /**
      * @notice Initiates a token withdrawal from Arbitrum to Ethereum

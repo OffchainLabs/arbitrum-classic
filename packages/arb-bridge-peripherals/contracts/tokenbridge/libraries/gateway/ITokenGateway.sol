@@ -41,12 +41,12 @@ interface ITokenGateway {
     //     bytes _data
     // );
 
-    struct PermitData {
-        uint256 deadline;
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
-    }
+    // struct PermitData {
+    //     uint256 deadline;
+    //     uint8 v;
+    //     bytes32 r;
+    //     bytes32 s;
+    // }
 
     function outboundTransfer(
         address _token,
@@ -80,16 +80,16 @@ interface ITokenGateway {
         bytes calldata _data
     ) external payable returns (bytes memory);
 
-    function outboundTransferCustomRefundWithPermit(
-        address _token,
-        address _refundTo,
-        address _to,
-        uint256 _amount,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
-        bytes calldata _data,
-        PermitData memory permitData
-    ) external payable returns (bytes memory);
+    // function outboundTransferCustomRefundWithPermit(
+    //     address _token,
+    //     address _refundTo,
+    //     address _to,
+    //     uint256 _amount,
+    //     uint256 _maxGas,
+    //     uint256 _gasPriceBid,
+    //     bytes calldata _data,
+    //     PermitData memory permitData
+    // ) external payable returns (bytes memory);
 
     function finalizeInboundTransfer(
         address _token,

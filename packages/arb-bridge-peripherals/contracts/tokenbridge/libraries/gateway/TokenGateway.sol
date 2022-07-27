@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 pragma experimental ABIEncoderV2;
 
 import "./ITokenGateway.sol";
+import "./IL1TokenGateway.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 abstract contract TokenGateway is ITokenGateway {

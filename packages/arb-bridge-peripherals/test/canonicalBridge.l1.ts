@@ -106,7 +106,6 @@ describe('Bridge peripherals layer 1', () => {
       [accounts[0].address, data]
     );
 
-    const value = 100;
     const deadline = ethers.constants.MaxUint256;
 
     const signature = await getCorrectPermitSig(accounts[0], tokenPermit, testBridge.address, tokenAmount, deadline);
@@ -119,7 +118,7 @@ describe('Bridge peripherals layer 1', () => {
       s: s
     };
 
-    console.log(permitData);
+    // console.log(permitData);
     await testBridge.outboundTransferCustomRefundWithPermit(
       tokenPermit.address,
       accounts[1].address,

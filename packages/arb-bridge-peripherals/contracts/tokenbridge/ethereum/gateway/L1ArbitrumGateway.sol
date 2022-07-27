@@ -39,7 +39,7 @@ import "hardhat/console.sol";
 /**
  * @title Common interface for gatways on L1 messaging to Arbitrum.
  */
-abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, ERC165 {
+abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, ERC165, IL1TokenGateway {
     using SafeERC20 for IERC20;
     using Address for address;
 
@@ -305,7 +305,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, ERC165
             } else {
                 _from = msg.sender;
         }
-        
+
         ERC20Permit(_l1Token).permit(_from, address(this), _amount, permitData.deadline, permitData.v, permitData.r, permitData.s);
 
         return outboundTransferCustomRefund(_l1Token, _refundTo, _to, _amount, _maxGas, _gasPriceBid, _data);
