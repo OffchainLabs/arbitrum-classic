@@ -27,9 +27,11 @@ import "../Messages.sol";
 import "../../libraries/MerkleLib.sol";
 import "../../libraries/BytesLib.sol";
 import "../../libraries/Cloneable.sol";
+import "../../rollup/Rollup.sol";
 
 import "@openzeppelin/contracts/proxy/BeaconProxy.sol";
 import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract OldOutbox is IOutbox, Cloneable {
     using BytesLib for bytes;
@@ -258,5 +260,14 @@ contract OldOutbox is IOutbox, Cloneable {
 
     function outboxesLength() public view returns (uint256) {
         return outboxes.length;
+    }
+
+    function setBridge(IBridge newBridge) external override {
+        require(msg.sender == OwnableUpgradeable(address(bridge)).owner(), "NOT_BRIDGE_OWNER");
+        bridge = newBridge;
+    }
+
+    function isNitroReady() external pure override returns (uint256) {
+        return 0xa4b1;
     }
 }

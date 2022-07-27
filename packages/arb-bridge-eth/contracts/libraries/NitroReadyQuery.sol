@@ -19,12 +19,12 @@
 pragma solidity ^0.6.11;
 
 interface NitroReadyContract {
-    function isNitroReady() external pure returns (uint8);
+    function isNitroReady() external pure returns (uint256);
 }
 
 contract NitroReadyQuery {
     /// @dev queries a contract to know if its ready for the nitro upgrade
-    function isNitroReady(address target) external pure returns (uint8) {
+    function isNitroReady(address target) external pure returns (uint256) {
         return NitroReadyContract(target).isNitroReady();
     }
 }

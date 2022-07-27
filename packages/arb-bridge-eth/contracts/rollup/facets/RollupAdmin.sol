@@ -412,7 +412,7 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
         emit OwnerFunctionCalled(27);
     }
 
-    function isNitroReady() external pure returns (uint8) {
-        return uint8(0xa4b2);
+    function isNitroReady() external pure returns (uint256) {
+        return 0xa4b2;
     }
 }

@@ -60,12 +60,15 @@ interface INitroRollup {
     function bridge() external view returns (INitroBridge.IBridge);
 
     function inbox() external view returns (INitroInbox.IInbox);
+
     function setInbox(IInbox newInbox) external;
 
     function setOwner(address newOwner) external;
 
     function paused() external view returns (bool);
+
     function pause() external;
+
     function resume() external;
 
     function latestNodeCreated() external returns (uint64);
@@ -84,8 +87,6 @@ contract NitroMigrator is Ownable, IMessageProvider {
     SequencerInbox public sequencerInbox;
     Bridge public bridge;
     RollupEventBridge public rollupEventBridge;
-    OldOutbox public outboxV1;
-    Outbox public outboxV2;
     // assumed this contract is now the rollup admin
     RollupAdminFacet public rollup;
     ProxyAdmin public classicProxyAdmin;
@@ -130,8 +131,6 @@ contract NitroMigrator is Ownable, IMessageProvider {
         SequencerInbox _sequencerInbox,
         Bridge _bridge,
         RollupEventBridge _rollupEventBridge,
-        OldOutbox _outboxV1,
-        Outbox _outboxV2,
         RollupAdminFacet _rollup,
         ProxyAdmin _classicProxyAdmin,
         INitroRollup _nitroRollup,
@@ -144,8 +143,6 @@ contract NitroMigrator is Ownable, IMessageProvider {
         bridge = _bridge;
         rollupEventBridge = _rollupEventBridge;
         rollup = _rollup;
-        outboxV1 = _outboxV1;
-        outboxV2 = _outboxV2;
         classicProxyAdmin = _classicProxyAdmin;
 
         nitroRollup = _nitroRollup;
@@ -157,16 +154,21 @@ contract NitroMigrator is Ownable, IMessageProvider {
             // so we deploy a new contract to ensure the query is dispatched to the user facet, not the admin
             NitroReadyQuery queryContract = new NitroReadyQuery();
             require(
-                queryContract.isNitroReady(address(_rollup)) == uint8(0xa4b1),
+                queryContract.isNitroReady(address(_rollup)) == 0xa4b1,
                 "USER_ROLLUP_NOT_NITRO_READY"
             );
         }
         // this returns a different magic value so we can differentiate the user and admin facets
-        require(_rollup.isNitroReady() == uint8(0xa4b2), "ADMIN_ROLLUP_NOT_NITRO_READY");
+        require(_rollup.isNitroReady() == 0xa4b2, "ADMIN_ROLLUP_NOT_NITRO_READY");
 
-        require(_bridge.isNitroReady() == uint8(0xa4b1), "BRIDGE_NOT_UPGRADED");
-        require(_inbox.isNitroReady() == uint8(0xa4b1), "INBOX_NOT_UPGRADED");
-        require(_sequencerInbox.isNitroReady() == uint8(0xa4b1), "SEQINBOX_NOT_UPGRADED");
+        uint256 numOutboxes = bridge.allowedOutboxListLength();
+        for (uint256 i = 0; i < numOutboxes; i++) {
+            address currOutbox = bridge.allowedOutboxList(i);
+            require(IOutbox(currOutbox).isNitroReady() == 0xa4b1, "OUTBOX_NOT_NITRO_READY");
+        }
+        require(_bridge.isNitroReady() == 0xa4b1, "BRIDGE_NOT_UPGRADED");
+        require(_inbox.isNitroReady() == 0xa4b1, "INBOX_NOT_UPGRADED");
+        require(_sequencerInbox.isNitroReady() == 0xa4b1, "SEQINBOX_NOT_UPGRADED");
 
         // we check that the new contracts that will receive permissions are actually contracts
         require(Address.isContract(address(nitroBridge)), "NITRO_BRIDGE_NOT_CONTRACT");
@@ -277,9 +279,14 @@ contract NitroMigrator is Ownable, IMessageProvider {
         }
         bridge.setOutbox(address(this), false);
 
-        // the bridge will proxy executeCall calls from the classic outboxes
-        nitroBridge.setOutbox(address(bridge), true);
-        bridge.setReplacementBridge(address(nitroBridge));
+        uint256 numOutboxes = bridge.allowedOutboxListLength();
+        for (uint256 i = 0; i < numOutboxes; i++) {
+            // when we disable the list, it always shrinks by 1, so first index should always be a new one
+            address currOutbox = bridge.allowedOutboxList(0);
+            IOutbox(currOutbox).setBridge(IBridge(address(nitroBridge)));
+            bridge.setOutbox(currOutbox, false);
+            nitroBridge.setOutbox(currOutbox, true);
+        }
 
         // we don't enable sequencer inbox and the rollup event bridge in nitro bridge as they are already configured in the deployment
         nitroBridge.setDelayedInbox(address(inbox), true);
