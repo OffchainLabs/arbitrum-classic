@@ -44,6 +44,7 @@ COPY --chown=user arb-util/go.* /home/user/arb-util/
 COPY --chown=user arb-node-core/go.* /home/user/arb-node-core/
 COPY --chown=user arb-rpc-node/go.* /home/user/arb-rpc-node/
 COPY --chown=user arb-evm/go.* /home/user/arb-evm/
+COPY --chown=user go-ethereum /home/user/go-ethereum
 RUN cd arb-rpc-node && go mod download
 
 # Copy source code

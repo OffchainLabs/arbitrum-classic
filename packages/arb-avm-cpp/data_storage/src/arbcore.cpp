@@ -4121,6 +4121,10 @@ uint256_t ArbCore::getCheckpointPruningGas() {
     return unsafe_checkpoint_pruning_gas_used;
 }
 
+std::shared_ptr<DataStorage> ArbCore::getDataStorage() {
+    return data_storage;
+}
+
 std::string optionalUint256ToString(std::optional<uint256_t>& value) {
     if (!value.has_value()) {
         return "empty";

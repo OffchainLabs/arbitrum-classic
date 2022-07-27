@@ -180,14 +180,20 @@ type Tracing struct {
 	Namespace string `koanf:"namespace"`
 }
 
+type NitroExport struct {
+	Enable  bool   `koanf:"enable"`
+	BaseDir string `koanf:"basedir"`
+}
+
 type RPC struct {
-	Addr              string  `koanf:"addr"`
-	Port              string  `koanf:"port"`
-	Path              string  `koanf:"path"`
-	EnableL1Calls     bool    `koanf:"enable-l1-calls"`
-	Tracing           Tracing `koanf:"tracing"`
-	MaxCallGas        uint64  `koanf:"max-call-gas"`
-	EnableDevopsStubs bool    `koanf:"enable-devops-stubs"`
+	Addr              string      `koanf:"addr"`
+	Port              string      `koanf:"port"`
+	Path              string      `koanf:"path"`
+	EnableL1Calls     bool        `koanf:"enable-l1-calls"`
+	Tracing           Tracing     `koanf:"tracing"`
+	NitroExport       NitroExport `koanf:"nitroexport"`
+	MaxCallGas        uint64      `koanf:"max-call-gas"`
+	EnableDevopsStubs bool        `koanf:"enable-devops-stubs"`
 }
 
 type S3 struct {
@@ -604,6 +610,9 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.String("node.rpc.tracing.namespace", "arbtrace", "rpc namespace for tracing api")
 	f.Uint64("node.rpc.max-call-gas", 5000000, "Max computational arbgas limit when processing eth_call and eth_estimateGas")
 	f.Bool("node.rpc.enable-devops-stubs", false, "Enable fake versions of eth_syncing and eth_netPeers")
+
+	f.Bool("node.rpc.nitroexport.enable", false, "Enable rpcs for nitro export (stored locally on node)")
+	f.String("node.rpc.nitroexport.basedir", "", "Base dir for nitro export")
 
 	f.Int64("node.sequencer.create-batch-block-interval", 270, "block interval at which to create new batches")
 	f.Int64("node.sequencer.continue-batch-posting-block-interval", 2, "block interval to post the next batch after posting a partial one")
