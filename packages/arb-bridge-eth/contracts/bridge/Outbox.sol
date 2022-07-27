@@ -29,6 +29,7 @@ import "../rollup/Rollup.sol";
 
 import "@openzeppelin/contracts/proxy/BeaconProxy.sol";
 import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract Outbox is IOutbox, Cloneable {
     using BytesLib for bytes;
@@ -275,7 +276,7 @@ contract Outbox is IOutbox, Cloneable {
     }
 
     function setBridge(IBridge newBridge) external override {
-        require(msg.sender == Rollup(payable(rollup)).owner(), "NOT_ROLLUP_OWNER");
+        require(msg.sender == OwnableUpgradeable(address(bridge)).owner(), "NOT_BRIDGE_OWNER");
         bridge = newBridge;
     }
 

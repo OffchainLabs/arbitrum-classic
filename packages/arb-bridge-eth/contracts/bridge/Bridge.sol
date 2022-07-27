@@ -159,13 +159,6 @@ contract Bridge is OwnableUpgradeable, IBridge {
     }
 
     function isNitroReady() external view override returns (uint256) {
-        uint256 numOutboxes = allowedOutboxList.length;
-        for (uint256 i = 0; i < numOutboxes; i++) {
-            require(
-                IOutbox(allowedOutboxList[i]).isNitroReady() == 0xa4b1,
-                "OUTBOX_NOT_NITRO_READY"
-            );
-        }
         return 0xa4b1;
     }
 }
