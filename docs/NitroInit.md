@@ -41,3 +41,5 @@ Blockchain state exported as a series of json files. State read from these json 
 - Optional: Issue rpc call `arb_exportOutbox` with parameter "0xffffffffffffffff" to start exporting classical outbox data. This will return immediately.
 - Issue rpc call `arb_exportState` with parameter "latest" to export state. Unless disconnected - this will only return after state export is done. State will be created in a separate subdir under the output directory.
 - Use `arb_exportHistoryStatus` and `arb_exportOutboxStatus` to see how they progress. These call will return an error if one was encountered during export, and number of block / outbox batch exported otherwise.
+
+Important note: exporting the state on your own classic node should produce the same state as using files supplied by offchain labs (e.g. the same genesis blockhash). However, files themselves will not necessarily be identical. For example - state export is done in parallel, so entries in the files could appear in a different order.
