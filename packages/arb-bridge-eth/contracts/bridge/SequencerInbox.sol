@@ -98,8 +98,8 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         emit MaxDelayUpdated(newMaxDelayBlocks, newMaxDelaySeconds);
     }
 
-    function isNitroReady() external pure returns (uint8) {
-        return uint8(0xa4b1);
+    function isNitroReady() external pure returns (uint256) {
+        return 0xa4b1;
     }
 
     /**

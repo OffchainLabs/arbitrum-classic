@@ -259,4 +259,13 @@ contract OldOutbox is IOutbox, Cloneable {
     function outboxesLength() public view returns (uint256) {
         return outboxes.length;
     }
+
+    function setBridge(IBridge newBridge) external override {
+        require(msg.sender == address(bridge), "NOT_BRIDGE");
+        bridge = newBridge;
+    }
+
+    function isNitroReady() external pure override returns (uint256) {
+        return 0xa4b1;
+    }
 }

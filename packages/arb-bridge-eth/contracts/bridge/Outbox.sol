@@ -272,4 +272,13 @@ contract Outbox is IOutbox, Cloneable {
     function outboxEntryExists(uint256 batchNum) public view override returns (bool) {
         return outboxEntries[batchNum].root != bytes32(0);
     }
+
+    function setBridge(IBridge newBridge) external override {
+        require(msg.sender == address(bridge), "NOT_BRIDGE");
+        bridge = newBridge;
+    }
+
+    function isNitroReady() external pure override returns (uint256) {
+        return 0xa4b1;
+    }
 }
