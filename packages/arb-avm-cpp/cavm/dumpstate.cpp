@@ -314,7 +314,27 @@ int dumpAddressTable(CArbCore* a, CMachine* m, const char* filename) {
     auto addressTable = indexTup(l, indexTup(l, root, 5), 4);
     auto addressKvs = indexTup(l, addressTable, 1);
 
-    writeKvsToFile(l, addressKvs, stringFileName, serializeAddressKey);
+    std::mutex mutex;
+    std::map<uint256_t, std::string> addressTableMap;
+    kvsForAll(l, addressKvs, [&](Value key, Value val) {
+        mutex.lock();
+        addressTableMap.emplace(assertInt(val), addressString(assertInt(key)));
+        mutex.unlock();
+    });
+
+    std::ofstream file;
+    file.open(filename, std::ios::out | std::ios::trunc);
+    uint256_t expectedIdx;
+    for (auto& pair : addressTableMap) {
+        if (pair.first != expectedIdx) {
+            throw std::runtime_error("Address table out of order: expected " +
+                                     intx::to_string(expectedIdx) +
+                                     " but got " + intx::to_string(pair.first));
+        }
+        file << '"' << pair.second << '"' << std::endl;
+        expectedIdx += 1;
+    }
+    file.close();
 
     return 0;
 }
