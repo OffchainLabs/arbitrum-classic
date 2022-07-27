@@ -212,5 +212,6 @@ interface IRollupAdmin {
 
 interface INitroRollupCore {
     function inbox() external view returns (address);
+
     function owner() external view returns (address);
 }

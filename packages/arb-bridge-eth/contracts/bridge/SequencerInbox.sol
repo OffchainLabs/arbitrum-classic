@@ -144,10 +144,10 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
     }
 
     /// @dev this function is intended to force include the delayed inbox a final time in the nitro migration
-    function shutdownForNitro(
-        uint256 _totalDelayedMessagesRead,
-        bytes32 delayedAcc
-    ) external whenNotShutdownForNitro {
+    function shutdownForNitro(uint256 _totalDelayedMessagesRead, bytes32 delayedAcc)
+        external
+        whenNotShutdownForNitro
+    {
         // no delay on force inclusion, triggered only by rollup's owner
         require(Rollup(payable(rollup)).owner() == msg.sender, "ONLY_ROLLUP_OWNER");
 

@@ -60,12 +60,15 @@ interface INitroRollup {
     function bridge() external view returns (INitroBridge.IBridge);
 
     function inbox() external view returns (INitroInbox.IInbox);
+
     function setInbox(IInbox newInbox) external;
 
     function setOwner(address newOwner) external;
 
     function paused() external view returns (bool);
+
     function pause() external;
+
     function resume() external;
 
     function latestNodeCreated() external returns (uint64);
