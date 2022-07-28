@@ -10,7 +10,7 @@ Note: If you’re interested in accessing the Arbitrum Rinkeby network but you d
 
 ### Required Artifacts
 
-- Latest Docker Image: `offchainlabs/nitro-node:v2.0.0-beta.6-1ff142d
+- Latest Docker Image: `offchainlabs/nitro-node:v2.0.0-beta.6-1ff142d`
 
 - Rinkeby Nitro Seed Database Snapshot
   - On Thursday, July 28th the Rinkeby chain will be temporarily offline (approx. 2-4 hours), and Offchain Labs will run through a series of steps to upgrade the Arbitrum Rinkeby testnet to Arbitrum Nitro Rinkeby testnet. During that time, Offchain Labs will convert the Arbitrum Classic database to an Arbitrum Nitro database
