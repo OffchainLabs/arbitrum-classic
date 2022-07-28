@@ -151,3 +151,15 @@ Uint256Result executionCursorTotalLogCount(
         return {{}, false};
     }
 }
+
+Uint256Result executionCursorL2BlockNumber(
+    CExecutionCursor* execution_cursor_ptr) {
+    try {
+        auto index_result = static_cast<ExecutionCursor*>(execution_cursor_ptr)
+                                ->getOutput()
+                                .l2_block_number;
+        return {returnUint256(index_result), true};
+    } catch (const std::exception& e) {
+        return {{}, false};
+    }
+}

@@ -19,3 +19,6 @@
 [submodule "packages/arb-os"]
 	path = packages/arb-os
 	url = https://github.com/OffchainLabs/arb-os
+[submodule "packages/go-ethereum"]
+	path = packages/go-ethereum
+	url = ../go-ethereum.git
