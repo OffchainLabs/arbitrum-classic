@@ -250,6 +250,13 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		return nil, false, errors.Errorf("local machine doesn't match chain %v %v", cursor.TotalGasConsumed(), startState.TotalGasConsumed)
 	}
 
+	if cursor.L2BlockNumber().BitLen() >= 128 {
+		if strategy == configuration.MakeNodesStrategy {
+			logger.Info().Str("startGas", startState.TotalGasConsumed.String()).Msg("not creating node past shutdown for nitro")
+			strategy = configuration.StakeLatestStrategy
+		}
+	}
+
 	// Not necessarily successors
 	successorNodes, err := v.rollup.LookupNodeChildren(ctx, stakerInfo.LatestStakedNodeHash, startState.ProposedBlock)
 	if err != nil {
@@ -266,11 +273,16 @@ func (v *Validator) generateNodeAction(ctx context.Context, stakerInfo *OurStake
 		if err != nil {
 			return nil, false, err
 		}
+		coreL2BlockNumber, err := v.lookup.GetLastMachineL2BlockNumber()
+		if err != nil {
+			return nil, false, err
+		}
 		gasExecuted := new(big.Int).Sub(coreGasExecuted, startState.TotalGasConsumed)
 		sendCount := new(big.Int).Sub(coreSendCount, startState.TotalSendCount)
 		if sendCount.Cmp(v.SendThreshold) < 0 &&
 			gasExecuted.Cmp(v.GasThreshold) < 0 &&
-			timeSinceProposed.Cmp(v.BlockThreshold) < 0 {
+			timeSinceProposed.Cmp(v.BlockThreshold) < 0 &&
+			coreL2BlockNumber.BitLen() < 128 {
 			return nil, false, nil
 		}
 	}

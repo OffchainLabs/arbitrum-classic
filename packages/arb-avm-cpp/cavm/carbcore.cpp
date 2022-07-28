@@ -584,6 +584,12 @@ Uint256Result arbCoreGetLastMachineTotalGas(CArbCore* arbcore_ptr) {
     return returnUint256Result({rocksdb::Status::OK(), gas});
 }
 
+Uint256Result arbCoreGetLastMachineL2BlockNumber(CArbCore* arbcore_ptr) {
+    auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
+    auto gas = arbCore->getLastMachineOutput().l2_block_number;
+    return returnUint256Result({rocksdb::Status::OK(), gas});
+}
+
 void arbCoreUpdateCheckpointPruningGas(CArbCore* arbcore_ptr,
                                        const void* gas_ptr) {
     auto arbCore = static_cast<ArbCore*>(arbcore_ptr);
@@ -621,8 +627,8 @@ CExecutionCursorResult arbCoreGetExecutionCursorAtEndOfBlock(
                 return {nullptr, 1};
             }
 
-            std::cerr << "Failed to load machine for sideload "
-                      << status.ToString() << std::endl;
+            std::cerr << "Failed to load machine for sideload  at block: "
+                      << block_number << ", " << status.ToString() << std::endl;
             return {nullptr, 0};
         }
 
