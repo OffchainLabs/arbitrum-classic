@@ -18,8 +18,9 @@ package aggregator
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/snapshot"
@@ -240,6 +241,10 @@ func (m *Server) GetLogs(_ context.Context, blockHash ethcommon.Hash) ([][]*type
 		logs = append(logs, res.EthLogs(common.NewHashFromEth(blockHash)))
 	}
 	return logs, nil
+}
+
+func (m *Server) PendingBlockAndReceipts() (*types.Block, types.Receipts) {
+	return nil, nil
 }
 
 func (m *Server) BloomStatus() (uint64, uint64) {
