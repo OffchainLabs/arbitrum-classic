@@ -25,7 +25,7 @@ import "../rollup/facets/RollupAdmin.sol";
 import "../rollup/RollupEventBridge.sol";
 import "../rollup/RollupLib.sol";
 import "../libraries/NitroReadyQuery.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 import "@arbitrum/nitro-contracts/src/bridge/IBridge.sol" as INitroBridge;
@@ -80,7 +80,7 @@ interface IArbOwner {
     function addChainOwner(address newOwner) external;
 }
 
-contract NitroMigrator is Ownable, IMessageProvider {
+contract NitroMigrator is OwnableUpgradeable, IMessageProvider {
     uint8 internal constant L1MessageType_shutdownForNitro = 128;
 
     Inbox public inbox;
@@ -122,7 +122,8 @@ contract NitroMigrator is Ownable, IMessageProvider {
     }
     NitroMigrationSteps public latestCompleteStep;
 
-    constructor() public Ownable() {
+    function initialize() external initializer {
+        __Ownable_init();
         latestCompleteStep = NitroMigrationSteps.Uninitialized;
     }
 
