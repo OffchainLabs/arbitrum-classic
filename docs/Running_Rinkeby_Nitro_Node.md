@@ -13,10 +13,8 @@ Note: If you’re interested in accessing the Arbitrum Rinkeby network but you d
 - Latest Docker Image: `offchainlabs/nitro-node:v2.0.0-beta.6-1ff142d`
 
 - Rinkeby Nitro Seed Database Snapshot
-  - On Thursday, July 28th the Rinkeby chain will be temporarily offline (approx. 2-4 hours), and Offchain Labs will run through a series of steps to upgrade the Arbitrum Rinkeby testnet to Arbitrum Nitro Rinkeby testnet. During that time, Offchain Labs will convert the Arbitrum Classic database to an Arbitrum Nitro database
-  - The URL to download the seed database will be announced on Discord and placed on this webpage
-  - If running more than one node, easiest to manually download image and host it locally for your nodes
-  - Use the parameter `--init.url` to provide the URL to download the Rinkeby seed database from
+  - Use the parameter `--init.url="https://snapshot.arbitrum.io/rinkeby/nitro.tar"` on first startup to initialize Nitro database
+  - If running more than one node, easiest to manually download image from https://snapshot.arbitrum.io/rinkeby/nitro.tar and host it locally for your nodes
 
 ### Required parameter
 
@@ -52,7 +50,7 @@ Note: If you’re interested in accessing the Arbitrum Rinkeby network but you d
 
 ### Optional parameters
 
-- `--init.url=<seed database URL>`
+- `--init.url="https://snapshot.arbitrum.io/rinkeby/nitro.tar"`
   - URL to download seed database from. Only needed when starting without database
 - `--node.rpc.classic-redirect=<classic node RPC>`
   - If set, will redirect archive requests for pre-nitro blocks to the designated RPC, which should be an Arbitrum Classic node with archive database
