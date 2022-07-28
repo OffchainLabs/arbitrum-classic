@@ -4,7 +4,7 @@ title: Running full node for Arbitrum One
 sidebar_label: Running a Node
 ---
 
-Note: On Thursday July 28th, the Arbitrum Rinkeby testnet will be upgrade to Nitro, and the classic node will only be useful for archive requests on Rinkeby. Mainnet Nitro upgrade date will be announced at a later date
+Note: The Arbitrum Rinkeby testnet has been upgraded to Nitro, and the classic node is only useful for archive requests for pre-Nitro blocks on Rinkeby. Mainnet Nitro upgrade date will be announced at a later date
 
 Note: If you’re interested in accessing the Arbitrum network but you don’t want to setup your own node, see our [Node Providers](https://developer.offchainlabs.com/docs/node_providers) to get RPC access to fully-managed nodes hosted by one of our partners!
 
@@ -30,11 +30,7 @@ Note: If you’re interested in accessing the Arbitrum network but you don’t w
   ```
   docker run --rm -it  -v /some/local/dir/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.4.0-f4bbe91 --l1.url https://l1-node:8545
   ```
-- Here is an example of how to run arb-node for rinkeby before July 28th:
-  ```
-  docker run --rm -it  -v /some/local/dir/arbitrum-rinkeby/:/home/user/.arbitrum/rinkeby -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.4.0-f4bbe91 --l1.url https://l1-rinkeby-node:8545
-  ```
-- Here is an example of how to run arb-node for rinkeby after July 28th, disabling feed to reduce log error messages (only good for archive requests on pre-Nitro blocks, so probably want to enable archive as well):
+- Here is an example of how to run arb-node for rinkeby, disabling feed to reduce log error messages (only good for archive requests on pre-Nitro blocks, so probably want to enable archive as well):
   ```
   docker run --rm -it  -v /some/local/dir/arbitrum-rinkeby/:/home/user/.arbitrum/rinkeby -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.4.0-f4bbe91 --l1.url https://l1-rinkeby-node:8545 --feed.input.url=""
   ```
@@ -56,7 +52,7 @@ Note: If you’re interested in accessing the Arbitrum network but you don’t w
 - `--feed.input.url=<feed address>`
   - Will default to `https://arb1.arbitrum.io/feed` or `https://rinkeby.arbitrum.io/feed` depending on chain ID reported by ethereum node provided. If running more than a couple nodes, you will want to provide one feed relay per datacenter, see further instructions below.
 - `--node.forwarder.target=<sequencer RPC>`
-  - Will default to `https://arb1.arbitrum.io/rpc` or `https://rinkeby.arbitrum.io/rpc` depending on chain ID reported by ethereum node provided.
+  - Will default to `https://arb1.arbitrum.io/rpc` when chain ID reported by ethereum node is 1 (mainnet), but needs to be manually set to empty string (`""`) for Rinkeby testnet.
 - `--core.cache.timed-expire`
   - Defaults to `20m`, or 20 minutes. Age of oldest blocks to hold in cache so that disk lookups are not required
 - `--node.rpc.max-call-gas`
@@ -81,6 +77,7 @@ Note: If you’re interested in accessing the Arbitrum network but you don’t w
 
 - When running more than one node, you want to run a single arb-relay which can provide a feed for all your nodes.
   The arb-relay is in the same docker image.
+- Note that rinkeby testnet has been upgraded to Nitro, so rinkeby feed messages cannot be parsed by the classic node and classic relay is not required.
 - Here is an example of how to run arb-relay for mainnet:
   ```
   docker run --rm -it  -v /some/local/dir/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:9642:9642 --entrypoint /home/user/go/bin/arb-relay offchainlabs/arb-node:v1.4.0-f4bbe91 --feed.input.url wss://arb1.arbitrum.io/feed
