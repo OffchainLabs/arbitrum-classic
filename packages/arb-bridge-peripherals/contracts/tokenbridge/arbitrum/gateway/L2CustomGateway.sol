@@ -17,7 +17,6 @@
  */
 
 pragma solidity ^0.6.11;
-pragma experimental ABIEncoderV2;
 
 import "./L2ArbitrumGateway.sol";
 import "../../libraries/gateway/ICustomGateway.sol";

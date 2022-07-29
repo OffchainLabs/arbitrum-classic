@@ -17,14 +17,11 @@
  */
 
 pragma solidity ^0.6.11;
-pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/drafts/ERC20Permit.sol";
 import "arb-bridge-eth/contracts/libraries/BytesLib.sol";
 import "arb-bridge-eth/contracts/libraries/ProxyUtil.sol";
 import "arb-bridge-eth/contracts/libraries/AddressAliasHelper.sol";
-
 
 import "../IArbToken.sol";
 
@@ -138,19 +135,6 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
     }
 
-    // function outboundTransferCustomRefundWithPermit(
-    //     address _l1Token,
-    //     address _to,
-    //     address, /* _refundTo */
-    //     uint256 _amount,
-    //     uint256, /* _maxGas */
-    //     uint256, /* _gasPriceBid */
-    //     bytes calldata _data,
-    //     PermitData memory permitData
-    // ) public payable override returns (bytes memory res) {
-    //     return outboundTransfer(_l1Token, _to, _amount, 0, 0, _data);
-    // }
-
     /**
      * @notice Initiates a token withdrawal from Arbitrum to Ethereum
      * @param _l1Token l1 address of token
@@ -198,53 +182,6 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         }
         return abi.encode(id);
     }
-
-    // function outboundTransferWithPermit(
-    //     address _l1Token,
-    //     address _to,
-    //     uint256 _amount,
-    //     uint256, /* _maxGas */
-    //     uint256, /* _gasPriceBid */
-    //     bytes calldata _data,
-    //     uint256 _deadline,
-    //     uint8 _v,
-    //     bytes32 _r,
-    //     bytes32 _s
-    // ) public payable override returns (bytes memory res) {
-    //     // This function is set as public and virtual so that subclasses can override
-    //     // it and add custom validation for callers (ie only whitelisted users)
-
-    //     // the function is marked as payable to conform to the inheritance setup
-    //     // this particular code path shouldn't have a msg.value > 0
-    //     // TODO: remove this invariant for execution markets
-    //     require(msg.value == 0, "NO_VALUE");
-
-    //     address _from;
-    //     bytes memory _extraData;
-    //     {
-    //         if (isRouter(msg.sender)) {
-    //             (_from, _extraData) = GatewayMessageHandler.parseFromRouterToGateway(_data);
-    //         } else {
-    //             _from = msg.sender;
-    //             _extraData = _data;
-    //         }
-    //     }
-    //     // the inboundEscrowAndCall functionality has been disabled, so no data is allowed
-    //     require(_extraData.length == 0, "EXTRA_DATA_DISABLED");
-        
-    //     ERC20Permit(_l1Token).permit(_from, address(this), _amount, _deadline, _v, _r, _s);
-
-    //     uint256 id;
-    //     {
-    //         address l2Token = calculateL2TokenAddress(_l1Token);
-    //         require(l2Token.isContract(), "TOKEN_NOT_DEPLOYED");
-    //         require(IArbToken(l2Token).l1Address() == _l1Token, "NOT_EXPECTED_L1_TOKEN");
-
-    //         _amount = outboundEscrowTransfer(l2Token, _from, _amount);
-    //         id = triggerWithdrawal(_l1Token, _from, _to, _amount, _extraData);
-    //     }
-    //     return abi.encode(id);
-    // }
 
     function triggerWithdrawal(
         address _l1Token,

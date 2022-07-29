@@ -296,7 +296,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, ERC165
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data,
-        PermitData memory permitData
+        PermitData calldata permitData
     ) public payable virtual override returns (bytes memory res) {
         address _from;
         if (super.isRouter(msg.sender)) {
@@ -307,7 +307,6 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, ERC165
         }
 
         ERC20Permit(_l1Token).permit(_from, address(this), _amount, permitData.deadline, permitData.v, permitData.r, permitData.s);
-
         return outboundTransferCustomRefund(_l1Token, _refundTo, _to, _amount, _maxGas, _gasPriceBid, _data);
     }
 

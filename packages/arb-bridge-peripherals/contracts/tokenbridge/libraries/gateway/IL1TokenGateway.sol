@@ -19,7 +19,6 @@
 
 pragma solidity >=0.6.9 <0.9.0;
 pragma experimental ABIEncoderV2;
-import "./ITokenGateway.sol";
 
 interface IL1TokenGateway {
 
@@ -38,6 +37,6 @@ interface IL1TokenGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data,
-        PermitData memory permitData
+        PermitData calldata permitData
     ) external payable returns (bytes memory);
 }

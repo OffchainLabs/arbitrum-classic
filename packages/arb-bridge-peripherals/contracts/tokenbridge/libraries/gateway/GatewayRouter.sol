@@ -24,7 +24,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "./TokenGateway.sol";
 import "./IL1TokenGateway.sol";
 import "./GatewayMessageHandler.sol";
-import "@openzeppelin/contracts/drafts/ERC20Permit.sol";
+// import "@openzeppelin/contracts/drafts/ERC20Permit.sol";
 
 /**
  * @title Common interface for L1 and L2 Gateway Routers
@@ -154,7 +154,7 @@ abstract contract GatewayRouter is TokenGateway, IL1TokenGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data,
-        PermitData memory permitData
+        PermitData calldata permitData
     ) public payable virtual override returns (bytes memory) {
         address gateway = getGateway(_token);
         bytes memory gatewayData = GatewayMessageHandler.encodeFromRouterToGateway(

@@ -302,7 +302,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data,
-        PermitData memory permitData
+        PermitData calldata permitData
     ) public payable override returns (bytes memory) {
         return
             super.outboundTransferCustomRefundWithPermit(

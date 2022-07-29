@@ -25,10 +25,6 @@ import "@openzeppelin/contracts/drafts/ERC20Permit.sol";
 
 contract TestERC20Permit is ERC20, ERC20Permit {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) ERC20Permit(name) public {
-        // Mint 100 tokens to msg.sender
-        // Similar to how
-        // 1 dollar = 100 cents
-        // 1 token = 1 * (10 ** decimals)
         _mint(msg.sender, 1000 * 10**uint(decimals()));
     }
 }

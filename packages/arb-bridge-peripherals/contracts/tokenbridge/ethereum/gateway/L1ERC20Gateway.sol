@@ -85,7 +85,7 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data,
-        PermitData memory permitData
+        PermitData calldata permitData
     ) public payable override returns (bytes memory res) {
         return
             super.outboundTransferCustomRefundWithPermit(
