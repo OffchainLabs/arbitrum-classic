@@ -176,7 +176,7 @@ func (m *Server) PendingSnapshot(ctx context.Context) (*snapshot.Snapshot, error
 		return pending, nil
 	}
 
-	return nil, errors.New("no batcher defined, cannot generate pending snapshot")
+	return m.LatestSnapshot(ctx)
 }
 
 func (m *Server) Aggregator() *common.Address {
