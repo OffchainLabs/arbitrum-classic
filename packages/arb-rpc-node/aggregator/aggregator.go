@@ -65,7 +65,11 @@ func NewServer(
 // SendTransaction takes a request signed transaction l2message from a Client
 // and puts it in a queue to be included in the next transaction batch
 func (m *Server) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	return m.batch.SendTransaction(ctx, tx)
+	if m.batch != nil {
+		return m.batch.SendTransaction(ctx, tx)
+	}
+
+	return errors.New("no batcher defined, cannot send transaction")
 }
 
 func (m *Server) GetBlockCount() (uint64, error) {
@@ -161,22 +165,35 @@ func (m *Server) LatestSnapshot(ctx context.Context) (*snapshot.Snapshot, error)
 }
 
 func (m *Server) PendingSnapshot(ctx context.Context) (*snapshot.Snapshot, error) {
-	pending, err := m.batch.PendingSnapshot(ctx)
-	if err != nil {
-		return nil, err
+	if m.batch != nil {
+		pending, err := m.batch.PendingSnapshot(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if pending == nil {
+			return m.LatestSnapshot(ctx)
+		}
+		return pending, nil
 	}
-	if pending == nil {
-		return m.LatestSnapshot(ctx)
-	}
-	return pending, nil
+
+	return nil, errors.New("no batcher defined, cannot generate pending snapshot")
 }
 
 func (m *Server) Aggregator() *common.Address {
-	return m.batch.Aggregator()
+	if m.batch != nil {
+		return m.batch.Aggregator()
+	}
+
+	return &common.Address{}
 }
 
 func (m *Server) PendingTransactionCount(ctx context.Context, account common.Address) (*uint64, error) {
-	return m.batch.PendingTransactionCount(ctx, account)
+	if m.batch != nil {
+		return m.batch.PendingTransactionCount(ctx, account)
+	}
+
+	count := uint64(0)
+	return &count, nil
 }
 
 func (m *Server) ChainDb() ethdb.Database {

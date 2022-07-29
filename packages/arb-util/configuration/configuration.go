@@ -723,10 +723,11 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		} else if l1ChainId.Cmp(big.NewInt(4)) == 0 {
 			err := k.Load(confmap.Provider(map[string]interface{}{
 				"bridge-utils-address":             "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
-				"feed.input.url":                   []string{"wss://rinkeby.arbitrum.io/feed"},
+				"feed.input.url":                   []string{},
 				"node.aggregator.inbox-address":    "0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e",
 				"node.chain-id":                    "421611",
-				"node.forwarder.target":            "https://rinkeby.arbitrum.io/rpc",
+				"node.forwarder.target":            "",
+				"node.forwarder.rpc-mode":          "non-mutating",
 				"persistent.chain":                 "rinkeby",
 				"rollup.address":                   "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c",
 				"rollup.from-block":                "8700589",
