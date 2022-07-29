@@ -10,13 +10,11 @@ Note: If you’re interested in accessing the Arbitrum Rinkeby network but you d
 
 ### Required Artifacts
 
-- Latest Docker Image: `offchainlabs/nitro-node:v2.0.0-beta.6-1ff142d
+- Latest Docker Image: `offchainlabs/nitro-node:v2.0.0-beta.7-340b812`
 
 - Rinkeby Nitro Seed Database Snapshot
-  - On Thursday, July 28th the Rinkeby chain will be temporarily offline (approx. 2-4 hours), and Offchain Labs will run through a series of steps to upgrade the Arbitrum Rinkeby testnet to Arbitrum Nitro Rinkeby testnet. During that time, Offchain Labs will convert the Arbitrum Classic database to an Arbitrum Nitro database
-  - The URL to download the seed database will be announced on Discord and placed on this webpage
-  - If running more than one node, easiest to manually download image and host it locally for your nodes
-  - Use the parameter `--init.url` to provide the URL to download the Rinkeby seed database from
+  - Use the parameter `--init.url="https://snapshot.arbitrum.io/rinkeby/nitro.tar"` on first startup to initialize Nitro database
+  - If running more than one node, easiest to manually download image from https://snapshot.arbitrum.io/rinkeby/nitro.tar and host it locally for your nodes
 
 ### Required parameter
 
@@ -37,7 +35,7 @@ Note: If you’re interested in accessing the Arbitrum Rinkeby network but you d
 - Here is an example of how to run nitro-node for Rinkeby:
 
   ```
-  docker run --rm -it  -v /some/local/dir/rinkeby-nitro/:/home/user/.arbitrum/rinkeby-nitro -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-beta.6-1ff142d --l1.url https://l1-rinkeby-node:8545 --l2.chain-id=421611
+  docker run --rm -it  -v /some/local/dir/rinkeby-nitro/:/home/user/.arbitrum/rinkeby-nitro -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-beta.7-340b812 --l1.url https://l1-rinkeby-node:8545 --l2.chain-id=421611
   ```
 
   - Note that if you are running L1 node on localhost, you may need to add `--network host` right after `docker run` to use docker host-based networking
@@ -52,7 +50,7 @@ Note: If you’re interested in accessing the Arbitrum Rinkeby network but you d
 
 ### Optional parameters
 
-- `--init.url=<seed database URL>`
+- `--init.url="https://snapshot.arbitrum.io/rinkeby/nitro.tar"`
   - URL to download seed database from. Only needed when starting without database
 - `--node.rpc.classic-redirect=<classic node RPC>`
   - If set, will redirect archive requests for pre-nitro blocks to the designated RPC, which should be an Arbitrum Classic node with archive database
@@ -82,9 +80,9 @@ Note: If you’re interested in accessing the Arbitrum Rinkeby network but you d
   The arb-relay is in the same docker image.
 - Here is an example of how to run nitro-relay for Rinkeby:
   ```
-  docker run --rm -it  -p 0.0.0.0:9642:9642 --entrypoint relay offchainlabs/nitro-node:v2.0.0-beta.6-1ff142d --node.feed.input.url wss://rinkeby.arbitrum.io/feed --l2.chain-id=421611
+  docker run --rm -it  -p 0.0.0.0:9642:9642 --entrypoint relay offchainlabs/nitro-node:v2.0.0-beta.7-340b812 --node.feed.input.url wss://rinkeby.arbitrum.io/feed --l2.chain-id=421611
   ```
 - Here is an example of how to run nitro-node for Rinkeby with custom relay:
   ```
-  docker run --rm -it  -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-beta.6-1ff142d --l1.url https://l1-goeri-node:8545 --feed.input.url ws://local-relay-address:9642 --l2.chain-id=421611
+  docker run --rm -it  -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-beta.7-340b812 --l1.url https://l1-goeri-node:8545 --feed.input.url ws://local-relay-address:9642 --l2.chain-id=421611
   ```
