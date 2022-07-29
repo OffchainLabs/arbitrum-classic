@@ -449,7 +449,8 @@ type Config struct {
 		URL     string `koanf:"url"`
 	} `koanf:"l1"`
 	L2 struct {
-		ChainID uint64 `koanf:"chain-id"`
+		ChainID         uint64 `koanf:"chain-id"`
+		DisableUpstream bool   `koanf:"disable-upstream"`
 	} `koanf:"l2"`
 	Log           Log        `koanf:"log"`
 	Node          Node       `koanf:"node"`
@@ -724,6 +725,7 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 			err := k.Load(confmap.Provider(map[string]interface{}{
 				"bridge-utils-address":             "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
 				"feed.input.url":                   []string{},
+				"l2.disable-upstream":              true,
 				"node.aggregator.inbox-address":    "0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e",
 				"node.chain-id":                    "421611",
 				"node.forwarder.target":            "",
@@ -751,6 +753,12 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	out, wallet, err := endCommonParse(k)
 	if err != nil {
 		return nil, nil, nil, nil, err
+	}
+
+	if out.L2.DisableUpstream {
+		out.Feed.Input.URLs = []string{}
+		out.Node.Forwarder.Target = ""
+		out.Node.Forwarder.RpcModeImpl = "non-mutating"
 	}
 
 	// Fixup directories
@@ -991,6 +999,7 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.String("log.core", "info", "log level for general arb node logging")
 
 	f.Uint64("l2.chain-id", 0, "if set other than 0, will be used to validate L2 feed connection")
+	f.Bool("l2.disable-upstream", false, "disable feed and transaction forwarding")
 
 	f.Bool("pprof-enable", false, "enable profiling server")
 
