@@ -10,7 +10,7 @@ Note: If you’re interested in accessing the Arbitrum Rinkeby network but you d
 
 ### Required Artifacts
 
-- Latest Docker Image: `offchainlabs/nitro-node:v2.0.0-beta.7-340b812`
+- Latest Docker Image: `offchainlabs/nitro-node:v2.0.0-beta.8-5ed2c72`
 
 - Rinkeby Nitro Seed Database Snapshot
   - Use the parameter `--init.url="https://snapshot.arbitrum.io/rinkeby/nitro.tar"` on first startup to initialize Nitro database
@@ -31,11 +31,13 @@ Note: If you’re interested in accessing the Arbitrum Rinkeby network but you d
 
 ### Putting it all together
 
-- When running docker image, an external volume should be mounted to persist the database across restarts. The mount point inside the docker image should be `/home/user/.arbitrum/rinkeby-nitro`.
+- When running docker image, an external volume should be mounted to persist the database across restarts. The mount point inside the docker image should be `/home/user/.arbitrum`.
 - Here is an example of how to run nitro-node for Rinkeby:
 
+  - Note that is important that `/some/local/dir/arbitrum` already exists, otherwise the directory might be created with `root` as owner, and the docker container won't be able to write to it.
+
   ```
-  docker run --rm -it  -v /some/local/dir/rinkeby-nitro/:/home/user/.arbitrum/rinkeby-nitro -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-beta.7-340b812 --l1.url https://l1-rinkeby-node:8545 --l2.chain-id=421611
+  docker run --rm -it  -v /some/local/dir/arbitrum:/home/user/.arbitrum -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-beta.8-5ed2c72 --l1.url https://l1-rinkeby-node:8545 --l2.chain-id=421611 --http.api=net,web3,eth,debug --http.corsdomain=* --http.vhosts=*
   ```
 
   - Note that if you are running L1 node on localhost, you may need to add `--network host` right after `docker run` to use docker host-based networking
@@ -80,9 +82,9 @@ Note: If you’re interested in accessing the Arbitrum Rinkeby network but you d
   The arb-relay is in the same docker image.
 - Here is an example of how to run nitro-relay for Rinkeby:
   ```
-  docker run --rm -it  -p 0.0.0.0:9642:9642 --entrypoint relay offchainlabs/nitro-node:v2.0.0-beta.7-340b812 --node.feed.input.url wss://rinkeby.arbitrum.io/feed --l2.chain-id=421611
+  docker run --rm -it  -p 0.0.0.0:9642:9642 --entrypoint relay offchainlabs/nitro-node:v2.0.0-beta.8-5ed2c72 --node.feed.input.url wss://rinkeby.arbitrum.io/feed --l2.chain-id=421611`
   ```
 - Here is an example of how to run nitro-node for Rinkeby with custom relay:
   ```
-  docker run --rm -it  -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-beta.7-340b812 --l1.url https://l1-goeri-node:8545 --feed.input.url ws://local-relay-address:9642 --l2.chain-id=421611
+  docker run --rm -it  -v /some/local/dir/arbitrum:/home/user/.arbitrum -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/nitro-node:v2.0.0-beta.8-5ed2c72 --l1.url https://l1-rinkeby-node:8545 --l2.chain-id=421611 --http.api=net,web3,eth,debug --http.corsdomain=* --http.vhosts=* --node.feed.input.url ws://local-relay-address:9642
   ```
