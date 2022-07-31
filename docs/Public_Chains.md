@@ -13,7 +13,6 @@ The following is a comprehensive list of all of the currently live Arbitrum chai
 | Arbitrum Nova                   | 42170  | Mainnet | Ethereum      | Nitro AnyTrust     | [nova.arbitrum.io/rpc](https://nova.arbitrum.io/rpc)                                                                                                                                                                                    | [nova-explorer.arbitrum.io/](https://nova-explorer.arbitrum.io/)                                                          | ETH             | [retryable-tx-panel-nitro.arbitrum.io](http://retryable-tx-panel-nitro.arbitrum.io/) |
 | RinkArby                        | 421611 | Testnet | Rinkeby       | Nitro Rollup       | [rinkeby.arbitrum.io/rpc](https://rinkeby.arbitrum.io/rpc)                                                                                                                                                                              | [testnet.arbiscan.io](https://testnet.arbiscan.io/) [rinkeby-explorer.arbitrum.io](https://rinkeby-explorer.arbitrum.io/) | RinkebyETH      | [retryable-dashboard.arbitrum.io](https://retryable-dashboard.arbitrum.io/)          |
 | Nitro Goerli Rollup Testnet     | 421613 | Testnet | Goerli        | Nitro Rollup       | [goerli-rollup.arbitrum.io/rpc](https://goerli-rollup.arbitrum.io/rpc)                                                                                                                                                                  | [goerli-rollup-explorer.arbitrum.io](https://goerli-rollup-explorer.arbitrum.io/)                                         | GoerliETH       | [retryable-tx-panel-nitro.arbitrum.io](http://retryable-tx-panel-nitro.arbitrum.io/) |
-| Nitro Devnet [Deprecated Soon!] | 421612 | Testnet | Goerli        | Nitro Rollup       | [nitro-devnet.arbitrum.io/rpc](https://nitro-devnet.arbitrum.io/rpc)                                                                                                                                                                    | [nitro-devnet-explorer.arbitrum.io](https://nitro-devnet-explorer.arbitrum.io/)                                           | GoerliETH       | [retryable-tx-panel-nitro.arbitrum.io](http://retryable-tx-panel-nitro.arbitrum.io/) |
 </em>
 
 For a list of useful contract addresses, see [here](Useful_Addresses.md).
@@ -27,8 +26,6 @@ For a list of useful contract addresses, see [here](Useful_Addresses.md).
 **RinkArby**: RinkArby is the longest running Arbitrum testnet. It previously ran on the classic stack, but at block 7/28/2022 it was migrated use the Nitro stack! Rinkarby will be deprecated [when Rinkeby itself gets deprecated](https://blog.ethereum.org/2022/06/21/testnet-deprecation/); plan accordingly!
 
 **Nitro Goerli Rollup Testnet**: This testnet (421613) uses the Nitro rollup tech stack; it is expected to be the primary, stable Arbitrum testnet moving forward.
-
-**Arbitrum Nitro Devnet**: The devnet chain (421612) will soon be deprecated in favor of 421613; for last minute bridging needs, use https://nitro-devnet-bridge.arbitrum.io.
 
 ## Using Arbitrum
 
@@ -62,5 +59,5 @@ Dapp developers can build on Arbitrum seamlessly using their favorite Ethereum t
 
 ### What's Next
 
-The team working on Arbitrum is always interested and looking forward to engage with its users.  
+The team working on Arbitrum is always interested and looking forward to engage with its users.
 Why not follow us on [Twitter](https://twitter.com/arbitrum) or join our community on [Discord](https://discord.gg/5KE54JwyTs)?
