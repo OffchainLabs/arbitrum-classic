@@ -62,6 +62,12 @@ const config = {
         ? [process.env['MAINNET_PRIVKEY']]
         : [],
     },
+    nova: {
+      url: 'https://nova.arbitrum.io/rpc',
+      accounts: process.env['MAINNET_PRIVKEY']
+        ? [process.env['MAINNET_PRIVKEY']]
+        : [],
+    },
     rinkeby: {
       url: 'https://rinkeby.infura.io/v3/' + process.env['INFURA_KEY'],
       accounts: process.env['DEVNET_PRIVKEY']
@@ -69,11 +75,22 @@ const config = {
         : [],
     },
     arbRinkeby: {
-      gasPrice: 0,
       url: 'https://rinkeby.arbitrum.io/rpc',
       accounts: process.env['DEVNET_PRIVKEY']
         ? [process.env['DEVNET_PRIVKEY']]
         : [],
+    },
+    goerli: {
+      url: 'https://goerli.infura.io/v3/' + process.env['INFURA_KEY'],
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
+    },
+    arbGoerliRollup: {
+      url: 'https://goerli-rollup.arbitrum.io/rpc',
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],      
     },
     arbitrum: {
       url: 'http://127.0.0.1:8547',
