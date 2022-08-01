@@ -1,0 +1,26 @@
+{
+  "L2GatewayRouter": {
+    "address": "0xa707480046b0Bd1C602CCd1D83FCf7Bd367217E2",
+    "deployTxn": "0x3c2adecca82c874282a694a23faec77ae02cd3a19a17527855554fd77d93e4a9",
+    "arbitrumCommitHash": "25bf76e8cdd9b00bc181269abcc9b04579a42aca",
+    "buildInfo": ""
+  },
+  "L2ERC20Gateway": {
+    "address": "0xCbD2dC47b287C8324747A5AA2A71A8f939662B3e",
+    "deployTxn": "0x07c3734dd047f99ce9955d694517f2fa0b73def14bd46215847a747accb49702",
+    "arbitrumCommitHash": "25bf76e8cdd9b00bc181269abcc9b04579a42aca",
+    "buildInfo": ""
+  },
+  "L2CustomGateway": {
+    "address": "0x802B583C2f81415b047f1Ee19e498bDa7Efd6920",
+    "deployTxn": "0xb14f6f5b2e6c425f597b7438e32058441420c70aaa7ca8a6f505b5d935cfb820",
+    "arbitrumCommitHash": "25bf76e8cdd9b00bc181269abcc9b04579a42aca",
+    "buildInfo": ""
+  },
+  "L2WethGateway": {
+    "address": "0x3BD10e97ECa83B362dA291beFdA0f1ba70D31411",
+    "deployTxn": "0xe35957e6aef4d5919b8d7d93ff1b575dd5c50aa3b3dc944be07ac913d46a2846",
+    "arbitrumCommitHash": "25bf76e8cdd9b00bc181269abcc9b04579a42aca",
+    "buildInfo": ""
+  }
+}
