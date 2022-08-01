@@ -27,12 +27,11 @@ abstract contract TokenGateway is ITokenGateway {
     address public counterpartGateway;
     address public router;
 
-    modifier onlyCounterpartGateway() virtual {
-        // this method is overriden in gateways that require special logic for validation
-        // ie L2 to L1 messages need to be validated against the outbox
-        require(msg.sender == counterpartGateway, "ONLY_COUNTERPART_GATEWAY");
-        _;
-    }
+    // This modifier is overriden in gateways to validate the message sender
+    // For L1 to L2 messages need to be validated against the aliased counterpartGateway
+    // For L2 to L1 messages need to be validated against the bridge and L2ToL1Sender
+    // prettier-ignore
+    modifier onlyCounterpartGateway() virtual;
 
     function _initialize(address _counterpartGateway, address _router) internal virtual {
         // This initializes internal variables of the abstract contract it can be chained together with other functions.
