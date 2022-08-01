@@ -9,6 +9,7 @@ import {
   Outbox__factory,
   OldOutbox__factory,
   Rollup__factory,
+  Node__factory,
 } from '../build/types'
 
 if (!process.env['ETHERSCAN_API_KEY'])
@@ -27,6 +28,7 @@ const main = async () => {
   const Outbox = new Outbox__factory(accounts[0])
   const OldOutbox = new OldOutbox__factory(accounts[0])
   const Rollup = new Rollup__factory(accounts[0])
+  const Node = new Node__factory(accounts[0])
 
   console.log('deploying Rollup')
   const rollup = await Rollup.deploy(1)
@@ -142,6 +144,16 @@ const main = async () => {
     hre.ethers.constants.AddressZero
   )
   await initSeqInbox.wait()
+
+  console.log('deploying node')
+  const node = await Node.deploy()
+  await node.deployed()
+  console.log(node.address)
+
+  await hre.run('verify:verify', {
+    address: node.address,
+    constructorArguments: [],
+  })
 }
 
 main()
