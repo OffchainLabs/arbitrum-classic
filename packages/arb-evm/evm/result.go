@@ -272,6 +272,15 @@ func (r *TxResult) CalcGasUsed() *big.Int {
 	}
 }
 
+func (r *TxResult) CalcGasUsedForL1() *big.Int {
+	if r.FeeStats.Price.L2Computation.Cmp(big.NewInt(0)) == 0 {
+		return r.GasUsed
+	} else {
+		paidL1Sum := new(big.Int).Add(r.FeeStats.Paid.L1Transaction, r.FeeStats.Paid.L1Calldata)
+		return new(big.Int).Div(paidL1Sum, r.FeeStats.Price.L2Computation)
+	}
+}
+
 func (r *TxResult) IsContractCreation() bool {
 	if r.IncomingRequest.Kind == message.L2Type || r.IncomingRequest.Kind == message.EthDepositTxType {
 		msg, err := message.L2Message{Data: r.IncomingRequest.Data}.AbstractMessage()
@@ -316,13 +325,15 @@ func (r *TxResult) ToEthReceipt(blockHash common.Hash) *types.Receipt {
 			}
 		}
 	}
-	status := uint64(0)
+	status := types.ReceiptStatusFailed
 	if r.ResultCode == ReturnCode {
-		status = 1
+		status = types.ReceiptStatusSuccessful
 	}
 
 	evmLogs := r.EthLogs(blockHash)
 	return &types.Receipt{
+		Type:              types.ArbitrumLegacyTxType,
+		GasUsedForL1:      r.CalcGasUsedForL1().Uint64(),
 		PostState:         []byte{0},
 		Status:            status,
 		CumulativeGasUsed: r.CumulativeGas.Uint64(),

@@ -13,7 +13,7 @@ If you're looking to discover how Arbitrum works, the best place to begin is by 
 
 ### How Can I Start Building
 
-If you want to get started using Arbitrum with no setup required, check out our [public testnet](Public_Testnet.md) running on top of Rinkeby.
+If you want to get started using Arbitrum with no setup required, check out our [public testnets](Public_Chains.md).
 
 ### How Can I Develop Locally
 

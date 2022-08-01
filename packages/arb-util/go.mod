@@ -16,3 +16,5 @@ require (
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/crypto v0.0.0-20211215165025-cf75a172585e
 )
+
+replace github.com/ethereum/go-ethereum => ../go-ethereum
