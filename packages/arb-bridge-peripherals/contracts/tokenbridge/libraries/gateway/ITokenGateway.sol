@@ -18,7 +18,6 @@
 
 // solhint-disable-next-line compiler-version
 pragma solidity >=0.6.9 <0.9.0;
-pragma experimental ABIEncoderV2;
 
 interface ITokenGateway {
     /// @notice event deprecated in favor of DepositInitiated and WithdrawalInitiated
@@ -41,13 +40,6 @@ interface ITokenGateway {
     //     bytes _data
     // );
 
-    // struct PermitData {
-    //     uint256 deadline;
-    //     uint8 v;
-    //     bytes32 r;
-    //     bytes32 s;
-    // }
-
     function outboundTransfer(
         address _token,
         address _to,
@@ -56,19 +48,6 @@ interface ITokenGateway {
         uint256 _gasPriceBid,
         bytes calldata _data
     ) external payable returns (bytes memory);
-
-    // function outboundTransferWithPermit(
-    //     address _token,
-    //     address _to,
-    //     uint256 _amount,
-    //     uint256 _maxGas,
-    //     uint256 _gasPriceBid,
-    //     bytes calldata _data,
-    //     uint256 _deadline,
-    //     uint8 _v,
-    //     bytes32 _r,
-    //     bytes32 _s
-    // ) external payable returns (bytes memory);
 
     function outboundTransferCustomRefund(
         address _token,
@@ -79,17 +58,6 @@ interface ITokenGateway {
         uint256 _gasPriceBid,
         bytes calldata _data
     ) external payable returns (bytes memory);
-
-    // function outboundTransferCustomRefundWithPermit(
-    //     address _token,
-    //     address _refundTo,
-    //     address _to,
-    //     uint256 _amount,
-    //     uint256 _maxGas,
-    //     uint256 _gasPriceBid,
-    //     bytes calldata _data,
-    //     PermitData memory permitData
-    // ) external payable returns (bytes memory);
 
     function finalizeInboundTransfer(
         address _token,

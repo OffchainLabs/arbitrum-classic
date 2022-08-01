@@ -18,13 +18,16 @@
 
 pragma solidity ^0.6.11;
 
-// Import this file to use console.log
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/drafts/ERC20Permit.sol";
 
 contract TestERC20Permit is ERC20, ERC20Permit {
-    constructor(string memory name, string memory symbol) ERC20(name, symbol) ERC20Permit(name) public {
-        _mint(msg.sender, 1000 * 10**uint(decimals()));
+    constructor(string memory name, string memory symbol)
+        public
+        ERC20(name, symbol)
+        ERC20Permit(name)
+    {
+        _mint(msg.sender, 1000 * 10**uint256(decimals()));
     }
 }

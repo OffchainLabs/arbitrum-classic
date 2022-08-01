@@ -226,27 +226,33 @@ describe('Bridge peripherals layer 1', () => {
       maxSubmissionCost
     )
 
-    const TokenPermit = await ethers.getContractFactory('TestERC20Permit');
-    const tokenPermit = await TokenPermit.deploy("TestPermit", "TPP");
+    const TokenPermit = await ethers.getContractFactory('TestERC20Permit')
+    const tokenPermit = await TokenPermit.deploy('TestPermit', 'TPP')
     // send escrowed tokens to bridge
-    const tokenAmount = 100;
+    const tokenAmount = 100
 
     const data = ethers.utils.defaultAbiCoder.encode(
       ['uint256', 'bytes'],
       [maxSubmissionCost, '0x']
-    );
+    )
 
-    const deadline = ethers.constants.MaxUint256;
+    const deadline = ethers.constants.MaxUint256
 
-    const signature = await getCorrectPermitSig(accounts[0], tokenPermit, l1ERC20Gateway.address, tokenAmount, deadline);
-    const { v, r, s } = ethers.utils.splitSignature(signature);
+    const signature = await getCorrectPermitSig(
+      accounts[0],
+      tokenPermit,
+      l1ERC20Gateway.address,
+      tokenAmount,
+      deadline
+    )
+    const { v, r, s } = ethers.utils.splitSignature(signature)
 
     const permitData = {
       deadline: deadline,
-      v: v, 
-      r: r, 
-      s: s
-    };
+      v: v,
+      r: r,
+      s: s,
+    }
 
     const tx = await testBridge.outboundTransferCustomRefundWithPermit(
       tokenPermit.address,

@@ -22,14 +22,13 @@ pragma experimental ABIEncoderV2;
 import "arb-bridge-eth/contracts/libraries/ProxyUtil.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./TokenGateway.sol";
-import "./IL1TokenGateway.sol";
+import "./ITokenGatewayPermit.sol";
 import "./GatewayMessageHandler.sol";
-// import "@openzeppelin/contracts/drafts/ERC20Permit.sol";
 
 /**
  * @title Common interface for L1 and L2 Gateway Routers
  */
-abstract contract GatewayRouter is TokenGateway, IL1TokenGateway {
+abstract contract GatewayRouter is TokenGateway, ITokenGatewayPermit {
     using Address for address;
 
     address internal constant ZERO_ADDR = address(0);
@@ -154,7 +153,7 @@ abstract contract GatewayRouter is TokenGateway, IL1TokenGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data,
-        PermitData calldata permitData
+        PermitData calldata _permitData
     ) public payable virtual override returns (bytes memory) {
         address gateway = getGateway(_token);
         bytes memory gatewayData = GatewayMessageHandler.encodeFromRouterToGateway(
@@ -164,7 +163,7 @@ abstract contract GatewayRouter is TokenGateway, IL1TokenGateway {
         emit TransferRouted(_token, msg.sender, _to, gateway);
         
         return
-            IL1TokenGateway(gateway).outboundTransferCustomRefundWithPermit{ value: msg.value }(
+            ITokenGatewayPermit(gateway).outboundTransferCustomRefundWithPermit{ value: msg.value }(
                 _token,
                 _refundTo,
                 _to,
@@ -172,7 +171,7 @@ abstract contract GatewayRouter is TokenGateway, IL1TokenGateway {
                 _maxGas,
                 _gasPriceBid,
                 gatewayData,
-                permitData
+                _permitData
             );
     }
 

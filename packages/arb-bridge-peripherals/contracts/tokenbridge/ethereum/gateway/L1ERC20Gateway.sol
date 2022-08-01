@@ -76,7 +76,6 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
             );
     }
 
-    // note: reentrancy here
     function outboundTransferCustomRefundWithPermit(
         address _l1Token,
         address _refundTo,
@@ -85,7 +84,7 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data,
-        PermitData calldata permitData
+        PermitData calldata _permitData
     ) public payable override returns (bytes memory res) {
         return
             super.outboundTransferCustomRefundWithPermit(
@@ -95,8 +94,8 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
                 _amount,
                 _maxGas,
                 _gasPriceBid,
-                _data, 
-                permitData
+                _data,
+                _permitData
             );
     }
 

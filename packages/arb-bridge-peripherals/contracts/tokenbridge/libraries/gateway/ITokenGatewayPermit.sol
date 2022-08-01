@@ -16,12 +16,10 @@
  * limitations under the License.
  */
 
-
-pragma solidity >=0.6.9 <0.9.0;
+pragma solidity ^0.6.11;
 pragma experimental ABIEncoderV2;
 
-interface IL1TokenGateway {
-
+interface ITokenGatewayPermit {
     struct PermitData {
         uint256 deadline;
         uint8 v;
@@ -37,6 +35,6 @@ interface IL1TokenGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data,
-        PermitData calldata permitData
+        PermitData calldata _permitData
     ) external payable returns (bytes memory);
 }

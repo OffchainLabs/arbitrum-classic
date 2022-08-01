@@ -32,14 +32,14 @@ import "arb-bridge-eth/contracts/libraries/ProxyUtil.sol";
 import "../L1ArbitrumMessenger.sol";
 import "../../libraries/gateway/GatewayMessageHandler.sol";
 import "../../libraries/gateway/TokenGateway.sol";
+import "../../libraries/gateway/ITokenGatewayPermit.sol";
 import "../../libraries/ITransferAndCall.sol";
 import "../../libraries/ERC165.sol";
-import "hardhat/console.sol";
 
 /**
- * @title Common interface for gatways on L1 messaging to Arbitrum.
+ * @title Common interface for gateways on L1 messaging to Arbitrum.
  */
-abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, ERC165, IL1TokenGateway {
+abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, ERC165, ITokenGatewayPermit {
     using SafeERC20 for IERC20;
     using Address for address;
 
@@ -288,6 +288,19 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, ERC165
         return abi.encode(seqNum);
     }
 
+    /**
+     * @notice Deposit ERC20 token from Ethereum into Arbitrum using Permit. Initiate by GatewayRouter.
+     * @param _l1Token L1 address of ERC20
+     * @param _refundTo Account, or its L2 alias if it have code in L1, to be credited with excess gas refund in L2
+     * @param _to Account to be credited with the tokens in the L2 (can be the user's L2 account or a contract), not subject to L2 aliasing
+                  This account, or its L2 alias if it have code in L1, will also be able to cancel the retryable ticket and receive callvalue refund
+     * @param _amount Token Amount
+     * @param _maxGas Max gas deducted from user's L2 balance to cover L2 execution
+     * @param _gasPriceBid Gas price for L2 execution
+     * @param _data encoded data from router and user
+     * @param _permitData signature and deadline params of permit
+     * @return res abi encoded inbox sequence number
+    */
     function outboundTransferCustomRefundWithPermit(
         address _l1Token,
         address _refundTo,
@@ -296,18 +309,35 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, ERC165
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data,
-        PermitData calldata permitData
+        PermitData calldata _permitData
     ) public payable virtual override returns (bytes memory res) {
         address _from;
         if (super.isRouter(msg.sender)) {
-                // router encoded
-                (_from, ) = GatewayMessageHandler.parseFromRouterToGateway(_data);
-            } else {
-                _from = msg.sender;
+            // router encoded
+            (_from, ) = GatewayMessageHandler.parseFromRouterToGateway(_data);
+        } else {
+            _from = msg.sender;
         }
 
-        ERC20Permit(_l1Token).permit(_from, address(this), _amount, permitData.deadline, permitData.v, permitData.r, permitData.s);
-        return outboundTransferCustomRefund(_l1Token, _refundTo, _to, _amount, _maxGas, _gasPriceBid, _data);
+        ERC20Permit(_l1Token).permit(
+            _from,
+            address(this),
+            _amount,
+            _permitData.deadline,
+            _permitData.v,
+            _permitData.r,
+            _permitData.s
+        );
+        return
+            outboundTransferCustomRefund(
+                _l1Token,
+                _refundTo,
+                _to,
+                _amount,
+                _maxGas,
+                _gasPriceBid,
+                _data
+            );
     }
 
     function outboundEscrowTransfer(

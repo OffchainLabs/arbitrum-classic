@@ -90,8 +90,8 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data,
-        PermitData calldata permitData
-    ) public payable override nonReentrant returns (bytes memory res) {
+        PermitData calldata _permitData
+    ) public payable override returns (bytes memory res) {
         return
             super.outboundTransferCustomRefundWithPermit(
                 _l1Token,
@@ -100,8 +100,8 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
                 _amount,
                 _maxGas,
                 _gasPriceBid,
-                _data, 
-                permitData
+                _data,
+                _permitData
             );
     }
 

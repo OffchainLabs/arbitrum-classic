@@ -43,7 +43,7 @@ describe('Bridge peripherals layer 1', () => {
     l2Address = accounts[0].address
 
     TestBridge = await ethers.getContractFactory('L1ERC20Gateway')
-    console.log(TestBridge);
+    console.log(TestBridge)
     testBridge = await TestBridge.deploy()
 
     const Inbox = await ethers.getContractFactory('InboxMock')
@@ -91,34 +91,39 @@ describe('Bridge peripherals layer 1', () => {
   })
 
   it('should escrow deposited tokens with permit', async function () {
-    const TokenPermit = await ethers.getContractFactory('TestERC20Permit');
-    const tokenPermit = await TokenPermit.deploy("TestPermit", "TPP");
-    const tokenAmount = 100;
+    const TokenPermit = await ethers.getContractFactory('TestERC20Permit')
+    const tokenPermit = await TokenPermit.deploy('TestPermit', 'TPP')
+    const tokenAmount = 100
 
     let data = ethers.utils.defaultAbiCoder.encode(
       ['uint256', 'bytes'],
       [maxSubmissionCost, '0x']
-    );
+    )
 
     // router usually does this encoding part
     data = ethers.utils.defaultAbiCoder.encode(
       ['address', 'bytes'],
       [accounts[0].address, data]
-    );
+    )
 
-    const deadline = ethers.constants.MaxUint256;
+    const deadline = ethers.constants.MaxUint256
 
-    const signature = await getCorrectPermitSig(accounts[0], tokenPermit, testBridge.address, tokenAmount, deadline);
-    const { v, r, s } = ethers.utils.splitSignature(signature);
+    const signature = await getCorrectPermitSig(
+      accounts[0],
+      tokenPermit,
+      testBridge.address,
+      tokenAmount,
+      deadline
+    )
+    const { v, r, s } = ethers.utils.splitSignature(signature)
 
     const permitData = {
       deadline: deadline,
-      v: v, 
-      r: r, 
-      s: s
-    };
+      v: v,
+      r: r,
+      s: s,
+    }
 
-    // console.log(permitData);
     await testBridge.outboundTransferCustomRefundWithPermit(
       tokenPermit.address,
       accounts[1].address,
@@ -128,10 +133,10 @@ describe('Bridge peripherals layer 1', () => {
       gasPrice,
       data,
       permitData
-    );
+    )
 
-    const escrowedTokens = await tokenPermit.balanceOf(testBridge.address);
-    assert.equal(escrowedTokens.toNumber(), tokenAmount, 'Tokens not escrowed');
+    const escrowedTokens = await tokenPermit.balanceOf(testBridge.address)
+    assert.equal(escrowedTokens.toNumber(), tokenAmount, 'Tokens not escrowed')
   })
 
   it('should revert post mint call correctly in outbound', async function () {
