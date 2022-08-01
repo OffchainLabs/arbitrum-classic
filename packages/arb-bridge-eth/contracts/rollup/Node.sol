@@ -22,6 +22,7 @@ import "./INode.sol";
 import "../libraries/Cloneable.sol";
 import "./Rollup.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import { NitroReadyMagicNums } from "../bridge/NitroMigratorUtil.sol";
 
 contract Node is Cloneable, INode {
     using SafeMath for uint256;
@@ -143,6 +144,10 @@ contract Node is Cloneable, INode {
      */
     function requirePastDeadline() external view override {
         require(block.number >= deadlineBlock(), "BEFORE_DEADLINE");
+    }
+
+    function isNitroReady() external pure returns (uint256) {
+        return NitroReadyMagicNums.NODE_BEACON;
     }
 
     /**

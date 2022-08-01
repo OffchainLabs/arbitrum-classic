@@ -25,7 +25,7 @@ import "@openzeppelin/contracts/proxy/BeaconProxy.sol";
 import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
 
 contract NodeFactory is INodeFactory {
-    UpgradeableBeacon public beacon;
+    UpgradeableBeacon public override beacon;
 
     constructor() public {
         address templateContract = address(new Node());

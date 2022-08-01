@@ -5,6 +5,7 @@ pragma solidity ^0.6.11;
 import "../Rollup.sol";
 import "../INode.sol";
 import "./IRollupFacets.sol";
+import { NitroReadyMagicNums } from "../../bridge/NitroMigratorUtil.sol";
 import "../../bridge/interfaces/IOutbox.sol";
 import "../../bridge/interfaces/ISequencerInbox.sol";
 import "../../libraries/Whitelist.sol";
@@ -413,6 +414,6 @@ contract RollupAdminFacet is RollupBase, IRollupAdmin {
     }
 
     function isNitroReady() external pure returns (uint256) {
-        return 0xa4b2;
+        return NitroReadyMagicNums.ROLLUP_ADMIN;
     }
 }

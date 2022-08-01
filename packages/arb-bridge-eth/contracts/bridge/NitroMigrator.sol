@@ -24,61 +24,18 @@ import "./Old_Outbox/OldOutbox.sol";
 import "../rollup/facets/RollupAdmin.sol";
 import "../rollup/RollupEventBridge.sol";
 import "../rollup/RollupLib.sol";
+import "../rollup/Node.sol";
+import "../rollup/NodeFactory.sol";
 import "../libraries/NitroReadyQuery.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 import "@arbitrum/nitro-contracts/src/bridge/IBridge.sol" as INitroBridge;
 import "@arbitrum/nitro-contracts/src/bridge/IInbox.sol" as INitroInbox;
+import { INitroRollup, IArbOwner, NitroReadyMagicNums } from "./NitroMigratorUtil.sol";
 
 pragma solidity ^0.6.11;
 pragma experimental ABIEncoderV2;
-
-interface INitroRollup {
-    struct GlobalState {
-        bytes32[2] bytes32Vals;
-        uint64[2] u64Vals;
-    }
-
-    enum MachineStatus {
-        RUNNING,
-        FINISHED,
-        ERRORED,
-        TOO_FAR
-    }
-
-    struct ExecutionState {
-        GlobalState globalState;
-        MachineStatus machineStatus;
-    }
-    struct NitroRollupAssertion {
-        ExecutionState beforeState;
-        ExecutionState afterState;
-        uint64 numBlocks;
-    }
-
-    function bridge() external view returns (INitroBridge.IBridge);
-
-    function inbox() external view returns (INitroInbox.IInbox);
-
-    function setInbox(IInbox newInbox) external;
-
-    function setOwner(address newOwner) external;
-
-    function paused() external view returns (bool);
-
-    function pause() external;
-
-    function resume() external;
-
-    function latestNodeCreated() external returns (uint64);
-
-    function createNitroMigrationGenesis(NitroRollupAssertion calldata assertion) external;
-}
-
-interface IArbOwner {
-    function addChainOwner(address newOwner) external;
-}
 
 contract NitroMigrator is OwnableUpgradeable, IMessageProvider {
     uint8 internal constant L1MessageType_shutdownForNitro = 128;
@@ -161,6 +118,9 @@ contract NitroMigrator is OwnableUpgradeable, IMessageProvider {
         }
         // this returns a different magic value so we can differentiate the user and admin facets
         require(_rollup.isNitroReady() == 0xa4b2, "ADMIN_ROLLUP_NOT_NITRO_READY");
+
+        UpgradeableBeacon beacon = _rollup.nodeFactory().beacon();
+        require(Node(address(beacon)).isNitroReady() == 0xa4b3, "NODE_BEACON_OLD");
 
         uint256 numOutboxes = bridge.allowedOutboxListLength();
         for (uint256 i = 0; i < numOutboxes; i++) {
