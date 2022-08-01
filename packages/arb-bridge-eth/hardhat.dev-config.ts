@@ -187,6 +187,15 @@ if (process.env['KOVAN_URL'] && process.env['KOVAN_MNEMONIC']) {
   }
 }
 
+if (process.env['GOERLI_URL'] && process.env['GOERLI_MNEMONIC']) {
+  ;(config.networks as any)['goerli'] = {
+    url: process.env['GOERLI_URL'] || '',
+    accounts: [process.env['GOERLI_MNEMONIC'] || ''],
+    network_id: 42,
+    confirmations: 4,
+  }
+}
+
 if (!process.env['DEVNET_PRIVKEY']) console.warn('No devnet privkey set')
 
 export { config }
