@@ -30,6 +30,7 @@ abstract contract TokenGateway is ITokenGateway {
     // This modifier is overriden in gateways to validate the message sender
     // For L1 to L2 messages need to be validated against the aliased counterpartGateway
     // For L2 to L1 messages need to be validated against the bridge and L2ToL1Sender
+    // prettier-ignore
     modifier onlyCounterpartGateway() virtual;
 
     function _initialize(address _counterpartGateway, address _router) internal virtual {
