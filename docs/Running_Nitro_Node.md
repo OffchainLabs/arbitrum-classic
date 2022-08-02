@@ -4,7 +4,7 @@ title: Running full node for any of the Arbitrum Nitro chains
 sidebar_label: Running a Nitro Node
 ---
 
-Note: If you’re interested in accessing an Arbitrum chain, but you don’t want to set up your own node, see our [Node Providers](https://developer.offchainlabs.com/docs/node_providers) to get RPC access to fully-managed nodes hosted by one of our partners!
+Note: If you’re interested in accessing an Arbitrum chain, but you don’t want to set up your own node, see our [Node Providers](https://developer.offchainlabs.com/docs/node_providers) to get RPC access to fully-managed nodes hosted by a third party provider
 
 ### Required Artifacts
 
