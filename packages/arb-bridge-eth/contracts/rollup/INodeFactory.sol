@@ -19,8 +19,6 @@
 // solhint-disable-next-line compiler-version
 pragma solidity >=0.6.9 <0.9.0;
 
-import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
-
 interface INodeFactory {
     function createNode(
         bytes32 _stateHash,
@@ -30,5 +28,5 @@ interface INodeFactory {
         uint256 _deadlineBlock
     ) external returns (address);
 
-    function beacon() external view returns (UpgradeableBeacon);
+    function beacon() external view returns (address);
 }

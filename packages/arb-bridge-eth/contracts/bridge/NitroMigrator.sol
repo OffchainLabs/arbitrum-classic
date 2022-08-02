@@ -122,11 +122,8 @@ contract NitroMigrator is OwnableUpgradeable, IMessageProvider {
             "ADMIN_ROLLUP_NOT_NITRO_READY"
         );
 
-        UpgradeableBeacon beacon = _rollup.nodeFactory().beacon();
-        require(
-            Node(address(beacon)).isNitroReady() == NitroReadyMagicNums.NODE_BEACON,
-            "NODE_BEACON_OLD"
-        );
+        address beacon = _rollup.nodeFactory().beacon();
+        require(Node(beacon).isNitroReady() == NitroReadyMagicNums.NODE_BEACON, "NODE_BEACON_OLD");
 
         uint256 numOutboxes = bridge.allowedOutboxListLength();
         for (uint256 i = 0; i < numOutboxes; i++) {
