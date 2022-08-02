@@ -21,6 +21,7 @@ pragma solidity ^0.6.11;
 import "./interfaces/IOutbox.sol";
 import "./interfaces/IBridge.sol";
 
+import { NitroReadyMagicNums } from "./NitroMigratorUtil.sol";
 import "./Messages.sol";
 import "../libraries/MerkleLib.sol";
 import "../libraries/BytesLib.sol";
@@ -281,6 +282,6 @@ contract Outbox is IOutbox, Cloneable {
     }
 
     function isNitroReady() external pure override returns (uint256) {
-        return 0xa4b1;
+        return NitroReadyMagicNums.OUTBOX;
     }
 }

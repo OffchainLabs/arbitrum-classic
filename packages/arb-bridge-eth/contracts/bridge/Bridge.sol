@@ -18,6 +18,7 @@
 
 pragma solidity ^0.6.11;
 
+import { NitroReadyMagicNums } from "./NitroMigratorUtil.sol";
 import "./Inbox.sol";
 import "./Outbox.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -159,6 +160,6 @@ contract Bridge is OwnableUpgradeable, IBridge {
     }
 
     function isNitroReady() external view override returns (uint256) {
-        return 0xa4b1;
+        return NitroReadyMagicNums.BRIDGE;
     }
 }

@@ -33,6 +33,8 @@ import "@openzeppelin/contracts/proxy/BeaconProxy.sol";
 import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
+import { NitroReadyMagicNums } from "../NitroMigratorUtil.sol";
+
 contract OldOutbox is IOutbox, Cloneable {
     using BytesLib for bytes;
 
@@ -268,6 +270,6 @@ contract OldOutbox is IOutbox, Cloneable {
     }
 
     function isNitroReady() external pure override returns (uint256) {
-        return 0xa4b1;
+        return NitroReadyMagicNums.OUTBOX;
     }
 }

@@ -25,6 +25,7 @@ import "../libraries/Cloneable.sol";
 import "../rollup/Rollup.sol";
 import "../validator/IGasRefunder.sol";
 
+import { NitroReadyMagicNums } from "./NitroMigratorUtil.sol";
 import "./Messages.sol";
 
 interface OldRollup {
@@ -99,7 +100,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
     }
 
     function isNitroReady() external pure returns (uint256) {
-        return 0xa4b1;
+        return NitroReadyMagicNums.SEQ_INBOX;
     }
 
     /**
