@@ -16,7 +16,7 @@
 
 /* eslint-env node, mocha */
 import { ethers, network } from 'hardhat'
-import { ContractTransaction } from 'ethers'
+import { BigNumberish, Contract, ContractTransaction } from 'ethers'
 import {
   InboxMock,
   InboxMock__factory,
@@ -121,10 +121,10 @@ export const processL2ToL1Tx = async (
 
 export async function getCorrectPermitSig(
   signer: SignerWithAddress,
-  token: any,
+  token: Contract,
   spender: string,
-  value: any,
-  deadline: any,
+  value: BigNumberish,
+  deadline: BigNumberish,
   optional?: {
     nonce?: number
     name?: string

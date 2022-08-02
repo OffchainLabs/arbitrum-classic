@@ -27,7 +27,7 @@ interface ITokenGatewayPermit {
         bytes32 s;
     }
 
-    function outboundTransferCustomRefundWithPermit(
+    function outboundTransferWithPermit(
         address _token,
         address _refundTo,
         address _to,

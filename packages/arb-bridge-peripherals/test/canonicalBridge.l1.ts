@@ -43,7 +43,6 @@ describe('Bridge peripherals layer 1', () => {
     l2Address = accounts[0].address
 
     TestBridge = await ethers.getContractFactory('L1ERC20Gateway')
-    console.log(TestBridge)
     testBridge = await TestBridge.deploy()
 
     const Inbox = await ethers.getContractFactory('InboxMock')
@@ -124,7 +123,7 @@ describe('Bridge peripherals layer 1', () => {
       s: s,
     }
 
-    await testBridge.outboundTransferCustomRefundWithPermit(
+    await testBridge.outboundTransferWithPermit(
       tokenPermit.address,
       accounts[1].address,
       accounts[0].address,

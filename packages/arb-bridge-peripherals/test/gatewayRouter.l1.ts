@@ -254,7 +254,7 @@ describe('Bridge peripherals layer 1', () => {
       s: s,
     }
 
-    const tx = await testBridge.outboundTransferCustomRefundWithPermit(
+    const tx = await testBridge.outboundTransferWithPermit(
       tokenPermit.address,
       accounts[1].address,
       accounts[0].address,

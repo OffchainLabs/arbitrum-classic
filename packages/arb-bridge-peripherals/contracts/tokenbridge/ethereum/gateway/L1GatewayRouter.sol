@@ -294,7 +294,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
             );
     }
 
-    function outboundTransferCustomRefundWithPermit(
+    function outboundTransferWithPermit(
         address _l1Token,
         address _refundTo,
         address _to,
@@ -305,7 +305,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         PermitData calldata _permitData
     ) public payable override returns (bytes memory) {
         return
-            super.outboundTransferCustomRefundWithPermit(
+            super.outboundTransferWithPermit(
                 _l1Token,
                 _refundTo,
                 _to,

@@ -145,7 +145,7 @@ abstract contract GatewayRouter is TokenGateway, ITokenGatewayPermit {
             );
     }
 
-    function outboundTransferCustomRefundWithPermit(
+    function outboundTransferWithPermit(
         address _token,
         address _refundTo,
         address _to,
@@ -163,7 +163,7 @@ abstract contract GatewayRouter is TokenGateway, ITokenGatewayPermit {
         emit TransferRouted(_token, msg.sender, _to, gateway);
         
         return
-            ITokenGatewayPermit(gateway).outboundTransferCustomRefundWithPermit{ value: msg.value }(
+            ITokenGatewayPermit(gateway).outboundTransferWithPermit{ value: msg.value }(
                 _token,
                 _refundTo,
                 _to,

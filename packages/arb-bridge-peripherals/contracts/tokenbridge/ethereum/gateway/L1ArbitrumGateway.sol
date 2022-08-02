@@ -301,7 +301,7 @@ abstract contract L1ArbitrumGateway is L1ArbitrumMessenger, TokenGateway, ERC165
      * @param _permitData signature and deadline params of permit
      * @return res abi encoded inbox sequence number
     */
-    function outboundTransferCustomRefundWithPermit(
+    function outboundTransferWithPermit(
         address _l1Token,
         address _refundTo,
         address _to,
