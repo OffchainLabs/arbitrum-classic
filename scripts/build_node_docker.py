@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright 2019, Offchain Labs, Inc.
+# Copyright 2022, Offchain Labs, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import os
 from support.run import run
 
 ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DOCKERFILE_CACHE = """FROM alpine:3.9
+DOCKERFILE_CACHE = """FROM alpine:3
 RUN mkdir /build /cpp-build /rocksdb
 FROM scratch
 COPY --from=0 /cpp-build /cpp-build
