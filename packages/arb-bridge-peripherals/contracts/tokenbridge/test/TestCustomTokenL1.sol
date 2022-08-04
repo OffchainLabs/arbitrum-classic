@@ -20,7 +20,7 @@ interface IL1CustomGateway {
     ) external payable returns (uint256);
 }
 
-interface IGatewayRouter {
+interface IGatewayRouter2 {
     function setGateway(
         address _gateway,
         uint256 _maxGas,
@@ -92,7 +92,7 @@ contract TestCustomTokenL1 is aeERC20, ICustomToken {
             creditBackAddress
         );
 
-        IGatewayRouter(router).setGateway{ value: valueForRouter }(
+        IGatewayRouter2(router).setGateway{ value: valueForRouter }(
             bridge,
             maxGasForRouter,
             gasPriceBid,

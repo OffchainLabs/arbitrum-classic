@@ -26,6 +26,8 @@ import "../../libraries/IERC165.sol";
  * @title Common interface for gatways on L1 messaging to Arbitrum.
  */
 interface IL1ArbitrumGateway is ITokenGateway, IERC165 {
+    function inbox() external view returns (address);
+
     /**
      * @notice Deposit ERC20 token from Ethereum into Arbitrum. If L2 side hasn't been deployed yet, includes name/symbol/decimals data for initial L2 deploy. Initiate by GatewayRouter.
      * @dev L2 address alias will not be applied to the following types of addresses on L1:

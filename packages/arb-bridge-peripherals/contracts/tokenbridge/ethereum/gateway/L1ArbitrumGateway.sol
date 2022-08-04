@@ -46,7 +46,7 @@ abstract contract L1ArbitrumGateway is
     using SafeERC20 for IERC20;
     using Address for address;
 
-    address public inbox;
+    address public override inbox;
 
     event DepositInitiated(
         address l1Token,
