@@ -76,29 +76,6 @@ contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
             );
     }
 
-    function outboundTransferWithPermit(
-        address _l1Token,
-        address _refundTo,
-        address _to,
-        uint256 _amount,
-        uint256 _maxGas,
-        uint256 _gasPriceBid,
-        bytes calldata _data,
-        PermitData calldata _permitData
-    ) public payable override returns (bytes memory res) {
-        return
-            super.outboundTransferWithPermit(
-                _l1Token,
-                _refundTo,
-                _to,
-                _amount,
-                _maxGas,
-                _gasPriceBid,
-                _data,
-                _permitData
-            );
-    }
-
     function finalizeInboundTransfer(
         address _token,
         address _from,

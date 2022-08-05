@@ -245,6 +245,7 @@ describe('Bridge peripherals layer 1', () => {
       tokenAmount,
       deadline
     )
+    
     const { v, r, s } = ethers.utils.splitSignature(signature)
 
     const permitData = {

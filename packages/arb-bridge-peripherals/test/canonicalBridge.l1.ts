@@ -23,7 +23,7 @@ import {
   L1ERC20Gateway,
   L1ERC20Gateway__factory,
 } from '../build/types'
-import { impersonateAccount, getCorrectPermitSig } from './testhelper'
+import { impersonateAccount } from './testhelper'
 
 describe('Bridge peripherals layer 1', () => {
   let accounts: SignerWithAddress[]
@@ -86,55 +86,6 @@ describe('Bridge peripherals layer 1', () => {
     )
 
     const escrowedTokens = await token.balanceOf(testBridge.address)
-    assert.equal(escrowedTokens.toNumber(), tokenAmount, 'Tokens not escrowed')
-  })
-
-  it('should escrow deposited tokens with permit', async function () {
-    const TokenPermit = await ethers.getContractFactory('TestERC20Permit')
-    const tokenPermit = await TokenPermit.deploy('TestPermit', 'TPP')
-    const tokenAmount = 100
-
-    let data = ethers.utils.defaultAbiCoder.encode(
-      ['uint256', 'bytes'],
-      [maxSubmissionCost, '0x']
-    )
-
-    // router usually does this encoding part
-    data = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'bytes'],
-      [accounts[0].address, data]
-    )
-
-    const deadline = ethers.constants.MaxUint256
-
-    const signature = await getCorrectPermitSig(
-      accounts[0],
-      tokenPermit,
-      testBridge.address,
-      tokenAmount,
-      deadline
-    )
-    const { v, r, s } = ethers.utils.splitSignature(signature)
-
-    const permitData = {
-      deadline: deadline,
-      v: v,
-      r: r,
-      s: s,
-    }
-
-    await testBridge.outboundTransferWithPermit(
-      tokenPermit.address,
-      accounts[1].address,
-      accounts[0].address,
-      tokenAmount,
-      maxGas,
-      gasPrice,
-      data,
-      permitData
-    )
-
-    const escrowedTokens = await tokenPermit.balanceOf(testBridge.address)
     assert.equal(escrowedTokens.toNumber(), tokenAmount, 'Tokens not escrowed')
   })
 
