@@ -39,20 +39,27 @@ Arbitrum is a Layer 2 cryptocurrency platform that makes smart contracts scalabl
 ## Getting Started
 
 Visit official website: [click here](https://arbitrum.io/) <br>
-Join the team on [Discord](https://discord.gg/ZpZuw7p)
-follow the [developer guide](https://developer.offchainlabs.com)
-Read the [white paper](https://developer.offchainlabs.com/docs/inside_arbitrum)
+Join the team on: [Discord](https://discord.gg/ZpZuw7p) <br>
+follow the: [developer guide](https://developer.offchainlabs.com) <br>
+Read the: [white paper](https://developer.offchainlabs.com/docs/inside_arbitrum) <br>
 
-
-
-
-
-
-
-Want to learn more? Join the team on [Discord](https://discord.gg/ZpZuw7p), follow the [developer guide](https://developer.offchainlabs.com), and read the [white paper](https://developer.offchainlabs.com/docs/inside_arbitrum)!
-
-This repository is offered under the Apache 2.0 license. See LICENSE for details.
 
 ## Quickstart
 
 Follow [the guide](https://developer.offchainlabs.com/docs/Developer_Quickstart/) on our developer site to build a demo dapp on Arbitrum.
+
+
+<!-- LICENSE -->
+## License
+
+Distributed under the Apache 2.0 license. See [LICENSE](https://github.com/OffchainLabs/arbitrum/blob/master/LICENSE) for more information.
+
+
+<!-- CONTACT -->
+## Contact
+
+Discord - [Arbitrium](https://discord.com/invite/5KE54JwyTs)
+
+Twitter: [Arbitrium](https://twitter.com/arbitrum)
+
+Telegram: Currently we don't have official telegram account, any telegram account claiming to be official arbitrium is fake. 
