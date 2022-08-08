@@ -22,7 +22,7 @@
 
 <!-- ABOUT THE PROJECT -->
 ## About Arbitrium Monorepo
-
+<img src="https://arbitrum.io/wp-content/uploads/2021/08/Arbitrum_Symbol-Full-color-White-background-768x840.png" alt="Logo" width="80" height="80">
 <p align="center">
   <a href="https://circleci.com/gh/OffchainLabs/arbitrum">
    <img src="https://circleci.com/gh/OffchainLabs/arbitrum.svg?style=svg" />
@@ -31,8 +31,6 @@
    <img src="https://codecov.io/gh/OffchainLabs/arbitrum/branch/master/graph/badge.svg" />
   </a>
 </p>
-
-<img src="https://arbitrum.io/wp-content/uploads/2021/08/Arbitrum_Symbol-Full-color-White-background-768x840.png" alt="Logo" width="80" height="80">
 
 Arbitrum is a Layer 2 cryptocurrency platform that makes smart contracts scalable, fast, and private. Arbitrum interoperates closely with Ethereum, so Ethereum developers can easily cross-compile their contracts to run on Arbitrum. Arbitrum achieves these goals through a unique combination of incentives, network protocol design, and virtual machine architecture. Arbitrum has three modes: channels, AnyTrust sidechains, and rollup. Channels and sidechains provide the AnyTrust Guarantee which ensures that the code will run correctly as long as any validator is honest.
 
