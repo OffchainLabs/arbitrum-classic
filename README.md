@@ -23,9 +23,9 @@
 <!-- ABOUT THE PROJECT -->
 ## About Arbitrium Monorepo
 
-<p align="center">
+<div align="center">
 [![CircleCI](https://circleci.com/gh/OffchainLabs/arbitrum.svg?style=svg)](https://circleci.com/gh/OffchainLabs/arbitrum) [![codecov](https://codecov.io/gh/OffchainLabs/arbitrum/branch/master/graph/badge.svg)](https://codecov.io/gh/OffchainLabs/arbitrum)
-</p>
+</div>
 
 
 
