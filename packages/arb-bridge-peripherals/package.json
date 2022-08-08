@@ -31,10 +31,12 @@
     "hardhat.prod-config.js"
   ],
   "dependencies": {
+    "@makerdao/dai": "^0.42.5-alpha.0",
     "@openzeppelin/contracts": "3.4.2",
     "@openzeppelin/contracts-upgradeable": "3.4.2",
     "arb-bridge-eth": "0.7.8",
     "arbos-precompiles": "^1.0.2",
+    "dss": "https://github.com/makerdao/dss.git",
     "hardhat": "2.9.9"
   },
   "devDependencies": {

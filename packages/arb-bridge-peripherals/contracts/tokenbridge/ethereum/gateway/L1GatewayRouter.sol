@@ -302,7 +302,8 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data,
-        PermitData calldata _permitData
+        PermitData calldata _permitData,
+        bool _isStandardImpl
     ) public payable override returns (bytes memory) {
         return
             super.outboundTransferWithPermit(
@@ -313,7 +314,8 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
                 _maxGas,
                 _gasPriceBid,
                 _data,
-                _permitData
+                _permitData,
+                _isStandardImpl
             );
     }
 

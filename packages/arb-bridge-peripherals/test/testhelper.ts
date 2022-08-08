@@ -119,7 +119,7 @@ export const processL2ToL1Tx = async (
   return Promise.all(l2ToL1Logs)
 }
 
-export async function getCorrectPermitSig(
+export async function getPermitSig(
   signer: SignerWithAddress,
   token: Contract,
   spender: string,
@@ -165,5 +165,104 @@ export async function getCorrectPermitSig(
   }
 
   const sig = await signer._signTypedData(domain, types, message)
-  return sig
+  return [sig, nonce]
 }
+
+export async function getPermitSigNoVersion(
+  signer: SignerWithAddress,
+  token: Contract,
+  spender: string,
+  value: BigNumberish,
+  deadline: BigNumberish,
+  optional?: {
+    nonce?: number
+    name?: string
+    chainId?: number
+    version?: string
+  }
+) {
+  const [nonce, name, version, chainId] = await Promise.all([
+    optional?.nonce ?? token.nonces(signer.address),
+    optional?.name ?? token.name(),
+    optional?.version ?? '1',
+    optional?.chainId ?? network.config.chainId,
+  ])
+
+  const domain = {
+    name: name,
+    chainId: chainId,
+    verifyingContract: token.address,
+  }
+
+  const types = {
+    Permit: [
+      { name: 'owner', type: 'address' },
+      { name: 'spender', type: 'address' },
+      { name: 'value', type: 'uint256' },
+      { name: 'nonce', type: 'uint256' },
+      { name: 'deadline', type: 'uint256' },
+    ],
+  }
+
+  const message = {
+    owner: signer.address,
+    spender: spender,
+    value: value,
+    nonce: nonce,
+    deadline: deadline,
+  }
+
+  const sig = await signer._signTypedData(domain, types, message)
+  return [sig, nonce]
+}
+
+
+export async function getDaiLikePermitSig(
+  signer: SignerWithAddress,
+  token: Contract,
+  spender: string,
+  deadline: BigNumberish,
+  optional?: {
+    nonce?: number
+    name?: string
+    chainId?: number
+    version?: string
+  }
+) {
+  const [nonce, name, version, chainId] = await Promise.all([
+    optional?.nonce ?? token.nonces(signer.address),
+    optional?.name ?? token.name(),
+    optional?.version ?? '1',
+    optional?.chainId ?? network.config.chainId,
+  ])
+
+  const domain = {
+    name: name,
+    version: version,
+    chainId: chainId,
+    verifyingContract: token.address,
+  }
+
+  const types = {
+    Permit: [
+      { name: 'holder', type: 'address' },
+      { name: 'spender', type: 'address' },
+      { name: 'nonce', type: 'uint256' },
+      { name: 'expiry', type: 'uint256' },
+      { name: 'allowed', type: 'bool' },
+    ],
+  }
+
+  const message = {
+    holder: signer.address,
+    spender: spender,
+    nonce: nonce,
+    expiry: deadline,
+    allowed: true
+  }
+
+  const sig = await signer._signTypedData(domain, types, message)
+  return [sig, nonce]
+}
+
+

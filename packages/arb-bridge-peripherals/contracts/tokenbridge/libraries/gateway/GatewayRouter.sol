@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/drafts/ERC20Permit.sol";
+import "../DaiToken.sol";
 import "arb-bridge-eth/contracts/libraries/ProxyUtil.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./TokenGateway.sol";
@@ -40,6 +41,7 @@ abstract contract GatewayRouter is TokenGateway {
 
     struct PermitData {
         uint256 deadline;
+        uint256 nonce;
         uint8 v;
         bytes32 r;
         bytes32 s;
@@ -164,6 +166,7 @@ abstract contract GatewayRouter is TokenGateway {
      * @param _gasPriceBid Gas price for L2 execution
      * @param _data encoded data from router and user
      * @param _permitData signature and deadline params of permit
+     * @param _isStandardImpl if true, standard implementation of permit; if false, could be similar to Dai impl
      * @return res abi encoded inbox sequence number
     */
     function outboundTransferWithPermit(
@@ -174,7 +177,8 @@ abstract contract GatewayRouter is TokenGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data,
-        PermitData calldata _permitData
+        PermitData calldata _permitData,
+        bool _isStandardImpl
     ) public payable virtual returns (bytes memory) {
         address gateway = getGateway(_token);
         bytes memory gatewayData = GatewayMessageHandler.encodeFromRouterToGateway(
@@ -183,16 +187,29 @@ abstract contract GatewayRouter is TokenGateway {
         );
 
         emit TransferRouted(_token, msg.sender, _to, gateway);
-
-        ERC20Permit(_token).permit(
-            msg.sender,
-            gateway,
-            _amount,
-            _permitData.deadline,
-            _permitData.v,
-            _permitData.r,
-            _permitData.s
-        );
+        if(_isStandardImpl){
+            ERC20Permit(_token).permit(
+                msg.sender,
+                gateway,
+                _amount,
+                _permitData.deadline,
+                _permitData.v,
+                _permitData.r,
+                _permitData.s
+            );
+        }
+        else {
+            DaiToken(_token).permit(
+                msg.sender,
+                gateway,
+                _permitData.nonce,
+                _permitData.deadline,
+                true,
+                _permitData.v,
+                _permitData.r,
+                _permitData.s
+            );
+        }
 
         return
             ITokenGateway(gateway).outboundTransferCustomRefund{ value: msg.value }(
