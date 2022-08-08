@@ -26,7 +26,6 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "./TokenGateway.sol";
 import "./GatewayMessageHandler.sol";
 
-
 /**
  * @title Common interface for L1 and L2 Gateway Routers
  */
@@ -187,7 +186,7 @@ abstract contract GatewayRouter is TokenGateway {
         );
 
         emit TransferRouted(_token, msg.sender, _to, gateway);
-        if(_isStandardImpl){
+        if (_isStandardImpl) {
             ERC20Permit(_token).permit(
                 msg.sender,
                 gateway,
@@ -197,8 +196,7 @@ abstract contract GatewayRouter is TokenGateway {
                 _permitData.r,
                 _permitData.s
             );
-        }
-        else {
+        } else {
             DaiToken(_token).permit(
                 msg.sender,
                 gateway,

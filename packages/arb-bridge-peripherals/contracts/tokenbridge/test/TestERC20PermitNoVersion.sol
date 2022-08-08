@@ -1,23 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
-/*
- * Copyright 2020, Offchain Labs, Inc.
+/**
+ * @dev UNI ERC20 Contract
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Tests ERC20 Tokens W/O Version in Domain (such as Uniswap)
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * https://github.com/Uniswap/governance/blob/eabd8c71ad01f61fb54ed6945162021ee419998e/contracts/Uni.sol
  */
 
 pragma solidity ^0.6.11;
-
 
 library SafeMath {
     /**
@@ -43,7 +34,11 @@ library SafeMath {
      * Requirements:
      * - Addition cannot overflow.
      */
-    function add(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    function add(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
         uint256 c = a + b;
         require(c >= a, errorMessage);
 
@@ -70,7 +65,11 @@ library SafeMath {
      * Requirements:
      * - Subtraction cannot underflow.
      */
-    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    function sub(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
         require(b <= a, errorMessage);
         uint256 c = a - b;
 
@@ -107,7 +106,11 @@ library SafeMath {
      * Requirements:
      * - Multiplication cannot overflow.
      */
-    function mul(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    function mul(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
         // Gas optimization: this is cheaper than requiring 'a' not being zero, but the
         // benefit is lost if 'b' is also tested.
         // See: https://github.com/OpenZeppelin/openzeppelin-contracts/pull/522
@@ -147,7 +150,11 @@ library SafeMath {
      * Requirements:
      * - The divisor cannot be zero.
      */
-    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    function div(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
         // Solidity only automatically asserts when dividing by 0
         require(b > 0, errorMessage);
         uint256 c = a / b;
@@ -182,7 +189,11 @@ library SafeMath {
      * Requirements:
      * - The divisor cannot be zero.
      */
-    function mod(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    function mod(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
         require(b != 0, errorMessage);
         return a % b;
     }
@@ -199,13 +210,13 @@ contract TestERC20PermitNoVersion {
     uint8 public constant decimals = 18;
 
     /// @notice Total number of tokens in circulation
-    uint public totalSupply = 1_000_000_000e18; // 1 billion
+    uint256 public totalSupply = 1_000_000_000e18; // 1 billion
 
     /// @notice Address which may mint new tokens
     address public minter;
 
     /// @notice The timestamp after which minting may occur
-    uint public mintingAllowedAfter;
+    uint256 public mintingAllowedAfter;
 
     /// @notice Minimum time between mints
     uint32 public constant minimumTimeBetweenMints = 1 days * 365;
@@ -213,14 +224,14 @@ contract TestERC20PermitNoVersion {
     /// @notice Cap on the percentage of totalSupply that can be minted at each mint
     uint8 public constant mintCap = 2;
 
-    /// @notice Allowance amounts on behalf of others
-    mapping (address => mapping (address => uint96)) internal allowances;
+    /// @dev Allowance amounts on behalf of others
+    mapping(address => mapping(address => uint96)) internal allowances;
 
-    /// @notice Official record of token balances for each account
-    mapping (address => uint96) internal balances;
+    /// @dev Official record of token balances for each account
+    mapping(address => uint96) internal balances;
 
     /// @notice A record of each accounts delegate
-    mapping (address => address) public delegates;
+    mapping(address => address) public delegates;
 
     /// @notice A checkpoint for marking number of votes from a given block
     struct Checkpoint {
@@ -229,31 +240,44 @@ contract TestERC20PermitNoVersion {
     }
 
     /// @notice A record of votes checkpoints for each account, by index
-    mapping (address => mapping (uint32 => Checkpoint)) public checkpoints;
+    mapping(address => mapping(uint32 => Checkpoint)) public checkpoints;
 
     /// @notice The number of checkpoints for each account
-    mapping (address => uint32) public numCheckpoints;
+    mapping(address => uint32) public numCheckpoints;
 
     /// @notice The EIP-712 typehash for the contract's domain
-    bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
+    bytes32 public constant DOMAIN_TYPEHASH =
+        keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
 
     /// @notice The EIP-712 typehash for the delegation struct used by the contract
-    bytes32 public constant DELEGATION_TYPEHASH = keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
+    bytes32 public constant DELEGATION_TYPEHASH =
+        keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
 
     /// @notice The EIP-712 typehash for the permit struct used by the contract
-    bytes32 public constant PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+    bytes32 public constant PERMIT_TYPEHASH =
+        keccak256(
+            "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
+        );
 
     /// @notice A record of states for signing / validating signatures
-    mapping (address => uint) public nonces;
+    mapping(address => uint256) public nonces;
 
     /// @notice An event thats emitted when the minter address is changed
     event MinterChanged(address minter, address newMinter);
 
     /// @notice An event thats emitted when an account changes its delegate
-    event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
+    event DelegateChanged(
+        address indexed delegator,
+        address indexed fromDelegate,
+        address indexed toDelegate
+    );
 
     /// @notice An event thats emitted when a delegate account's vote balance changes
-    event DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance);
+    event DelegateVotesChanged(
+        address indexed delegate,
+        uint256 previousBalance,
+        uint256 newBalance
+    );
 
     /// @notice The standard EIP-20 transfer event
     event Transfer(address indexed from, address indexed to, uint256 amount);
@@ -267,8 +291,15 @@ contract TestERC20PermitNoVersion {
      * @param minter_ The account with minting ability
      * @param mintingAllowedAfter_ The timestamp after which minting may occur
      */
-    constructor(address account, address minter_, uint mintingAllowedAfter_) public {
-        require(mintingAllowedAfter_ >= block.timestamp, "constructor: minting can only begin after deployment");
+    constructor(
+        address account,
+        address minter_,
+        uint256 mintingAllowedAfter_
+    ) public {
+        require(
+            mintingAllowedAfter_ >= block.timestamp,
+            "constructor: minting can only begin after deployment"
+        );
 
         balances[account] = uint96(totalSupply);
         emit Transfer(address(0), account, totalSupply);
@@ -292,7 +323,7 @@ contract TestERC20PermitNoVersion {
      * @param dst The address of the destination account
      * @param rawAmount The number of tokens to be minted
      */
-    function mint(address dst, uint rawAmount) external {
+    function mint(address dst, uint256 rawAmount) external {
         require(msg.sender == minter, "mint: only the minter can mint");
         require(block.timestamp >= mintingAllowedAfter, "mint: minting not allowed yet");
         require(dst != address(0), "mint: cannot transfer to the zero address");
@@ -302,8 +333,14 @@ contract TestERC20PermitNoVersion {
 
         // mint the amount
         uint96 amount = safe96(rawAmount, "mint: amount exceeds 96 bits");
-        require(amount <= SafeMath.div(SafeMath.mul(totalSupply, mintCap), 100), "mint: exceeded mint cap");
-        totalSupply = safe96(SafeMath.add(totalSupply, amount), "mint: totalSupply exceeds 96 bits");
+        require(
+            amount <= SafeMath.div(SafeMath.mul(totalSupply, mintCap), 100),
+            "mint: exceeded mint cap"
+        );
+        totalSupply = safe96(
+            SafeMath.add(totalSupply, amount),
+            "mint: totalSupply exceeds 96 bits"
+        );
 
         // transfer the amount to the recipient
         balances[dst] = add96(balances[dst], amount, "mint: transfer amount overflows");
@@ -316,7 +353,7 @@ contract TestERC20PermitNoVersion {
      * @param spender The address of the account spending the funds
      * @return The number of tokens approved
      */
-    function allowance(address account, address spender) external view returns (uint) {
+    function allowance(address account, address spender) external view returns (uint256) {
         return allowances[account][spender];
     }
 
@@ -328,9 +365,9 @@ contract TestERC20PermitNoVersion {
      * @param rawAmount The number of tokens that are approved (2^256-1 means infinite)
      * @return Whether or not the approval succeeded
      */
-    function approve(address spender, uint rawAmount) external returns (bool) {
+    function approve(address spender, uint256 rawAmount) external returns (bool) {
         uint96 amount;
-        if (rawAmount == uint(-1)) {
+        if (rawAmount == uint256(-1)) {
             amount = uint96(-1);
         } else {
             amount = safe96(rawAmount, "approve: amount exceeds 96 bits");
@@ -352,16 +389,28 @@ contract TestERC20PermitNoVersion {
      * @param r Half of the ECDSA signature pair
      * @param s Half of the ECDSA signature pair
      */
-    function permit(address owner, address spender, uint rawAmount, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
+    function permit(
+        address owner,
+        address spender,
+        uint256 rawAmount,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
         uint96 amount;
-        if (rawAmount == uint(-1)) {
+        if (rawAmount == uint256(-1)) {
             amount = uint96(-1);
         } else {
             amount = safe96(rawAmount, "permit: amount exceeds 96 bits");
         }
 
-        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this)));
-        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, rawAmount, nonces[owner]++, deadline));
+        bytes32 domainSeparator = keccak256(
+            abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), getChainId(), address(this))
+        );
+        bytes32 structHash = keccak256(
+            abi.encode(PERMIT_TYPEHASH, owner, spender, rawAmount, nonces[owner]++, deadline)
+        );
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         address signatory = ecrecover(digest, v, r, s);
         require(signatory != address(0), "permit: invalid signature");
@@ -378,7 +427,7 @@ contract TestERC20PermitNoVersion {
      * @param account The address of the account to get the balance of
      * @return The number of tokens held
      */
-    function balanceOf(address account) external view returns (uint) {
+    function balanceOf(address account) external view returns (uint256) {
         return balances[account];
     }
 
@@ -388,7 +437,7 @@ contract TestERC20PermitNoVersion {
      * @param rawAmount The number of tokens to transfer
      * @return Whether or not the transfer succeeded
      */
-    function transfer(address dst, uint rawAmount) external returns (bool) {
+    function transfer(address dst, uint256 rawAmount) external returns (bool) {
         uint96 amount = safe96(rawAmount, "transfer: amount exceeds 96 bits");
         _transferTokens(msg.sender, dst, amount);
         return true;
@@ -401,13 +450,21 @@ contract TestERC20PermitNoVersion {
      * @param rawAmount The number of tokens to transfer
      * @return Whether or not the transfer succeeded
      */
-    function transferFrom(address src, address dst, uint rawAmount) external returns (bool) {
+    function transferFrom(
+        address src,
+        address dst,
+        uint256 rawAmount
+    ) external returns (bool) {
         address spender = msg.sender;
         uint96 spenderAllowance = allowances[src][spender];
         uint96 amount = safe96(rawAmount, "approve: amount exceeds 96 bits");
 
         if (spender != src && spenderAllowance != uint96(-1)) {
-            uint96 newAllowance = sub96(spenderAllowance, amount, "Uni::transferFrom: transfer amount exceeds spender allowance");
+            uint96 newAllowance = sub96(
+                spenderAllowance,
+                amount,
+                "Uni::transferFrom: transfer amount exceeds spender allowance"
+            );
             allowances[src][spender] = newAllowance;
 
             emit Approval(src, spender, newAllowance);
@@ -417,41 +474,57 @@ contract TestERC20PermitNoVersion {
         return true;
     }
 
-    function _transferTokens(address src, address dst, uint96 amount) internal {
+    function _transferTokens(
+        address src,
+        address dst,
+        uint96 amount
+    ) internal {
         require(src != address(0), "_transferTokens: cannot transfer from the zero address");
         require(dst != address(0), "_transferTokens: cannot transfer to the zero address");
 
-        balances[src] = sub96(balances[src], amount, "_transferTokens: transfer amount exceeds balance");
+        balances[src] = sub96(
+            balances[src],
+            amount,
+            "_transferTokens: transfer amount exceeds balance"
+        );
         balances[dst] = add96(balances[dst], amount, "_transferTokens: transfer amount overflows");
         emit Transfer(src, dst, amount);
-
     }
 
-
-    function safe32(uint n, string memory errorMessage) internal pure returns (uint32) {
+    function safe32(uint256 n, string memory errorMessage) internal pure returns (uint32) {
         require(n < 2**32, errorMessage);
         return uint32(n);
     }
 
-    function safe96(uint n, string memory errorMessage) internal pure returns (uint96) {
+    function safe96(uint256 n, string memory errorMessage) internal pure returns (uint96) {
         require(n < 2**96, errorMessage);
         return uint96(n);
     }
 
-    function add96(uint96 a, uint96 b, string memory errorMessage) internal pure returns (uint96) {
+    function add96(
+        uint96 a,
+        uint96 b,
+        string memory errorMessage
+    ) internal pure returns (uint96) {
         uint96 c = a + b;
         require(c >= a, errorMessage);
         return c;
     }
 
-    function sub96(uint96 a, uint96 b, string memory errorMessage) internal pure returns (uint96) {
+    function sub96(
+        uint96 a,
+        uint96 b,
+        string memory errorMessage
+    ) internal pure returns (uint96) {
         require(b <= a, errorMessage);
         return a - b;
     }
 
-    function getChainId() internal pure returns (uint) {
+    function getChainId() internal pure returns (uint256) {
         uint256 chainId;
-        assembly { chainId := chainid() }
+        assembly {
+            chainId := chainid()
+        }
         return chainId;
     }
 }

@@ -131,7 +131,7 @@ export async function getPermitSig(
     chainId?: number
     version?: string
   }
-) {
+): Promise<[string, number]> {
   const [nonce, name, version, chainId] = await Promise.all([
     optional?.nonce ?? token.nonces(signer.address),
     optional?.name ?? token.name(),
@@ -180,11 +180,10 @@ export async function getPermitSigNoVersion(
     chainId?: number
     version?: string
   }
-) {
-  const [nonce, name, version, chainId] = await Promise.all([
+): Promise<[string, number]> {
+  const [nonce, name, chainId] = await Promise.all([
     optional?.nonce ?? token.nonces(signer.address),
     optional?.name ?? token.name(),
-    optional?.version ?? '1',
     optional?.chainId ?? network.config.chainId,
   ])
 
@@ -216,7 +215,6 @@ export async function getPermitSigNoVersion(
   return [sig, nonce]
 }
 
-
 export async function getDaiLikePermitSig(
   signer: SignerWithAddress,
   token: Contract,
@@ -228,7 +226,7 @@ export async function getDaiLikePermitSig(
     chainId?: number
     version?: string
   }
-) {
+): Promise<[string, number]> {
   const [nonce, name, version, chainId] = await Promise.all([
     optional?.nonce ?? token.nonces(signer.address),
     optional?.name ?? token.name(),
@@ -258,11 +256,9 @@ export async function getDaiLikePermitSig(
     spender: spender,
     nonce: nonce,
     expiry: deadline,
-    allowed: true
+    allowed: true,
   }
 
   const sig = await signer._signTypedData(domain, types, message)
   return [sig, nonce]
 }
-
-

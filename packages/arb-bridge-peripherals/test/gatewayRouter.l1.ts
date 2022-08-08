@@ -19,7 +19,11 @@ import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Contract, ContractFactory } from 'ethers'
-import { getDaiLikePermitSig, getPermitSig, getPermitSigNoVersion } from './testhelper'
+import {
+  getDaiLikePermitSig,
+  getPermitSig,
+  getPermitSigNoVersion,
+} from './testhelper'
 
 describe('Bridge peripherals layer 1', () => {
   let accounts: SignerWithAddress[]
@@ -268,7 +272,7 @@ describe('Bridge peripherals layer 1', () => {
       true,
       {
         value: maxSubmissionCost + maxGas * gasPrice,
-      },
+      }
     )
 
     const receipt = await tx.wait()
@@ -290,7 +294,6 @@ describe('Bridge peripherals layer 1', () => {
     )
   })
 
-
   it('should submit the custom refund address to inbox using permit w/no version in signature', async function () {
     const L1ERC20Gateway = await ethers.getContractFactory('L1ERC20Gateway')
     const l1ERC20Gateway = await L1ERC20Gateway.deploy()
@@ -310,8 +313,14 @@ describe('Bridge peripherals layer 1', () => {
       maxSubmissionCost
     )
 
-    const TokenPermit = await ethers.getContractFactory('TestERC20PermitNoVersion')
-    const tokenPermit = await TokenPermit.deploy(accounts[0].address, accounts[0].address, 100000000000)
+    const TokenPermit = await ethers.getContractFactory(
+      'TestERC20PermitNoVersion'
+    )
+    const tokenPermit = await TokenPermit.deploy(
+      accounts[0].address,
+      accounts[0].address,
+      100000000000
+    )
     // send escrowed tokens to bridge
     const tokenAmount = 100
 
@@ -329,7 +338,7 @@ describe('Bridge peripherals layer 1', () => {
       tokenAmount,
       deadline
     )
-    
+
     const { v, r, s } = ethers.utils.splitSignature(signature[0])
 
     const permitData = {
@@ -392,8 +401,7 @@ describe('Bridge peripherals layer 1', () => {
       gasPrice,
       maxSubmissionCost
     )
-    console.log("2")
-    const network = await ethers.getDefaultProvider().getNetwork();
+
     const TokenPermit = await ethers.getContractFactory('TestERC20PermitDai')
     const tokenPermit = await TokenPermit.deploy()
     await tokenPermit.mint(accounts[0].address, 100)
@@ -412,7 +420,7 @@ describe('Bridge peripherals layer 1', () => {
       l1ERC20Gateway.address,
       deadline
     )
-    
+
     const { v, r, s } = ethers.utils.splitSignature(signature[0])
 
     const permitData = {
@@ -422,7 +430,7 @@ describe('Bridge peripherals layer 1', () => {
       r: r,
       s: s,
     }
-    
+
     const tx = await testBridge.outboundTransferWithPermit(
       tokenPermit.address,
       accounts[1].address,
