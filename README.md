@@ -1,4 +1,36 @@
-<p align="center"><img src="docs/assets/arbitrum_horizontal_logo.png" width="600"></p>
+<!-- PROJECT LOGO -->
+<br />
+<p align="center">
+  <a href="https://arbitrum.io/">
+    <img src="https://arbitrum.io/wp-content/uploads/2021/08/Arbitrum_Symbol-Full-color-White-background-768x840.png" alt="Logo" width="80" height="80">
+  </a>
+
+  <h3 align="center">Arbitrium</h3>
+
+  <p align="center">
+    Arbitrium Grows Open Source.
+    <br />
+    <a href="https://arbitrum.io/"><strong>Explore more about Arbitrium »</strong></a>
+    <br />
+    <br />
+    <a href="https://discord.com/invite/5KE54JwyTs">Community</a>
+    ·
+    <a href="https://developer.offchainlabs.com/docs/developer_quickstart">Docs</a>
+  </p>
+</p>
+
+
+<!-- ABOUT THE PROJECT -->
+## About Arbitrium Monorepo
+
+<p align="center">
+    [![CircleCI](https://circleci.com/gh/OffchainLabs/arbitrum.svg?style=svg)](https://circleci.com/gh/OffchainLabs/arbitrum) [![codecov](https://codecov.io/gh/OffchainLabs/arbitrum/branch/master/graph/badge.svg)](https://codecov.io/gh/OffchainLabs/arbitrum)
+</p>
+
+
+
+
+
 
 # Arbitrum Monorepo
 
