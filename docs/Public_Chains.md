@@ -29,7 +29,7 @@ Usres can now use [QuickNode](https://www.quicknode.com) to interact with the Ar
 Users can now use [Alchemy](https://alchemy.com/?a=arbitrum-docs), [Infura](https://infura.io/), [QuickNode](https://www.quicknode.com), [Moralis](https://moralis.io/), [Ankr](https://www.ankr.com/), [BlockVision](https://blockvision.org/), and [GetBlock](https://getblock.io/) to interact with the Arbitrum One. See [node providers](Node_Providers.md) for the full guide. 
 
 **Nitro Goerli Rollup Testnet**: This testnet (421613) uses the Nitro rollup tech stack; it is expected to be the primary, stable Arbitrum testnet moving forward.
-Users can now use [Alchemy](https://alchemy.com/?a=arbitrum-docs), [Infura](https://infura.io/), and [QuickNode](https://www.quicknode.com)to interact with the Arbitrum One. See [node providers](Node_Providers.md) for the full guide. 
+Users can now use [Alchemy](https://alchemy.com/?a=arbitrum-docs), [Infura](https://infura.io/), and [QuickNode](https://www.quicknode.com) to interact with the Arbitrum One. See [node providers](Node_Providers.md) for the full guide. 
 
 ## Using Arbitrum
 
