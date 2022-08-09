@@ -109,7 +109,7 @@ Beyond the superfluous ticket creation, this is suboptimal in that the base subm
 
 ### Address Aliasing
 
-All messages that are not initiated on L1 by the Sequencer (which includes all retryable tickets) are submitted via the [Delayed Inbox](Censorship_resistance). When messages in the Delayed Inbox are executed on L2, the sender's address —i.e., that which is returned by `msg.sender` — will _not_ simply be the L1 address that sent the message; rather it will be the address's "L2 Alias." An address's L2 alias is its value increased by the hex value `0x1111000000000000000000000000000000001111`:
+All messages that are not initiated on L1 by the Sequencer (which includes all retryable tickets) are submitted via the [Delayed Inbox](Censorship_resistance). When unsigned messages in the Delayed Inbox are executed on L2, the sender's address —i.e., that which is returned by `msg.sender` — will _not_ simply be the L1 address that sent the message; rather it will be the address's "L2 Alias." An address's L2 alias is its value increased by the hex value `0x1111000000000000000000000000000000001111`:
 
 ```
 L2_Alias = L1_Contract_ Address + 0x1111000000000000000000000000000000001111
