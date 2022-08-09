@@ -6,7 +6,7 @@ sidebar_label: Running a Node
 
 Note: The Arbitrum Rinkeby testnet has been upgraded to Nitro, and the classic node is only useful for archive requests for pre-Nitro blocks on Rinkeby. Mainnet Nitro upgrade date will be announced at a later date
 
-Note: If you’re interested in accessing the Arbitrum network but you don’t want to setup your own node, see our [Node Providers](https://developer.offchainlabs.com/docs/node_providers) to get RPC access to fully-managed nodes hosted by one of our partners!
+Note: If you’re interested in accessing the Arbitrum network but you don’t want to setup your own node, see our [Node Providers](https://developer.offchainlabs.com/docs/node_providers) to get RPC access to fully-managed nodes hosted by a third party provider
 
 ### Required Artifacts
 
