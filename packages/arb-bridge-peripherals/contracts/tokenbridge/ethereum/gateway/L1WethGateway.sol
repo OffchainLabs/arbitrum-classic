@@ -17,7 +17,6 @@
  */
 
 pragma solidity ^0.6.11;
-pragma experimental ABIEncoderV2;
 
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";

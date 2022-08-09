@@ -17,7 +17,6 @@
  */
 
 pragma solidity ^0.6.11;
-pragma experimental ABIEncoderV2;
 
 import { ArbitrumEnabledToken } from "../ICustomToken.sol";
 import "./L1ArbitrumExtendedGateway.sol";

@@ -296,17 +296,37 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
 
     function outboundTransferWithPermit(
         address _l1Token,
+        address _to,
+        uint256 _amount,
+        uint256 _maxGas,
+        uint256 _gasPriceBid,
+        bytes calldata _data,
+        PermitData calldata _permitData
+    ) public payable override returns (bytes memory) {
+        return
+            super.outboundTransferWithPermit(
+                _l1Token,
+                _to,
+                _amount,
+                _maxGas,
+                _gasPriceBid,
+                _data,
+                _permitData
+            );
+    }
+
+    function outboundTransferCustomRefundWithPermit(
+        address _l1Token,
         address _refundTo,
         address _to,
         uint256 _amount,
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data,
-        PermitData calldata _permitData,
-        bool _isStandardImpl
+        PermitData calldata _permitData
     ) public payable override returns (bytes memory) {
         return
-            super.outboundTransferWithPermit(
+            super.outboundTransferCustomRefundWithPermit(
                 _l1Token,
                 _refundTo,
                 _to,
@@ -314,8 +334,7 @@ contract L1GatewayRouter is WhitelistConsumer, L1ArbitrumMessenger, GatewayRoute
                 _maxGas,
                 _gasPriceBid,
                 _data,
-                _permitData,
-                _isStandardImpl
+                _permitData
             );
     }
 

@@ -3,7 +3,7 @@
 pragma solidity ^0.6.11;
 
 /**
- * @dev Dai Stablecoin ERC20 Contract
+ * @dev Modified Dai Stablecoin ERC20 Contract
  *
  * Tests Dai Stablecoin for permit.
  *
@@ -14,14 +14,6 @@ contract TestERC20PermitDai {
     // --- Auth ---
     mapping(address => uint256) public wards;
 
-    function rely(address guy) external auth {
-        wards[guy] = 1;
-    }
-
-    function deny(address guy) external auth {
-        wards[guy] = 0;
-    }
-
     modifier auth() {
         require(wards[msg.sender] == 1, "Dai/not-authorized");
         _;
@@ -31,7 +23,6 @@ contract TestERC20PermitDai {
     string public constant name = "TestERC20PermitDai";
     string public constant symbol = "TestDAI";
     string public constant version = "1";
-    uint8 public constant decimals = 18;
     uint256 public totalSupply;
 
     mapping(address => uint256) public balanceOf;
@@ -99,40 +90,6 @@ contract TestERC20PermitDai {
         emit Transfer(address(0), usr, wad);
     }
 
-    function burn(address usr, uint256 wad) external {
-        require(balanceOf[usr] >= wad, "Dai/insufficient-balance");
-        if (usr != msg.sender && allowance[usr][msg.sender] != uint256(-1)) {
-            require(allowance[usr][msg.sender] >= wad, "Dai/insufficient-allowance");
-            allowance[usr][msg.sender] = sub(allowance[usr][msg.sender], wad);
-        }
-        balanceOf[usr] = sub(balanceOf[usr], wad);
-        totalSupply = sub(totalSupply, wad);
-        emit Transfer(usr, address(0), wad);
-    }
-
-    function approve(address usr, uint256 wad) external returns (bool) {
-        allowance[msg.sender][usr] = wad;
-        emit Approval(msg.sender, usr, wad);
-        return true;
-    }
-
-    // --- Alias ---
-    function push(address usr, uint256 wad) external {
-        transferFrom(msg.sender, usr, wad);
-    }
-
-    function pull(address usr, uint256 wad) external {
-        transferFrom(usr, msg.sender, wad);
-    }
-
-    function move(
-        address src,
-        address dst,
-        uint256 wad
-    ) external {
-        transferFrom(src, dst, wad);
-    }
-
     // --- Approve by signature ---
     function permit(
         address holder,
@@ -169,4 +126,3 @@ contract TestERC20PermitDai {
         return chainId;
     }
 }
-

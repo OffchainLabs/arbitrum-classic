@@ -17,7 +17,6 @@
  */
 
 pragma solidity ^0.6.11;
-pragma experimental ABIEncoderV2;
 
 import "./L1ArbitrumExtendedGateway.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";

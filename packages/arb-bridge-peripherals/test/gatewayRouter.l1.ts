@@ -211,6 +211,90 @@ describe('Bridge peripherals layer 1', () => {
     )
   })
 
+
+  it('should submit correct sender to inbox w/ permit', async function () {
+    const L1ERC20Gateway = await ethers.getContractFactory('L1ERC20Gateway')
+    const l1ERC20Gateway = await L1ERC20Gateway.deploy()
+
+    await l1ERC20Gateway.initialize(
+      l2Address,
+      testBridge.address,
+      inbox.address,
+      '0x0000000000000000000000000000000000000000000000000000000000000001', // cloneable proxy hash
+      accounts[0].address // beaconProxyFactory
+    )
+
+    await testBridge.setDefaultGateway(
+      l1ERC20Gateway.address,
+      maxGas,
+      gasPrice,
+      maxSubmissionCost
+    )
+
+    const TokenPermit = await ethers.getContractFactory('TestERC20Permit')
+    const tokenPermit = await TokenPermit.deploy('TestPermit', 'TPP')
+    // send escrowed tokens to bridge
+    const tokenAmount = 100
+
+    const data = ethers.utils.defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [maxSubmissionCost, '0x']
+    )
+
+    const deadline = ethers.constants.MaxUint256
+
+    const signature = await getPermitSig(
+      accounts[0],
+      tokenPermit,
+      l1ERC20Gateway.address,
+      tokenAmount,
+      deadline
+    )
+
+    const { v, r, s } = ethers.utils.splitSignature(signature[0])
+
+    const permitData = {
+      nonce: signature[1],
+      deadline: deadline,
+      v: v,
+      r: r,
+      s: s,
+      isStandardImpl: true
+    }
+
+    const tx = await testBridge.outboundTransferWithPermit(
+      tokenPermit.address,
+      accounts[1].address,
+      tokenAmount,
+      maxGas,
+      gasPrice,
+      data,
+      permitData,
+      {
+        value: maxSubmissionCost + maxGas * gasPrice,
+      }
+    )
+
+    const receipt = await tx.wait()
+    // RefundAddresses(address,address)
+    const expectedTopic =
+      '0x70b37e3cd4440bad0fef84e97b8196e82fe9a1ba044f099cbac6cd7f79e8702f'
+    const logs = receipt.events
+      .filter((curr: any) => curr.topics[0] === expectedTopic)
+      .map((curr: any) => inbox.interface.parseLog(curr))
+    assert.equal(
+      logs[0].args.excessFeeRefundAddress,
+      accounts[1].address,
+      'Invalid excessFeeRefundAddress address'
+    )
+    assert.equal(
+      logs[0].args.callValueRefundAddress,
+      accounts[0].address,
+      'Invalid callValueRefundAddress address'
+    )
+
+  })
+
   it('should submit the custom refund address to inbox using permit', async function () {
     const L1ERC20Gateway = await ethers.getContractFactory('L1ERC20Gateway')
     const l1ERC20Gateway = await L1ERC20Gateway.deploy()
@@ -258,9 +342,10 @@ describe('Bridge peripherals layer 1', () => {
       v: v,
       r: r,
       s: s,
+      isStandardImpl: true
     }
 
-    const tx = await testBridge.outboundTransferWithPermit(
+    const tx = await testBridge.outboundTransferCustomRefundWithPermit(
       tokenPermit.address,
       accounts[1].address,
       accounts[0].address,
@@ -269,7 +354,6 @@ describe('Bridge peripherals layer 1', () => {
       gasPrice,
       data,
       permitData,
-      true,
       {
         value: maxSubmissionCost + maxGas * gasPrice,
       }
@@ -347,9 +431,10 @@ describe('Bridge peripherals layer 1', () => {
       v: v,
       r: r,
       s: s,
+      isStandardImpl: true
     }
 
-    const tx = await testBridge.outboundTransferWithPermit(
+    const tx = await testBridge.outboundTransferCustomRefundWithPermit(
       tokenPermit.address,
       accounts[1].address,
       accounts[0].address,
@@ -358,7 +443,6 @@ describe('Bridge peripherals layer 1', () => {
       gasPrice,
       data,
       permitData,
-      true,
       {
         value: maxSubmissionCost + maxGas * gasPrice,
       }
@@ -429,9 +513,10 @@ describe('Bridge peripherals layer 1', () => {
       v: v,
       r: r,
       s: s,
+      isStandardImpl: false
     }
 
-    const tx = await testBridge.outboundTransferWithPermit(
+    const tx = await testBridge.outboundTransferCustomRefundWithPermit(
       tokenPermit.address,
       accounts[1].address,
       accounts[0].address,
@@ -440,7 +525,6 @@ describe('Bridge peripherals layer 1', () => {
       gasPrice,
       data,
       permitData,
-      false,
       {
         value: maxSubmissionCost + maxGas * gasPrice,
       }

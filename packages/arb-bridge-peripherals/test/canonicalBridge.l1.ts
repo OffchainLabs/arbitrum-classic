@@ -15,7 +15,7 @@
  */
 
 /* eslint-env node, mocha */
-import { ethers, network } from 'hardhat'
+import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import {
