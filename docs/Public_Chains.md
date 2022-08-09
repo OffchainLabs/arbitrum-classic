@@ -21,7 +21,8 @@ For a list of useful contract addresses, see [here](Useful_Addresses.md).
 
 **Arbitrum One**: Arbitrum One is the flagship Arbitrum mainnet chain; it is an Optimistic Rollup chain running on top of Ethereum Mainnet, and is open to all users. In an upcoming upgrade, the Arbitrum One chain will be upgraded to use the [Nitro](https://medium.com/offchainlabs/its-nitro-time-86944693bf29) tech stack, maintaining the same state. (Stay tuned for updates!)
 
-**Arbitrum Nova**: Arbitrum Nova is the first mainnet [AnyTrust](AnyTrust.md) chain; it is currently open for [developer access](https://medium.com/offchainlabs/introducing-nova-arbitrum-anytrust-mainnet-is-open-for-developers-9a54692f345e).
+**Arbitrum Nova**: Arbitrum Nova is the first mainnet [AnyTrust](AnyTrust.md) chain; it is currently open for [developer access](https://medium.com/offchainlabs/introducing-nova-arbitrum-anytrust-mainnet-is-open-for-developers-9a54692f345e). 
+Developers can now use [QuickNode](https://www.quicknode.com) to interact with the Arbitrum Nova chain. or a full guide of how to set up an Arbitrum node on QuickNode, see the QuickNode's Arbitrum RPC documentation.
 
 **RinkArby**: RinkArby is the longest running Arbitrum testnet. It previously ran on the classic stack, but at block 7/28/2022 it was migrated use the Nitro stack! Rinkarby will be deprecated [when Rinkeby itself gets deprecated](https://blog.ethereum.org/2022/06/21/testnet-deprecation/); plan accordingly!
 
