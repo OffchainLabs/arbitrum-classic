@@ -16,9 +16,10 @@ Alchemy provides 300M compute units per month for free, or the equivalent of 30M
 
 ## [Infura](https://infura.io/)
 
-Infura is a node service provider that provides access to Arbitrum One (Mainnet) and Rinkeby testnet. To start interacting with either of these networks, you need to set up an Infura account and create a project. Next, you will be given a ***Project ID*** (for detailed steps, check out the [Infura's documentation](https://blog.infura.io/getting-started-with-infura-28e41844cc89/)). You can now select which endpoint you want to connect to, this could be Arbitrum One, or it could be Rinkeby testnet. 
+Infura is a node service provider that provides access to Arbitrum One (Mainnet) and Rinkeby testnet. To start interacting with either of these networks, you need to set up an Infura account [here](https://infura.io/register) and create a new key. For detailed steps, check out [Infura's documentation](https://docs.infura.io/infura/networks/arbitrum>).
 
-Infura provides access to Arbitrum up to 100k requests per day for free. Once Arbitrum leaves beta in Infura, it will be charged as an addon of $200 / month.
+You can now select which endpoint you want to connect to, this could be Arbitrum One, or it could be Rinkeby testnet.
+Infura provides access to Arbitrum across all their subscription plans (Core Free, Developer, Team & Growth). See pricing & daily request rate limits [here](https://infura.io/pricing).
 
 ## [QuickNode](https://www.quicknode.com/)
 
