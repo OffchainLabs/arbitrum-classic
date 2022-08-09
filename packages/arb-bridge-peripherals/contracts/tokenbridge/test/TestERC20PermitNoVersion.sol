@@ -86,7 +86,6 @@ library SafeMath {
 
         return c;
     }
-
 }
 
 contract TestERC20PermitNoVersion {

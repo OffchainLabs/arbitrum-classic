@@ -10,9 +10,7 @@ pragma solidity ^0.6.11;
  * https://github.com/makerdao/dss/blob/17187f7d47be2f4c71d218785e1155474bbafe8a/src/dai.sol
  */
 
-
 interface IDaiLikePermit {
-    
     function permit(
         address holder,
         address spender,
@@ -23,5 +21,4 @@ interface IDaiLikePermit {
         bytes32 r,
         bytes32 s
     ) external;
-
 }

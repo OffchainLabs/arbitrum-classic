@@ -211,7 +211,6 @@ describe('Bridge peripherals layer 1', () => {
     )
   })
 
-
   it('should submit correct sender to inbox w/ permit', async function () {
     const L1ERC20Gateway = await ethers.getContractFactory('L1ERC20Gateway')
     const l1ERC20Gateway = await L1ERC20Gateway.deploy()
@@ -259,7 +258,7 @@ describe('Bridge peripherals layer 1', () => {
       v: v,
       r: r,
       s: s,
-      isStandardImpl: true
+      isStandardImpl: true,
     }
 
     const tx = await testBridge.outboundTransferWithPermit(
@@ -292,7 +291,6 @@ describe('Bridge peripherals layer 1', () => {
       accounts[0].address,
       'Invalid callValueRefundAddress address'
     )
-
   })
 
   it('should submit the custom refund address to inbox using permit', async function () {
@@ -342,7 +340,7 @@ describe('Bridge peripherals layer 1', () => {
       v: v,
       r: r,
       s: s,
-      isStandardImpl: true
+      isStandardImpl: true,
     }
 
     const tx = await testBridge.outboundTransferCustomRefundWithPermit(
@@ -431,7 +429,7 @@ describe('Bridge peripherals layer 1', () => {
       v: v,
       r: r,
       s: s,
-      isStandardImpl: true
+      isStandardImpl: true,
     }
 
     const tx = await testBridge.outboundTransferCustomRefundWithPermit(
@@ -513,7 +511,7 @@ describe('Bridge peripherals layer 1', () => {
       v: v,
       r: r,
       s: s,
-      isStandardImpl: false
+      isStandardImpl: false,
     }
 
     const tx = await testBridge.outboundTransferCustomRefundWithPermit(
