@@ -8,7 +8,7 @@ Note: If you’re interested in accessing an Arbitrum chain, but you don’t wan
 
 ### Required Artifacts
 
-- Latest Docker Image: `offchainlabs/nitro-node:v2.0.0-beta.8-5ed2c72`
+- Latest Docker Image: `offchainlabs/nitro-node:v2.0.0-beta.9-f8a2ed7`
 
 - Only if using Rinkeby: Rinkeby Nitro Seed Database Snapshot
   - Use the parameter `--init.url="https://snapshot.arbitrum.io/rinkeby/nitro.tar"` on first startup to initialize Nitro database
@@ -83,7 +83,7 @@ Note: If you’re interested in accessing an Arbitrum chain, but you don’t wan
   The arb-relay is in the same docker image.
 - Here is an example of how to run nitro-relay for Rinkeby:
   ```
-  docker run --rm -it  -p 0.0.0.0:9642:9642 --entrypoint relay offchainlabs/nitro-node:v2.0.0-beta.8-5ed2c72 --node.feed.output.addr=0.0.0.0 --node.feed.input.url wss://rinkeby.arbitrum.io/feed
+  docker run --rm -it  -p 0.0.0.0:9642:9642 --entrypoint relay offchainlabs/nitro-node:v2.0.0-beta.9-f8a2ed7 --node.feed.output.addr=0.0.0.0 --node.feed.input.url wss://rinkeby.arbitrum.io/feed
   ```
 - Here is an example of how to run nitro-node for Rinkeby with custom relay:
   ```
