@@ -19,7 +19,7 @@ import os
 from support.run import run
 
 ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DOCKERFILE_CACHE = """FROM alpine:3
+DOCKERFILE_CACHE = """FROM alpine:3.16.2
 RUN mkdir /build /cpp-build /rocksdb
 FROM scratch
 COPY --from=0 /cpp-build /cpp-build
