@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2021, Offchain Labs, Inc.
+ * Copyright 2020, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,18 +18,11 @@
 
 pragma solidity ^0.6.11;
 
-import "../libraries/BytesParser.sol";
+import "../arbitrum/L2ArbitrumMessenger.sol";
+import "arb-bridge-eth/contracts/libraries/AddressAliasHelper.sol";
 
-contract TestBytesParser {
-    function bytesToString(bytes memory input)
-        public
-        pure
-        returns (bool success, string memory res)
-    {
-        return BytesParser.toString(input);
-    }
-
-    function bytesToUint8(bytes memory input) public pure returns (bool, uint8) {
-        return BytesParser.toUint8(input);
+contract AddressMappingTest is L2ArbitrumMessenger {
+    function getL1AddressTest(address sender) external pure returns (address l1Address) {
+        return AddressAliasHelper.undoL1ToL2Alias(sender);
     }
 }

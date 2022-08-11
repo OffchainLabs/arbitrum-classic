@@ -32,7 +32,7 @@ abstract contract L2ArbitrumMessenger {
         address _from,
         address _to,
         bytes memory _data
-    ) internal virtual returns (uint256) {
+    ) internal returns (uint256) {
         uint256 _id = ArbSys(ARB_SYS_ADDRESS).sendTxToL1{ value: _l1CallValue }(_to, _data);
         emit TxToL1(_from, _to, _id, _data);
         return _id;
