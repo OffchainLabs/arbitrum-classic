@@ -10,7 +10,7 @@
     "arbos:upgrade": "ts-node ./scripts/update-arbos.ts init"
   },
   "devDependencies": {
-    "@ethersproject/providers": "^5.4.5",
+    "@ethersproject/providers": "^5.6.8",
     "@ethersproject/units": "^5.4.0",
     "@ethersproject/wallet": "^5.4.0",
     "@types/fs-extra": "^9.0.1",
