@@ -13,6 +13,7 @@ Note: If you’re interested in accessing an Arbitrum chain, but you don’t wan
 - Only if using Rinkeby: Rinkeby Nitro Seed Database Snapshot
   - Use the parameter `--init.url="https://snapshot.arbitrum.io/rinkeby/nitro.tar"` on first startup to initialize Nitro database
   - If running more than one node, easiest to manually download image from https://snapshot.arbitrum.io/rinkeby/nitro.tar and host it locally for your nodes
+  - Or use `--init.url="file:///path/to/snapshot/in/container/nitro.tar"` to use a local snapshot archive
 
 ### Required parameter
 
