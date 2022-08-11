@@ -15,10 +15,11 @@
  */
 
 /* eslint-env node, mocha */
-import { ethers } from 'hardhat'
+import { ethers, network } from 'hardhat'
 import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { Contract, ContractFactory } from 'ethers'
+import { L2ERC20Gateway, L2ERC20Gateway__factory } from '../build/types'
+import { applyAlias, impersonateAccount } from './testhelper'
 
 const encodeTokenInitData = (
   name: string,
@@ -37,9 +38,8 @@ const encodeTokenInitData = (
 
 describe('Bridge peripherals layer 2', () => {
   let accounts: SignerWithAddress[]
-  let TestBridge: ContractFactory
-  let testBridge: Contract
-  let erc20Proxy: string
+  let TestBridge: L2ERC20Gateway__factory
+  let testBridge: L2ERC20Gateway
 
   before(async function () {
     // constructor(uint256 _gasPrice, uint256 _maxGas, address erc777Template, address erc20Template)
@@ -61,11 +61,21 @@ describe('Bridge peripherals layer 2', () => {
 
     await beaconProxyFactory.initialize(beacon.address)
 
+    const ArbSysMock = await ethers.getContractFactory('ArbSysMock')
+    const arbsysmock = await ArbSysMock.deploy()
+    await network.provider.send('hardhat_setCode', [
+      '0x0000000000000000000000000000000000000064',
+      await network.provider.send('eth_getCode', [arbsysmock.address]),
+    ])
+
     testBridge = await TestBridge.deploy()
     await testBridge.initialize(
       accounts[0].address,
       accounts[3].address,
       beaconProxyFactory.address
+    )
+    testBridge = testBridge.connect(
+      await impersonateAccount(applyAlias(accounts[0].address))
     )
   })
 
@@ -245,7 +255,7 @@ describe('Bridge peripherals layer 2', () => {
     const eventTopic =
       '0x11ff8525c5d96036231ee652c108808dee4c40728a6117830a75029298bb7de6'
 
-    const filteredEvents: Array<any> = receipt.events.filter(
+    const filteredEvents: Array<any> = receipt.logs.filter(
       (event: any) => event.topics[0] === eventTopic
     )
 
@@ -309,7 +319,7 @@ describe('Bridge peripherals layer 2', () => {
     const eventTopic =
       '0x11ff8525c5d96036231ee652c108808dee4c40728a6117830a75029298bb7de6'
 
-    const filteredEvents: Array<any> = receipt.events.filter(
+    const filteredEvents: Array<any> = receipt.logs.filter(
       (event: any) => event.topics[0] === eventTopic
     )
 
@@ -325,7 +335,7 @@ describe('Bridge peripherals layer 2', () => {
 
   it('should burn on withdraw', async function () {
     const l1ERC20 = '0x0000000000000003000000000000000000000001'
-    const sender = accounts[0].address
+    const sender = applyAlias(accounts[0].address)
     const dest = sender
     const amount = '10'
     const initializeData = encodeTokenInitData('ArbToken', 'ATKN', '18')
