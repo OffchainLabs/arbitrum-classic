@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-
+// solhint-disable-next-line compiler-version
 pragma solidity >=0.6.0 <0.8.0;
 
 import "@openzeppelin/contracts/proxy/BeaconProxy.sol";

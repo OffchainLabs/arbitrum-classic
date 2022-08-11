@@ -27,3 +27,5 @@ replace github.com/offchainlabs/arbitrum/packages/arb-node-core => ../arb-node-c
 replace github.com/offchainlabs/arbitrum/packages/arb-evm => ../arb-evm
 
 replace github.com/offchainlabs/arbitrum/packages/arb-avm-cpp => ../arb-avm-cpp
+
+replace github.com/ethereum/go-ethereum => ../go-ethereum

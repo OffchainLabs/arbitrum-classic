@@ -19,7 +19,6 @@ package configuration
 import (
 	"context"
 	"fmt"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"io"
 	"math/big"
 	"net/http"
@@ -28,6 +27,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/json"
@@ -179,14 +180,20 @@ type Tracing struct {
 	Namespace string `koanf:"namespace"`
 }
 
+type NitroExport struct {
+	Enable  bool   `koanf:"enable"`
+	BaseDir string `koanf:"basedir"`
+}
+
 type RPC struct {
-	Addr              string  `koanf:"addr"`
-	Port              string  `koanf:"port"`
-	Path              string  `koanf:"path"`
-	EnableL1Calls     bool    `koanf:"enable-l1-calls"`
-	Tracing           Tracing `koanf:"tracing"`
-	MaxCallGas        uint64  `koanf:"max-call-gas"`
-	EnableDevopsStubs bool    `koanf:"enable-devops-stubs"`
+	Addr              string      `koanf:"addr"`
+	Port              string      `koanf:"port"`
+	Path              string      `koanf:"path"`
+	EnableL1Calls     bool        `koanf:"enable-l1-calls"`
+	Tracing           Tracing     `koanf:"tracing"`
+	NitroExport       NitroExport `koanf:"nitroexport"`
+	MaxCallGas        uint64      `koanf:"max-call-gas"`
+	EnableDevopsStubs bool        `koanf:"enable-devops-stubs"`
 }
 
 type S3 struct {
@@ -208,6 +215,7 @@ type SequencerDangerous struct {
 	RewriteSequencerAddress         bool `koanf:"rewrite-sequencer-address" json:"rewrite-sequencer-address"`
 	DisableBatchPosting             bool `koanf:"disable-batch-posting" json:"disable-batch-posting"`
 	DisableDelayedMessageSequencing bool `koanf:"disable-delayed-message-sequencing" json:"disable-delayed-message-sequencing"`
+	DisableUserMessageSequencing    bool `koanf:"disable-user-message-sequencing" json:"disable-user-message-sequencing"`
 }
 
 type Sequencer struct {
@@ -441,7 +449,8 @@ type Config struct {
 		URL     string `koanf:"url"`
 	} `koanf:"l1"`
 	L2 struct {
-		ChainID uint64 `koanf:"chain-id"`
+		ChainID         uint64 `koanf:"chain-id"`
+		DisableUpstream bool   `koanf:"disable-upstream"`
 	} `koanf:"l2"`
 	Log           Log        `koanf:"log"`
 	Node          Node       `koanf:"node"`
@@ -603,6 +612,9 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Uint64("node.rpc.max-call-gas", 5000000, "Max computational arbgas limit when processing eth_call and eth_estimateGas")
 	f.Bool("node.rpc.enable-devops-stubs", false, "Enable fake versions of eth_syncing and eth_netPeers")
 
+	f.Bool("node.rpc.nitroexport.enable", false, "Enable rpcs for nitro export (stored locally on node)")
+	f.String("node.rpc.nitroexport.basedir", "", "Base dir for nitro export")
+
 	f.Int64("node.sequencer.create-batch-block-interval", 270, "block interval at which to create new batches")
 	f.Int64("node.sequencer.continue-batch-posting-block-interval", 2, "block interval to post the next batch after posting a partial one")
 	f.Int64("node.sequencer.delayed-messages-target-delay", 12, "delay before sequencing delayed messages")
@@ -616,6 +628,7 @@ func ParseNode(ctx context.Context) (*Config, *Wallet, *ethutils.RPCEthClient, *
 	f.Bool("node.sequencer.dangerous.rewrite-sequencer-address", false, "reorganize to rewrite the sequencer address if it's not the loaded wallet (DANGEROUS)")
 	f.Bool("node.sequencer.dangerous.disable-batch-posting", false, "disable posting batches to L1 (DANGEROUS)")
 	f.Bool("node.sequencer.dangerous.disable-delayed-message-sequencing", false, "disable sequencing delayed messages (DANGEROUS)")
+	f.Bool("node.sequencer.dangerous.disable-user-message-sequencing", false, "disable sequencing user messages (DANGEROUS)")
 	f.Bool("node.sequencer.debug-timing", false, "log elapsed time throughout core sequencing loop")
 
 	f.String("node.type", "forwarder", "forwarder, aggregator, sequencer or validator")
@@ -711,10 +724,12 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		} else if l1ChainId.Cmp(big.NewInt(4)) == 0 {
 			err := k.Load(confmap.Provider(map[string]interface{}{
 				"bridge-utils-address":             "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
-				"feed.input.url":                   []string{"wss://rinkeby.arbitrum.io/feed"},
+				"feed.input.url":                   []string{},
+				"l2.disable-upstream":              true,
 				"node.aggregator.inbox-address":    "0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e",
 				"node.chain-id":                    "421611",
-				"node.forwarder.target":            "https://rinkeby.arbitrum.io/rpc",
+				"node.forwarder.target":            "",
+				"node.forwarder.rpc-mode":          "non-mutating",
 				"persistent.chain":                 "rinkeby",
 				"rollup.address":                   "0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c",
 				"rollup.from-block":                "8700589",
@@ -738,6 +753,12 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 	out, wallet, err := endCommonParse(k)
 	if err != nil {
 		return nil, nil, nil, nil, err
+	}
+
+	if out.L2.DisableUpstream {
+		out.Feed.Input.URLs = []string{}
+		out.Node.Forwarder.Target = ""
+		out.Node.Forwarder.RpcModeImpl = "non-mutating"
 	}
 
 	// Fixup directories
@@ -978,6 +999,7 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.String("log.core", "info", "log level for general arb node logging")
 
 	f.Uint64("l2.chain-id", 0, "if set other than 0, will be used to validate L2 feed connection")
+	f.Bool("l2.disable-upstream", false, "disable feed and transaction forwarding")
 
 	f.Bool("pprof-enable", false, "enable profiling server")
 

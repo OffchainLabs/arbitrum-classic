@@ -55,17 +55,30 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         _status = _NOT_ENTERED;
     }
 
-    // end of inline reentrancy guard
+    modifier onlyOwner() {
+        require(msg.sender == owner, "ONLY_OWNER");
+        _;
+    }
 
-    function outboundTransfer(
+    function outboundTransferCustomRefund(
         address _l1Token,
+        address _refundTo,
         address _to,
         uint256 _amount,
         uint256 _maxGas,
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable override nonReentrant returns (bytes memory res) {
-        return super.outboundTransfer(_l1Token, _to, _amount, _maxGas, _gasPriceBid, _data);
+        return
+            super.outboundTransferCustomRefund(
+                _l1Token,
+                _refundTo,
+                _to,
+                _amount,
+                _maxGas,
+                _gasPriceBid,
+                _data
+            );
     }
 
     function finalizeInboundTransfer(
@@ -74,7 +87,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         address _to,
         uint256 _amount,
         bytes calldata _data
-    ) public payable virtual override nonReentrant {
+    ) public payable override nonReentrant {
         // the superclass checks onlyCounterpartGateway
         super.finalizeInboundTransfer(_token, _from, _to, _amount, _data);
     }
@@ -85,7 +98,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         address _inbox,
         address _owner
     ) public {
-        L1ArbitrumExtendedGateway._initialize(_l1Counterpart, _l1Router, _inbox);
+        L1ArbitrumGateway._initialize(_l1Counterpart, _l1Router, _inbox);
         owner = _owner;
         // disable whitelist by default
         whitelist = address(0);
@@ -177,6 +190,11 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
             );
     }
 
+    function setOwner(address newOwner) external onlyOwner {
+        require(newOwner != address(0), "INVALID_OWNER");
+        owner = newOwner;
+    }
+
     /**
      * @notice Allows owner to force register a custom L1/L2 token pair.
      * @dev _l1Addresses[i] counterpart is assumed to be _l2Addresses[i]
@@ -193,8 +211,7 @@ contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
         uint256 _maxGas,
         uint256 _gasPriceBid,
         uint256 _maxSubmissionCost
-    ) external payable returns (uint256) {
-        require(msg.sender == owner, "ONLY_OWNER");
+    ) external payable onlyOwner returns (uint256) {
         require(_l1Addresses.length == _l2Addresses.length, "INVALID_LENGTHS");
 
         for (uint256 i = 0; i < _l1Addresses.length; i++) {

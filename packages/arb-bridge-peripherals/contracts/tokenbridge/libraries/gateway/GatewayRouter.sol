@@ -22,18 +22,19 @@ import "arb-bridge-eth/contracts/libraries/ProxyUtil.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./TokenGateway.sol";
 import "./GatewayMessageHandler.sol";
+import "./IGatewayRouter.sol";
 
 /**
  * @title Common interface for L1 and L2 Gateway Routers
  */
-abstract contract GatewayRouter is TokenGateway {
+abstract contract GatewayRouter is TokenGateway, IGatewayRouter {
     using Address for address;
 
     address internal constant ZERO_ADDR = address(0);
     address internal constant DISABLED = address(1);
 
     mapping(address => address) public l1TokenToGateway;
-    address public defaultGateway;
+    address public override defaultGateway;
 
     event TransferRouted(
         address indexed token,
@@ -83,6 +84,8 @@ abstract contract GatewayRouter is TokenGateway {
         uint256 _gasPriceBid,
         bytes calldata _data
     ) public payable virtual override returns (bytes memory) {
+        // this function is kept instead of delegating to outboundTransferCustomRefund to allow
+        // compatibility with older gateways that did not implement outboundTransferCustomRefund
         address gateway = getGateway(_token);
         bytes memory gatewayData = GatewayMessageHandler.encodeFromRouterToGateway(
             msg.sender,
@@ -112,7 +115,7 @@ abstract contract GatewayRouter is TokenGateway {
         return TokenGateway(gateway).getOutboundCalldata(_token, _from, _to, _amount, _data);
     }
 
-    function getGateway(address _token) public view virtual returns (address gateway) {
+    function getGateway(address _token) public view virtual override returns (address gateway) {
         gateway = l1TokenToGateway[_token];
 
         if (gateway == ZERO_ADDR) {
@@ -132,7 +135,7 @@ abstract contract GatewayRouter is TokenGateway {
         public
         view
         virtual
-        override
+        override(TokenGateway, ITokenGateway)
         returns (address)
     {
         address gateway = getGateway(l1ERC20);

@@ -18,14 +18,19 @@
 import { ethers } from 'hardhat'
 import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { Contract, ContractFactory } from 'ethers'
+import {
+  InboxMock,
+  L1ERC20Gateway,
+  L1ERC20Gateway__factory,
+} from '../build/types'
+import { impersonateAccount } from './testhelper'
 
 describe('Bridge peripherals layer 1', () => {
   let accounts: SignerWithAddress[]
-  let TestBridge: ContractFactory
-  let testBridge: Contract
+  let TestBridge: L1ERC20Gateway__factory
+  let testBridge: L1ERC20Gateway
 
-  let inbox: Contract
+  let inbox: InboxMock
   const maxSubmissionCost = 1
   const maxGas = 1000000000
   const gasPrice = 0
@@ -37,7 +42,7 @@ describe('Bridge peripherals layer 1', () => {
     accounts = await ethers.getSigners()
     l2Address = accounts[0].address
 
-    TestBridge = await ethers.getContractFactory('L1GatewayTester')
+    TestBridge = await ethers.getContractFactory('L1ERC20Gateway')
     testBridge = await TestBridge.deploy()
 
     const Inbox = await ethers.getContractFactory('InboxMock')
@@ -190,13 +195,15 @@ describe('Bridge peripherals layer 1', () => {
       [exitNum, '0x']
     )
 
-    await testBridge.finalizeInboundTransfer(
-      token.address,
-      accounts[0].address,
-      accounts[0].address,
-      tokenAmount,
-      withdrawData
-    )
+    await testBridge
+      .connect(await impersonateAccount(inbox.address))
+      .finalizeInboundTransfer(
+        token.address,
+        accounts[0].address,
+        accounts[0].address,
+        tokenAmount,
+        withdrawData
+      )
 
     const postUserBalance = await token.balanceOf(accounts[0].address)
 
@@ -268,5 +275,15 @@ describe('Bridge peripherals layer 1', () => {
 
     const escrowedTokens = await token.balanceOf(l1ERC20Gateway.address)
     assert.equal(escrowedTokens.toNumber(), tokenAmount, 'Tokens not escrowed')
+  })
+
+  it('should support ERC165 interface', async function () {
+    expect(await testBridge.supportsInterface('0x01ffc9a7')).is.true
+    expect(await testBridge.supportsInterface('0xffffffff')).is.false
+  })
+
+  it('should support outboundTransferCustomRefund interface', async function () {
+    // 4fb1a07b  =>  outboundTransferCustomRefund(address,address,address,uint256,uint256,uint256,bytes)
+    expect(await testBridge.supportsInterface('0x4fb1a07b')).is.true
   })
 })

@@ -4,7 +4,7 @@ title: AnyTrust Chains
 sidebar_label: AnyTrust Chains
 ---
 
-AnyTrust chains are an Arbitrum chain type, distinct from Arbitrum Rollup chains. The Arbitrum One mainnet chain (chain ID 42161) is — and will always be — a rollup chain; soon, Offchain Labs will be opening up the first public AnyTrust chain testnet (followed by mainnet!)
+AnyTrust chains are an Arbitrum chain type, distinct from Arbitrum Rollup chains. The Arbitrum One mainnet chain (chain ID 42161) is — and will always be — a rollup chain. The first AnyTrust chain — Arbitrum Nova, is currently [live on mainnet](https://medium.com/offchainlabs/its-time-for-a-new-dawn-nova-is-open-to-the-public-a081df1e4ad2); see [Public Chains](Public_Chains.md) for chain details.
 
 The fundamental tradeoff between Rollup and AnyTrust is decentralization vs. transaction costs: Rollup chains inherit their security directly from layer 1 without introducing new trust assumptions, whereas AnyTrust chains introduce their own security assumption, and are thus able to charge users lower fees.
 
