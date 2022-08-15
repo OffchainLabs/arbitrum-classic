@@ -160,12 +160,14 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         }
 
         isShutdownForNitro = true;
+        emit ShutdownForNitroSet(true);
     }
 
     function undoShutdownForNitro() external {
         require(Rollup(payable(rollup)).owner() == msg.sender, "ONLY_ROLLUP_OWNER");
         require(isShutdownForNitro, "NOT_SHUTDOWN");
         isShutdownForNitro = false;
+        emit ShutdownForNitroSet(false);
     }
 
     function forceInclusionImpl(uint256 _totalDelayedMessagesRead, bytes32 delayedAcc) internal {
