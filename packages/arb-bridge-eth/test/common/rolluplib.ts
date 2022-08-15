@@ -244,8 +244,8 @@ export class RollupContract {
       prevNode = parentNode
     }
     const isChild =
-      challengeHash(prevNode.assertion.afterState) ==
-      challengeHash(assertion.beforeState)
+      challengeHash(prevNode.assertion.afterState).toString() ===
+      challengeHash(assertion.beforeState).toString()
     const newNodeHash = ethers.utils.solidityKeccak256(
       ['bool', 'bytes32', 'bytes32', 'bytes32'],
       [

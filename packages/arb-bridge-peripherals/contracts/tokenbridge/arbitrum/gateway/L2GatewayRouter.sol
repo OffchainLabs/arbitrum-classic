@@ -30,8 +30,7 @@ import "arb-bridge-eth/contracts/libraries/AddressAliasHelper.sol";
 contract L2GatewayRouter is GatewayRouter, L2ArbitrumMessenger {
     modifier onlyCounterpartGateway() override {
         require(
-            msg.sender == counterpartGateway ||
-                AddressAliasHelper.undoL1ToL2Alias(msg.sender) == counterpartGateway,
+            msg.sender == AddressAliasHelper.applyL1ToL2Alias(counterpartGateway),
             "ONLY_COUNTERPART_GATEWAY"
         );
         _;

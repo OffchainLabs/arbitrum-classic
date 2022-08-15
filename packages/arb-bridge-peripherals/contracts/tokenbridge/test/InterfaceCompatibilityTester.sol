@@ -38,6 +38,9 @@ import "arb-bridge-eth/contracts/validator/IGasRefunder.sol";
 
 import "../arbitrum/IArbToken.sol";
 import "../ethereum/ICustomToken.sol";
+import "../ethereum/gateway/IL1ArbitrumGateway.sol";
+import "../ethereum/gateway/IL1GatewayRouter.sol";
 import "../libraries/IWETH9.sol";
+import "../libraries/IERC165.sol";
 import "../libraries/gateway/ICustomGateway.sol";
 import "../libraries/gateway/ITokenGateway.sol";
