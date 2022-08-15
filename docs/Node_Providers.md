@@ -24,9 +24,11 @@ Infura provides access to Arbitrum across all their subscription plans (Core Fre
 
 ## [QuickNode](https://www.quicknode.com/)
 
-QuickNode supports both Arbitrum One (Mainnet) and Rinkeby testnet and allows users to interact with these chains. For a full guide of how to set up an Arbitrum node on QuickNode, see the [QuickNode's Arbitrum RPC documentation](https://www.quicknode.com/docs/arbitrum).
+QuickNode supports Arbitrum One Mainnet, Goerli and Rinkeby testnet, as well as Arbitrum Nova Mainnet, and allows users to interact with these chains.
 
-Quicknode provides 300k Arbitrum requests per month at a rate of $9 / month.
+For a full guide of how to use an Arbitrum node on QuickNode, see the [QuickNode's Arbitrum](https://www.quicknode.com/docs/arbitrum) and [Quicknode's Arbitrum Nova documentation](https://www.quicknode.com/docs/arbitrum-nova).
+
+[Quicknode](https://www.quicknode.com/accounts/new-signup) provides 10 million API credits per month for Arbitrum for free.
 
 ## [Moralis](https://moralis.io/)
 
