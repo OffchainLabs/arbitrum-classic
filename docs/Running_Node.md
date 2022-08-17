@@ -10,7 +10,7 @@ Note: If you’re interested in accessing the Arbitrum network but you don’t w
 
 ### Required Artifacts
 
-- Latest Docker Image: offchainlabs/arb-node:v1.4.0-f4bbe91
+- Latest Docker Image: offchainlabs/arb-node:v1.4.1-h9180527
 
 ### Required parameter
 
@@ -28,11 +28,11 @@ Note: If you’re interested in accessing the Arbitrum network but you don’t w
 - When running docker image, an external volume should be mounted to persist the database across restarts. The mount point should be `/home/user/.arbitrum/mainnet` or `/home/user/.arbitrum/rinkeby` depending on what chain you are connecting to.
 - Here is an example of how to run arb-node for mainnet:
   ```
-  docker run --rm -it  -v /some/local/dir/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.4.0-f4bbe91 --l1.url https://l1-node:8545
+  docker run --rm -it  -v /some/local/dir/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.4.1-h9180527 --l1.url https://l1-node:8545
   ```
 - Here is an example of how to run arb-node for rinkeby, disabling feed to reduce log error messages (only good for archive requests on pre-Nitro blocks, so probably want to enable archive as well):
   ```
-  docker run --rm -it  -v /some/local/dir/arbitrum-rinkeby/:/home/user/.arbitrum/rinkeby -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.4.0-f4bbe91 --l1.url https://l1-rinkeby-node:8545 --feed.input.url=""
+  docker run --rm -it  -v /some/local/dir/arbitrum-rinkeby/:/home/user/.arbitrum/rinkeby -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.4.1-h9180527 --l1.url https://l1-rinkeby-node:8545 --feed.input.url=""
   ```
 
 ### Note on permissions
@@ -80,9 +80,9 @@ Note: If you’re interested in accessing the Arbitrum network but you don’t w
 - Note that rinkeby testnet has been upgraded to Nitro, so rinkeby feed messages cannot be parsed by the classic node and classic relay is not required.
 - Here is an example of how to run arb-relay for mainnet:
   ```
-  docker run --rm -it  -v /some/local/dir/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:9642:9642 --entrypoint /home/user/go/bin/arb-relay offchainlabs/arb-node:v1.4.0-f4bbe91 --feed.input.url wss://arb1.arbitrum.io/feed
+  docker run --rm -it  -v /some/local/dir/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:9642:9642 --entrypoint /home/user/go/bin/arb-relay offchainlabs/arb-node:v1.4.1-h9180527 --feed.input.url wss://arb1.arbitrum.io/feed
   ```
 - Here is an example of how to run arb-node for mainnet with custom relay:
   ```
-  docker run --rm -it  -v /some/local/dir/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.4.0-f4bbe91 --l1.url https://l1-node:8545 --feed.input.url ws://local-relay-address:9642
+  docker run --rm -it  -v /some/local/dir/arbitrum-mainnet/:/home/user/.arbitrum/mainnet -p 0.0.0.0:8547:8547 -p 0.0.0.0:8548:8548 offchainlabs/arb-node:v1.4.1-h9180527 --l1.url https://l1-node:8545 --feed.input.url ws://local-relay-address:9642
   ```
