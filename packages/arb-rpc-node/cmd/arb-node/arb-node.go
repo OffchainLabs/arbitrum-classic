@@ -288,7 +288,7 @@ func startup() error {
 
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
 	broadcastClientErrChan := make(chan error)
-	if len(config.Feed.Input.URLs) == 0 {
+	if len(config.Feed.Input.URLs) == 0 || len(config.Feed.Input.URLs[0]) == 0 {
 		logger.Warn().Msg("Missing --feed.input.url so not subscribing to feed")
 	} else if config.Node.Type() == configuration.ValidatorNodeType {
 		logger.Info().Msg("Ignoring feed because running as validator")
