@@ -157,6 +157,11 @@ func (ir *InboxReader) GetSequencerInboxWatcher() *ethbridge.SequencerInboxWatch
 }
 
 func (ir *InboxReader) isValidSignature(ctx context.Context, message broadcaster.BroadcastFeedMessage) bool {
+	if message.FeedItem.BatchItem.SequencerMessage == nil {
+		// Nitro feed message, ignore
+		return false
+	}
+
 	accHash := hashing.SoliditySHA3WithPrefix(hashing.Bytes32(message.FeedItem.BatchItem.Accumulator))
 	sigPublicKey, err := crypto.SigToPub(accHash.Bytes(), message.Signature)
 	if err != nil {
