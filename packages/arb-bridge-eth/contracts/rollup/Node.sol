@@ -146,7 +146,7 @@ contract Node is Cloneable, INode {
         require(block.number >= deadlineBlock(), "BEFORE_DEADLINE");
     }
 
-    function isNitroReady() external pure returns (uint256) {
+    function isNitroReady() external pure override returns (uint256) {
         return NitroReadyMagicNums.NODE_BEACON;
     }
 
