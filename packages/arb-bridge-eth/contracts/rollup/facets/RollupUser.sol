@@ -4,6 +4,7 @@ pragma solidity ^0.6.11;
 
 import "../Rollup.sol";
 import "./IRollupFacets.sol";
+import { NitroReadyMagicNums } from "../../bridge/NitroMigratorUtil.sol";
 
 abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     function initialize(address _stakeToken) public virtual override;
@@ -565,8 +566,8 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         require(currentChallenge(stakerAddress) == address(0), "IN_CHAL");
     }
 
-    function isNitroReady() external pure returns (uint8) {
-        return uint8(0xa4b1);
+    function isNitroReady() external pure returns (uint256) {
+        return NitroReadyMagicNums.ROLLUP_USER;
     }
 
     function withdrawStakerFunds(address payable destination) external virtual returns (uint256);

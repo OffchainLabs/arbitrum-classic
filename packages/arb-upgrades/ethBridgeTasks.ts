@@ -203,8 +203,6 @@ task('configure-migration', 'configure nitro migrator contract')
       data.contracts.SequencerInbox.proxyAddress,
       data.contracts.Bridge.proxyAddress,
       data.contracts.RollupEventBridge.proxyAddress,
-      data.contracts.OldOutbox.proxyAddress,
-      data.contracts.Outbox.proxyAddress,
       data.contracts.Rollup.proxyAddress,
       oldProxyAdmin,
       args.nitrorollupproxy,

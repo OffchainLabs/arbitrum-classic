@@ -269,7 +269,7 @@ const maxTxDataSize int = 100_000
 
 func (b *SequencerBatcher) SendTransaction(startCtx context.Context, startTx *types.Transaction) error {
 	if b.config.Node.Sequencer.Dangerous.DisableUserMessageSequencing {
-		return errors.New("user transaction sequencing disabled")
+		return errors.New("Arbitrum is temporarily unavailable while migrating to Nitro")
 	}
 
 	_, err := types.Sender(b.signer, startTx)

@@ -57,8 +57,6 @@ interface IBridge {
 
     function setOutbox(address inbox, bool enabled) external;
 
-    function setReplacementBridge(address newReplacementBridge) external;
-
     // View functions
 
     function activeOutbox() external view returns (address);
@@ -70,4 +68,6 @@ interface IBridge {
     function inboxAccs(uint256 index) external view returns (bytes32);
 
     function messageCount() external view returns (uint256);
+
+    function isNitroReady() external view returns (uint256);
 }

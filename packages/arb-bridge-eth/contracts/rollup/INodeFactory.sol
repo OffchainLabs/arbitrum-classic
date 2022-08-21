@@ -27,4 +27,6 @@ interface INodeFactory {
         uint256 _prev,
         uint256 _deadlineBlock
     ) external returns (address);
+
+    function beacon() external view returns (address);
 }

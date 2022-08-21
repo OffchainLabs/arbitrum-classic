@@ -46,8 +46,8 @@ export class NitroMigrationManager {
 
   public static async deploy(
     nitroDeployer: Signer,
-    log: boolean = true,
-    skipStep3Check: boolean = false
+    log = true,
+    skipStep3Check = false
   ) {
     if (log)
       console.log(`Proxy admin owner: ${await nitroDeployer.getAddress()}`)
@@ -516,7 +516,7 @@ export class NitroMigrationManager {
     // wait until the node has confirmed the remaining nodes
     const rollupAddr = await this.migrator.rollup()
     const rollup = RollupUserFacet__factory.connect(rollupAddr, this.provider)
-    while (true) {
+    for (;;) {
       const latestConfirmed = await rollup.latestConfirmed()
       const latestNodeCreated = await rollup.latestNodeCreated()
 
