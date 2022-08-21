@@ -57,7 +57,7 @@ const config = {
       url: 'http://127.0.0.1:8545/',
     },
     shadowfork: {
-      url: 'http://127.0.0.1:8545/',
+      url: 'http://127.0.0.1:8445/',
       accounts: process.env['SHADOWFORK_PRIVKEY']
         ? [process.env['SHADOWFORK_PRIVKEY']]
         : [],
