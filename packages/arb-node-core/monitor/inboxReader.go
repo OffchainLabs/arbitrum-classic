@@ -157,7 +157,7 @@ func (ir *InboxReader) GetSequencerInboxWatcher() *ethbridge.SequencerInboxWatch
 }
 
 func (ir *InboxReader) isValidSignature(ctx context.Context, message broadcaster.BroadcastFeedMessage) bool {
-	if message.FeedItem.BatchItem.SequencerMessage == nil {
+	if message.FeedItem.BatchItem.Accumulator.Equals(common.Hash{}) {
 		// Nitro feed message, ignore
 		return false
 	}
