@@ -17,3 +17,4 @@ const func: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
 module.exports = func
 module.exports.tags = ['NitroMigratorProxy', 'live']
+module.exports.dependencies = ['NitroMigrator', 'NitroMigratorProxyAdmin']
