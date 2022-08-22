@@ -18,14 +18,16 @@ package monitor
 
 import (
 	"context"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
 	"math/big"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
+
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-avm-cpp/cmachine"
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/ethbridge"
@@ -125,15 +127,16 @@ func (m *Monitor) StartInboxReader(
 	}
 	creationEvent, err := rollup.LookupCreation(ctx)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "error checking initial chain state")
-	}
-	initialExecutionCursor, err := m.Core.GetExecutionCursor(big.NewInt(0), true)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "error loading initial ArbCore machine")
-	}
-	initialMachineHash := initialExecutionCursor.MachineHash()
-	if initialMachineHash != creationEvent.MachineHash {
-		return nil, nil, errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(creationEvent.MachineHash[:]), initialMachineHash)
+		log.Warn("error checking initial chain state", "err", err)
+	} else {
+		initialExecutionCursor, err := m.Core.GetExecutionCursor(big.NewInt(0), true)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "error loading initial ArbCore machine")
+		}
+		initialMachineHash := initialExecutionCursor.MachineHash()
+		if initialMachineHash != creationEvent.MachineHash {
+			return nil, nil, errors.Errorf("Initial machine hash loaded from arbos.mexe doesn't match chain's initial machine hash: chain %v, arbCore %v", hexutil.Encode(creationEvent.MachineHash[:]), initialMachineHash)
+		}
 	}
 
 	delayedBridgeAddress, err := rollup.DelayedBridge(ctx)
