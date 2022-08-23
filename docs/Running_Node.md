@@ -50,7 +50,7 @@ Note: If you’re interested in accessing the Arbitrum network but you don’t w
 ### Optional parameters
 
 - `--feed.input.url=<feed address>`
-  - Will default to `https://arb1.arbitrum.io/feed` or `https://rinkeby.arbitrum.io/feed` depending on chain ID reported by ethereum node provided. If running more than a couple nodes, you will want to provide one feed relay per datacenter, see further instructions below.
+  - Will default to `wss://arb1.arbitrum.io/feed` or `wss://rinkeby.arbitrum.io/feed` depending on chain ID reported by ethereum node provided. If running more than a couple nodes, you will want to provide one feed relay per datacenter, see further instructions below.
 - `--node.forwarder.target=<sequencer RPC>`
   - Will default to `https://arb1.arbitrum.io/rpc` when chain ID reported by ethereum node is 1 (mainnet), but needs to be manually set to empty string (`""`) for Rinkeby testnet.
 - `--core.cache.timed-expire`
