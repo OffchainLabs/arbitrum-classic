@@ -318,7 +318,7 @@ func startup() error {
 	plugins["evm"] = dev.NewEVM(backend)
 
 	rpcConfig := web3.DefaultConfig
-	rpcConfig.Mode = web3.GanacheMode
+	rpcConfig.Mode = configuration.GanacheRpcMode
 	rpcConfig.Tracing.Enable = true
 	rpcConfig.Tracing.Namespace = *tracingNamespace
 
