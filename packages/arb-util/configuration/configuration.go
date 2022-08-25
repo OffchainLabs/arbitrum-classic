@@ -449,8 +449,7 @@ type Config struct {
 		URL     string `koanf:"url"`
 	} `koanf:"l1"`
 	L2 struct {
-		ChainID         uint64 `koanf:"chain-id"`
-		DisableUpstream bool   `koanf:"disable-upstream"`
+		DisableUpstream bool `koanf:"disable-upstream"`
 	} `koanf:"l2"`
 	Log           Log        `koanf:"log"`
 	Node          Node       `koanf:"node"`
@@ -882,6 +881,7 @@ func resolveDirectoryNames(out *Config, wallet *Wallet) error {
 func ParseRelay() (*Config, error) {
 	f := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 
+	f.Uint64("node.chain-id", 0, "chain id of the arbitrum chain")
 	AddFeedOutputOptions(f)
 
 	k, err := beginCommonParse(f)
@@ -998,7 +998,6 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.String("log.rpc", "info", "log level for rpc")
 	f.String("log.core", "info", "log level for general arb node logging")
 
-	f.Uint64("l2.chain-id", 0, "if set other than 0, will be used to validate L2 feed connection")
 	f.Bool("l2.disable-upstream", false, "disable feed and transaction forwarding")
 
 	f.Bool("pprof-enable", false, "enable profiling server")
