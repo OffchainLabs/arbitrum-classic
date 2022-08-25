@@ -79,6 +79,17 @@ contract NitroMigrator is OwnableUpgradeable, IMessageProvider {
     }
     NitroMigrationSteps public latestCompleteStep;
 
+    event DeploymentConfigured(RollupAdminFacet classicRollup, INitroRollup nitroRollup);
+    event Step1Executed();
+    event Step2Executed(uint256 finalNodeNum, bool destroyAlternatives, bool destroyChallenges);
+    event Step3Executed(
+        uint256 nitroGenesisBlockNum,
+        bytes32 nitroGenesisBlockHash,
+        bool skipCheck
+    );
+    event ArbitraryCallExecuted(address destination, bytes data, uint256 amount);
+    event OtherContractOwnershipTransferred(Ownable ownable, address newOwner);
+
     function initialize() external initializer {
         __Ownable_init();
         latestCompleteStep = NitroMigrationSteps.Uninitialized;
@@ -153,6 +164,7 @@ contract NitroMigrator is OwnableUpgradeable, IMessageProvider {
         }
 
         latestCompleteStep = NitroMigrationSteps.Step0;
+        emit DeploymentConfigured(rollup, nitroRollup);
     }
 
     /// @dev this assumes this contract owns the rollup/inboxes/bridge before this function is called (else it will revert)
@@ -207,6 +219,7 @@ contract NitroMigrator is OwnableUpgradeable, IMessageProvider {
 
         // we don't remove permissions from gas refunder to current sequencer inbox as that can be handled independently from the upgrade
         latestCompleteStep = NitroMigrationSteps.Step1;
+        emit Step1Executed();
     }
 
     /// @dev this assumes step 1 has executed succesfully and that a validator has made the final assertion that includes the inbox shutdownForNitro
@@ -218,6 +231,7 @@ contract NitroMigrator is OwnableUpgradeable, IMessageProvider {
         require(latestCompleteStep == NitroMigrationSteps.Step1, "WRONG_STEP");
         rollup.shutdownForNitro(finalNodeNum, destroyAlternatives, destroyChallenges);
         latestCompleteStep = NitroMigrationSteps.Step2;
+        emit Step2Executed(finalNodeNum, destroyAlternatives, destroyChallenges);
     }
 
     // CHRIS: TODO: remove skipCheck
@@ -292,6 +306,7 @@ contract NitroMigrator is OwnableUpgradeable, IMessageProvider {
         nitroRollup.setOwner(address(nitroProxyAdminOwner));
 
         latestCompleteStep = NitroMigrationSteps.Step3;
+        emit Step3Executed(nitroGenesisBlockNumber, nitroGenesisHash, skipCheck);
     }
 
     /// @dev allows the owner to do arbitrary calls. This is useful in case an unexpected event
@@ -314,10 +329,12 @@ contract NitroMigrator is OwnableUpgradeable, IMessageProvider {
                 revert(ptr, size)
             }
         }
+        emit ArbitraryCallExecuted(destination, data, amount);
     }
 
     function transferOtherContractOwnership(Ownable ownable, address newOwner) external onlyOwner {
         ownable.transferOwnership(newOwner);
+        emit OtherContractOwnershipTransferred(ownable, newOwner);
     }
 
     uint8 internal constant L2_MSG = 3;
