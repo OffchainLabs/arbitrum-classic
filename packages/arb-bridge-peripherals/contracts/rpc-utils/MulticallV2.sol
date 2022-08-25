@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// solhint-disable-next-line compiler-version
 pragma solidity >=0.5.0;
 pragma experimental ABIEncoderV2;
 
@@ -175,7 +176,7 @@ contract ArbMulticall2 {
     }
 
     function getLastBlockHash() public view returns (bytes32 blockHash) {
-        blockHash = blockhash(ArbSys(address(100)).arbBlockNumber() - 1);
+        blockHash = blockhash(block.number - 1);
     }
 
     function tryAggregate(bool requireSuccess, Call[] memory calls)
@@ -203,7 +204,7 @@ contract ArbMulticall2 {
         )
     {
         blockNumber = ArbSys(address(100)).arbBlockNumber();
-        blockHash = blockhash(ArbSys(address(100)).arbBlockNumber());
+        blockHash = blockhash(block.number);
         returnData = tryAggregate(requireSuccess, calls);
     }
 }

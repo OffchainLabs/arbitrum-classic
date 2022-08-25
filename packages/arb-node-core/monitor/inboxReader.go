@@ -157,6 +157,11 @@ func (ir *InboxReader) GetSequencerInboxWatcher() *ethbridge.SequencerInboxWatch
 }
 
 func (ir *InboxReader) isValidSignature(ctx context.Context, message broadcaster.BroadcastFeedMessage) bool {
+	if message.FeedItem.BatchItem.Accumulator.Equals(common.Hash{}) {
+		// Nitro feed message, ignore
+		return false
+	}
+
 	accHash := hashing.SoliditySHA3WithPrefix(hashing.Bytes32(message.FeedItem.BatchItem.Accumulator))
 	sigPublicKey, err := crypto.SigToPub(accHash.Bytes(), message.Signature)
 	if err != nil {
@@ -277,7 +282,11 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 				}
 			}
 			if from.Cmp(currentHeight) >= 0 {
-				break
+				if reorgingDelayed || reorgingSequencer {
+					from = new(big.Int).Sub(currentHeight, new(big.Int).SetUint64(blocksToFetch))
+				} else {
+					break
+				}
 			}
 			to := new(big.Int).Add(from, new(big.Int).SetUint64(blocksToFetch))
 			if to.Cmp(currentHeight) > 0 {
@@ -291,15 +300,20 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 			if err != nil {
 				return err
 			}
-			if ir.caughtUpTarget == nil && to.Cmp(currentHeight) == 0 {
+			if to.Cmp(currentHeight) == 0 && !reorgingDelayed && !reorgingSequencer {
+				var newCaughtUpTarget *big.Int
 				if len(sequencerBatches) > 0 {
-					ir.caughtUpTarget = sequencerBatches[len(sequencerBatches)-1].GetAfterCount()
+					newCaughtUpTarget = sequencerBatches[len(sequencerBatches)-1].GetAfterCount()
 				} else {
 					dbMessageCount, err := ir.db.GetMessageCount()
 					if err != nil {
 						return err
 					}
-					ir.caughtUpTarget = dbMessageCount
+					newCaughtUpTarget = dbMessageCount
+				}
+				// Only let the caught up target decrease (to avoid perpetually being not caught up)
+				if ir.caughtUpTarget == nil || newCaughtUpTarget.Cmp(ir.caughtUpTarget) < 0 {
+					ir.caughtUpTarget = newCaughtUpTarget
 				}
 			}
 			if len(sequencerBatches) > 0 {

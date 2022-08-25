@@ -288,7 +288,7 @@ func startup() error {
 
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
 	broadcastClientErrChan := make(chan error)
-	if len(config.Feed.Input.URLs) == 0 {
+	if len(config.Feed.Input.URLs) == 0 || len(config.Feed.Input.URLs[0]) == 0 {
 		logger.Warn().Msg("Missing --feed.input.url so not subscribing to feed")
 	} else if config.Node.Type() == configuration.ValidatorNodeType {
 		logger.Info().Msg("Ignoring feed because running as validator")
@@ -411,44 +411,46 @@ func startup() error {
 	var batch batcher.TransactionBatcher
 	var broadcasterErrChan chan error
 	errChan := make(chan error, 1)
-	for {
-		batch, broadcasterErrChan, err = rpc.SetupBatcher(
-			ctx,
-			l1Client,
-			rollupAddress,
-			l2ChainId,
-			db,
-			time.Duration(config.Node.Aggregator.MaxBatchTime)*time.Second,
-			batcherMode,
-			dataSigner,
-			config,
-			walletConfig,
-		)
-		lockoutConf := config.Node.Sequencer.Lockout
-		if err == nil {
-			seqBatcher, ok := batch.(*batcher.SequencerBatcher)
-			if lockoutConf.Redis != "" {
-				// Setup the lockout. This will take care of the initial delayed sequence.
-				batch, err = rpc.SetupLockout(ctx, seqBatcher, mon.Core, inboxReader, lockoutConf, errChan)
-			} else if ok {
-				// Ensure we sequence delayed messages before opening the RPC.
-				err = seqBatcher.SequenceDelayedMessages(ctx, false)
+	if config.Node.Forwarder.Target != "" {
+		for {
+			batch, broadcasterErrChan, err = rpc.SetupBatcher(
+				ctx,
+				l1Client,
+				rollupAddress,
+				l2ChainId,
+				db,
+				time.Duration(config.Node.Aggregator.MaxBatchTime)*time.Second,
+				batcherMode,
+				dataSigner,
+				config,
+				walletConfig,
+			)
+			lockoutConf := config.Node.Sequencer.Lockout
+			if err == nil {
+				seqBatcher, ok := batch.(*batcher.SequencerBatcher)
+				if lockoutConf.Redis != "" {
+					// Setup the lockout. This will take care of the initial delayed sequence.
+					batch, err = rpc.SetupLockout(ctx, seqBatcher, mon.Core, inboxReader, lockoutConf, errChan)
+				} else if ok {
+					// Ensure we sequence delayed messages before opening the RPC.
+					err = seqBatcher.SequenceDelayedMessages(ctx, false)
+				}
 			}
-		}
-		if err == nil {
-			go batch.Start(ctx)
-			break
-		}
-		if common.IsFatalError(err) {
-			logger.Error().Err(err).Msg("aborting inbox reader start")
-			break
-		}
-		logger.Warn().Err(err).Msg("failed to setup batcher, waiting and retrying")
+			if err == nil {
+				go batch.Start(ctx)
+				break
+			}
+			if common.IsFatalError(err) {
+				logger.Error().Err(err).Msg("aborting inbox reader start")
+				break
+			}
+			logger.Warn().Err(err).Msg("failed to setup batcher, waiting and retrying")
 
-		select {
-		case <-ctx.Done():
-			return errors.New("ctx cancelled setup batcher")
-		case <-time.After(5 * time.Second):
+			select {
+			case <-ctx.Done():
+				return errors.New("ctx cancelled setup batcher")
+			case <-time.After(5 * time.Second):
+			}
 		}
 	}
 

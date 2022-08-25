@@ -13,7 +13,7 @@
   },
   "homepage": "https://offchainlabs.com/",
   "scripts": {
-    "audit:ci": "audit-ci -l -a 1006805 1006806 1006865 1006896 1006899",
+    "audit:ci": "audit-ci -l -a 1067409 1067487 1067486",
     "install:deps": "./scripts/install-deps",
     "install:validator": "./scripts/install-validator",
     "update:abi": "yarn go:generate",

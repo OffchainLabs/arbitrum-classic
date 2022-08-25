@@ -1,7 +1,7 @@
 cache
 coverage
 build
-deployments
+_deployments
 dist
 test/proofs
 test/challenges

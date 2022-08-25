@@ -21,6 +21,7 @@
 
 #include <boost/filesystem.hpp>
 
+#include <fstream>
 #include <iostream>
 #include <string>
 
