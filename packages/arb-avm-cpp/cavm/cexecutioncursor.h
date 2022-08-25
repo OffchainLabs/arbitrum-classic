@@ -42,6 +42,8 @@ Uint256Result executionCursorTotalSendCount(
     CExecutionCursor* execution_cursor_ptr);
 Uint256Result executionCursorTotalLogCount(
     CExecutionCursor* execution_cursor_ptr);
+Uint256Result executionCursorL2BlockNumber(
+    CExecutionCursor* execution_cursor_ptr);
 
 #ifdef __cplusplus
 }

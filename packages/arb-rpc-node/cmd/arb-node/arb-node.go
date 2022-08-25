@@ -20,20 +20,23 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
-	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 	"io/ioutil"
 	golog "log"
 	"math/big"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"path"
+	"path/filepath"
 	"strings"
 	"time"
+
+	ethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/offchainlabs/arbitrum/packages/arb-node-core/staker"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/arblog"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethbridgecontracts"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/ethutils"
+	"github.com/offchainlabs/arbitrum/packages/arb-util/transactauth"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -50,6 +53,7 @@ import (
 	"github.com/offchainlabs/arbitrum/packages/arb-node-core/nodehealth"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/aggregator"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/batcher"
+	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/nitroexport"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/rpc"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/web3"
@@ -284,7 +288,7 @@ func startup() error {
 
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
 	broadcastClientErrChan := make(chan error)
-	if len(config.Feed.Input.URLs) == 0 {
+	if len(config.Feed.Input.URLs) == 0 || len(config.Feed.Input.URLs[0]) == 0 {
 		logger.Warn().Msg("Missing --feed.input.url so not subscribing to feed")
 	} else if config.Node.Type() == configuration.ValidatorNodeType {
 		logger.Info().Msg("Ignoring feed because running as validator")
@@ -407,50 +411,68 @@ func startup() error {
 	var batch batcher.TransactionBatcher
 	var broadcasterErrChan chan error
 	errChan := make(chan error, 1)
-	for {
-		batch, broadcasterErrChan, err = rpc.SetupBatcher(
-			ctx,
-			l1Client,
-			rollupAddress,
-			l2ChainId,
-			db,
-			time.Duration(config.Node.Aggregator.MaxBatchTime)*time.Second,
-			batcherMode,
-			dataSigner,
-			config,
-			walletConfig,
-		)
-		lockoutConf := config.Node.Sequencer.Lockout
-		if err == nil {
-			seqBatcher, ok := batch.(*batcher.SequencerBatcher)
-			if lockoutConf.Redis != "" {
-				// Setup the lockout. This will take care of the initial delayed sequence.
-				batch, err = rpc.SetupLockout(ctx, seqBatcher, mon.Core, inboxReader, lockoutConf, errChan)
-			} else if ok {
-				// Ensure we sequence delayed messages before opening the RPC.
-				err = seqBatcher.SequenceDelayedMessages(ctx, false)
+	if config.Node.Forwarder.Target != "" {
+		for {
+			batch, broadcasterErrChan, err = rpc.SetupBatcher(
+				ctx,
+				l1Client,
+				rollupAddress,
+				l2ChainId,
+				db,
+				time.Duration(config.Node.Aggregator.MaxBatchTime)*time.Second,
+				batcherMode,
+				dataSigner,
+				config,
+				walletConfig,
+			)
+			lockoutConf := config.Node.Sequencer.Lockout
+			if err == nil {
+				seqBatcher, ok := batch.(*batcher.SequencerBatcher)
+				if lockoutConf.Redis != "" {
+					// Setup the lockout. This will take care of the initial delayed sequence.
+					batch, err = rpc.SetupLockout(ctx, seqBatcher, mon.Core, inboxReader, lockoutConf, errChan)
+				} else if ok {
+					// Ensure we sequence delayed messages before opening the RPC.
+					err = seqBatcher.SequenceDelayedMessages(ctx, false)
+				}
 			}
-		}
-		if err == nil {
-			go batch.Start(ctx)
-			break
-		}
-		if common.IsFatalError(err) {
-			logger.Error().Err(err).Msg("aborting inbox reader start")
-			break
-		}
-		logger.Warn().Err(err).Msg("failed to setup batcher, waiting and retrying")
+			if err == nil {
+				go batch.Start(ctx)
+				break
+			}
+			if common.IsFatalError(err) {
+				logger.Error().Err(err).Msg("aborting inbox reader start")
+				break
+			}
+			logger.Warn().Err(err).Msg("failed to setup batcher, waiting and retrying")
 
-		select {
-		case <-ctx.Done():
-			return errors.New("ctx cancelled setup batcher")
-		case <-time.After(5 * time.Second):
+			select {
+			case <-ctx.Done():
+				return errors.New("ctx cancelled setup batcher")
+			case <-time.After(5 * time.Second):
+			}
 		}
 	}
 
 	var web3InboxReaderRef *monitor.InboxReader
 	if config.Node.RPC.EnableL1Calls {
 		web3InboxReaderRef = inboxReader
+	}
+
+	plugins := make(map[string]interface{})
+	if config.Node.RPC.NitroExport.Enable {
+		basedir := config.Node.RPC.NitroExport.BaseDir
+		if basedir == "" {
+			basedir = "nitroexport"
+		}
+		if !filepath.IsAbs(basedir) {
+			basedir = path.Join(config.Persistent.Chain, basedir)
+		}
+		exportServer, err := nitroexport.NewExportRPCServer(ctx, db, mon.Core, basedir)
+		if err != nil {
+			return err
+		}
+		plugins["arb"] = exportServer
 	}
 
 	srv := aggregator.NewServer(batch, l2ChainId, db)
@@ -460,7 +482,7 @@ func startup() error {
 		Tracing:       config.Node.RPC.Tracing,
 		DevopsStubs:   config.Node.RPC.EnableDevopsStubs,
 	}
-	web3Server, err := web3.GenerateWeb3Server(srv, nil, serverConfig, mon.CoreConfig, nil, web3InboxReaderRef)
+	web3Server, err := web3.GenerateWeb3Server(srv, nil, serverConfig, mon.CoreConfig, plugins, web3InboxReaderRef)
 	if err != nil {
 		return err
 	}

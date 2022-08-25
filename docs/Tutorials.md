@@ -19,12 +19,32 @@ It includes:
 
 And more!
 
-Our partners [Alchemy](https://alchemy.com/?a=arbitrum-docs) and [Web3 University](https://web3.university) provide a number of useful tutorials on building smart contracts and client applications in the Ethereum ecosystem. All of the following projects will work equivalently with the Arbitrum ecosystem simply by swapping out the deploying network to be arb-mainnet or arb-rinkeby.
+Our partners across the ecosystem provide a number of useful tutorials on building smart contracts and client applications in the Ethereum ecosystem. All of the following projects will work equivalently with the Arbitrum ecosystem simply by swapping out the deploying network to be arb-mainnet or arb-rinkeby.
 
-- ✅ [How to Get the Latest Block on Ethereum](https://docs.alchemy.com/alchemy/introduction/getting-started/simple-web3-script)
+- [Alchemy](https://alchemy.com/?a=arbitrum-docs) 
 
-- ✅ [How to Send Transactions on Ethereum](https://docs.alchemy.com/alchemy/introduction/getting-started/sending-txs)
+    - ✅ [How to Get the Latest Block on Ethereum](https://docs.alchemy.com/alchemy/introduction/getting-started/simple-web3-script)
+    
+    - ✅ [How to Send Transactions on Ethereum](https://docs.alchemy.com/alchemy/introduction/getting-started/sending-txs)
 
-- ✅ [Create Your First Smart Contract](https://www.web3.university/tracks/create-a-smart-contract)
+- [Infura](https://docs.infura.io/infura/networks/arbitrum)
 
-- ✅ [How to Build Your First NFT](https://www.web3.university/tracks/build-your-first-nft)
+    - ✅ [Send a Transaction](https://docs.infura.io/infura/tutorials/ethereum/send-a-transaction)
+
+    - ✅ [Create an NFT Using Truffle](https://docs.infura.io/infura/tutorials/ethereum/create-an-nft-using-truffle)
+
+- [QuickNode](https://www.quicknode.com/docs/arbitrum)
+
+    - ✅ [How to Write an Ethereum Smart Contract](https://www.quicknode.com/guides/solidity/how-to-write-an-ethereum-smart-contract-using-solidity)
+
+    - ✅ [Create and Deploy an ERC-721](https://www.quicknode.com/guides/solidity/how-to-create-and-deploy-an-erc-721-nft)
+
+- [Web3 University](https://web3.university) 
+
+    - ✅ [Create Your First Smart Contract](https://www.web3.university/tracks/create-a-smart-contract)
+    
+    - ✅ [How to Build Your First NFT](https://www.web3.university/tracks/build-your-first-nft)
+
+
+
+
