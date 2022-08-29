@@ -330,3 +330,12 @@ func (r *RollupWatcher) GetNode(ctx context.Context, node core.NodeID) (*NodeWat
 	}
 	return NewNodeWatcher(nodeAddress, r.client, r.baseCallOpts)
 }
+
+func (r *RollupWatcher) IsShuttingDownForNitro(ctx context.Context) (bool, error) {
+	shuttingDownForNitro, err := r.con.ShutdownForNitroMode(r.getCallOpts(ctx))
+	if err != nil {
+		logger.Warn().Err(err).Msg("assuming not shutting down for nitro as we failed to check")
+		return false, nil
+	}
+	return shuttingDownForNitro, nil
+}
