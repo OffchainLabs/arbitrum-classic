@@ -81,9 +81,11 @@ contract L2WethGateway is L2ArbitrumGateway {
         address _l2TokenAddress,
         address _dest,
         uint256 _amount
-    ) internal override {
+    ) internal override returns (bool shouldWithdraw) {
+        // these are expected not to revert for reasons other than Out of Gas
         IWETH9(_l2TokenAddress).deposit{ value: _amount }();
         IERC20(_l2TokenAddress).safeTransfer(_dest, _amount);
+        return false;
     }
 
     function createOutboundTx(

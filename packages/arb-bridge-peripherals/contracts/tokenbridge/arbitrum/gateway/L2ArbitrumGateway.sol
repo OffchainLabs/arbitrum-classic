@@ -208,9 +208,15 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
         address _l2Address,
         address _dest,
         uint256 _amount
-    ) internal virtual {
+    ) internal virtual returns (bool shouldWithdraw) {
         // this method is virtual since different subclasses can handle escrow differently
-        IArbToken(_l2Address).bridgeMint(_dest, _amount);
+        try IArbToken(_l2Address).bridgeMint(_dest, _amount) {
+            //  mint was successful, so no need to trigger a withdrawal
+            return false;
+        } catch {
+            //  could have reverted out of gas or because of logic
+            return true;
+        }
     }
 
     /**
@@ -273,6 +279,11 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
                 }
             }
 
+            if (!shouldWithdraw) {
+                // attempt inbound escrow transfer
+                shouldWithdraw = inboundEscrowTransfer(expectedAddress, _to, _amount);
+            }
+
             if (shouldWithdraw) {
                 // we don't need the return value from triggerWithdrawal since this is forcing
                 // a withdrawal back to the L1 instead of composing with a L2 dapp
@@ -281,7 +292,6 @@ abstract contract L2ArbitrumGateway is L2ArbitrumMessenger, TokenGateway {
             }
         }
 
-        inboundEscrowTransfer(expectedAddress, _to, _amount);
         emit DepositFinalized(_token, _from, _to, _amount);
 
         return;
