@@ -75,7 +75,7 @@ Note: If you’re interested in accessing the Arbitrum network but you don’t w
 
 ### Arb-Relay
 
-- When running more than one node, you want to run a single arb-relay which can provide a feed for all your nodes.
+- When running more than one node, you want to run a single arb-relay per datacenter which can provide a feed for all your nodes, which will reduce ingress fees and increase stability.
   The arb-relay is in the same docker image.
 - Note that rinkeby testnet has been upgraded to Nitro, so rinkeby feed messages cannot be parsed by the classic node and classic relay is not required.
 - Note that arb-relay now requires the extra parameter `--node.chain-id=<L2 chain id>`
