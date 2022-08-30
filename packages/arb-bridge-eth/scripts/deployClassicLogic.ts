@@ -1,5 +1,6 @@
 import { Signer } from '@ethersproject/abstract-signer'
 import hre from 'hardhat'
+import * as fs from 'fs'
 import {
   RollupAdminFacet__factory,
   RollupUserFacet__factory,
@@ -12,12 +13,21 @@ import {
   Node__factory,
 } from '../build/types'
 
-if (!process.env['ETHERSCAN_API_KEY'])
-  throw new Error('Please set ETHERSCAN_API_KEY')
-
 const ADDR_ONE = '0x0000000000000000000000000000000000000001'
 
-const main = async () => {
+export interface LogicAddresses {
+  rollup: string
+  oldOutbox: string
+  outbox: string
+  rollupAdmin: string
+  rollupUser: string
+  bridge: string
+  inbox: string
+  sequencerInbox: string
+  node: string
+}
+
+async function deployContracts() {
   const accounts: Signer[] = await hre.ethers.getSigners()
 
   const RollupAdmin = new RollupAdminFacet__factory(accounts[0])
@@ -35,10 +45,6 @@ const main = async () => {
   await rollup.deployed()
   console.log(rollup.address)
 
-  await hre.run('verify:verify', {
-    address: rollup.address,
-    constructorArguments: [],
-  })
   // rollup constructor makes this not initializable
   // const rollupInit = await rollup.initialize(...)
   // await rollupInit.wait()
@@ -51,11 +57,6 @@ const main = async () => {
   const oldOutboxInit = await oldOutbox.initialize(ADDR_ONE, ADDR_ONE)
   await oldOutboxInit.wait()
 
-  await hre.run('verify:verify', {
-    address: oldOutbox.address,
-    constructorArguments: [],
-  })
-
   console.log('deploying Outbox')
   const outbox = await Outbox.deploy()
   await outbox.deployed()
@@ -67,30 +68,15 @@ const main = async () => {
   )
   await outboxInit.wait()
 
-  await hre.run('verify:verify', {
-    address: outbox.address,
-    constructorArguments: [],
-  })
-
   console.log('deploying rollup admin')
   const rollupAdmin = await RollupAdmin.deploy()
   await rollupAdmin.deployed()
   console.log(rollupAdmin.address)
 
-  await hre.run('verify:verify', {
-    address: rollupAdmin.address,
-    constructorArguments: [],
-  })
-
   console.log('deploying rollup user')
   const rollupUser = await RollupUser.deploy()
   await rollupUser.deployed()
   console.log(rollupUser.address)
-
-  await hre.run('verify:verify', {
-    address: rollupUser.address,
-    constructorArguments: [],
-  })
 
   console.log('init rollup user')
   const initRU = await rollupUser.initialize(hre.ethers.constants.AddressZero)
@@ -101,11 +87,6 @@ const main = async () => {
   await bridge.deployed()
   console.log(bridge.address)
 
-  await hre.run('verify:verify', {
-    address: bridge.address,
-    constructorArguments: [],
-  })
-
   console.log('init bridge')
   const initBridge = await bridge.initialize()
   await initBridge.wait()
@@ -114,11 +95,6 @@ const main = async () => {
   const inbox = await Inbox.deploy()
   await inbox.deployed()
   console.log(inbox.address)
-
-  await hre.run('verify:verify', {
-    address: inbox.address,
-    constructorArguments: [],
-  })
 
   console.log('init inbox')
   const initInbox = await inbox.initialize(
@@ -131,11 +107,6 @@ const main = async () => {
   const sequencerInbox = await SequencerInbox.deploy()
   await sequencerInbox.deployed()
   console.log(sequencerInbox.address)
-
-  await hre.run('verify:verify', {
-    address: sequencerInbox.address,
-    constructorArguments: [],
-  })
 
   console.log('init seq inbox')
   const initSeqInbox = await sequencerInbox.initialize(
@@ -150,10 +121,22 @@ const main = async () => {
   await node.deployed()
   console.log(node.address)
 
-  await hre.run('verify:verify', {
-    address: node.address,
-    constructorArguments: [],
-  })
+  const addresses: LogicAddresses = {
+    rollup: rollup.address,
+    oldOutbox: oldOutbox.address,
+    outbox: outbox.address,
+    rollupAdmin: rollupAdmin.address,
+    rollupUser: rollupUser.address,
+    bridge: bridge.address,
+    inbox: inbox.address,
+    sequencerInbox: sequencerInbox.address,
+    node: node.address,
+  }
+  fs.writeFileSync('addresses.json', JSON.stringify(addresses))
+}
+
+const main = async () => {
+  await deployContracts()
 }
 
 main()

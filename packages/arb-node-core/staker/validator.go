@@ -136,6 +136,14 @@ func (v *Validator) resolveNextNode(ctx context.Context, info *ethbridge.StakerI
 	if err != nil {
 		return err
 	}
+	latestNodeCreated, err := v.rollup.LatestNodeCreated(ctx)
+	if err != nil {
+		return err
+	}
+	shuttingDownForNitro, err := v.rollup.IsShuttingDownForNitro(ctx)
+	if err != nil {
+		return err
+	}
 	switch confirmType {
 	case ethbridge.CONFIRM_TYPE_INVALID:
 		addr := v.wallet.Address()
@@ -146,17 +154,35 @@ func (v *Validator) resolveNextNode(ctx context.Context, info *ethbridge.StakerI
 		logger.Info().Int("node", int(unresolvedNodeIndex.Int64())).Msg("Rejecting node")
 		return v.rollup.RejectNextNode(ctx, *addr)
 	case ethbridge.CONFIRM_TYPE_VALID:
-		nodeInfo, err := v.rollup.RollupWatcher.LookupNode(ctx, unresolvedNodeIndex)
-		if err != nil {
-			return err
+		confCount := 1
+		if shuttingDownForNitro {
+			confCount = 10
 		}
-		sendCount := new(big.Int).Sub(nodeInfo.Assertion.After.TotalSendCount, nodeInfo.Assertion.Before.TotalSendCount)
-		sends, err := v.lookup.GetSends(nodeInfo.Assertion.Before.TotalSendCount, sendCount)
-		if err != nil {
-			return errors.Wrap(err, "catching up to chain")
+		totalSendSize := 0
+		for i := 0; i < confCount && unresolvedNodeIndex.Cmp(latestNodeCreated) <= 0; i++ {
+			nodeInfo, err := v.rollup.RollupWatcher.LookupNode(ctx, unresolvedNodeIndex)
+			if err != nil {
+				return err
+			}
+			sendCount := new(big.Int).Sub(nodeInfo.Assertion.After.TotalSendCount, nodeInfo.Assertion.Before.TotalSendCount)
+			sends, err := v.lookup.GetSends(nodeInfo.Assertion.Before.TotalSendCount, sendCount)
+			if err != nil {
+				return errors.Wrap(err, "catching up to chain")
+			}
+			for _, send := range sends {
+				totalSendSize += 32 + len(send)
+			}
+			if i > 0 && totalSendSize >= 64*1024 {
+				break
+			}
+			logger.Info().Int("node", int(unresolvedNodeIndex.Int64())).Msg("Confirming node")
+			err = v.rollup.ConfirmNextNode(ctx, nodeInfo.Assertion, sends)
+			if err != nil {
+				return err
+			}
+			unresolvedNodeIndex.Add(unresolvedNodeIndex, big.NewInt(1))
 		}
-		logger.Info().Int("node", int(unresolvedNodeIndex.Int64())).Msg("Confirming node")
-		return v.rollup.ConfirmNextNode(ctx, nodeInfo.Assertion, sends)
+		return nil
 	default:
 		return nil
 	}

@@ -627,8 +627,8 @@ CExecutionCursorResult arbCoreGetExecutionCursorAtEndOfBlock(
                 return {nullptr, 1};
             }
 
-            std::cerr << "Failed to load machine for sideload "
-                      << status.ToString() << std::endl;
+            std::cerr << "Failed to load machine for sideload  at block: "
+                      << block_number << ", " << status.ToString() << std::endl;
             return {nullptr, 0};
         }
 

@@ -51,3 +51,7 @@ interface ICustomToken is ArbitrumEnabledToken {
 
     function balanceOf(address account) external view returns (uint256);
 }
+
+interface L1MintableToken is ICustomToken {
+    function bridgeMint(address account, uint256 amount) external;
+}

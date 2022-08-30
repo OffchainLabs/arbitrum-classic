@@ -15,23 +15,25 @@
  */
 
 /* eslint-env node, mocha */
-import { ethers } from 'hardhat'
+import { ethers, network } from 'hardhat'
 import { assert, expect } from 'chai'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { Contract, ContractFactory } from 'ethers'
+import { AeWETH, L2WethGateway, L2WethGateway__factory } from '../build/types'
+import { applyAlias, impersonateAccount } from './testhelper'
 
-describe('Bridge peripherals weth layer 2', () => {
+describe.only('Bridge peripherals weth layer 2', () => {
   let accounts: SignerWithAddress[]
-  let TestBridge: ContractFactory
-  let testBridge: Contract
+  let TestBridge: L2WethGateway__factory
+  let testBridge: L2WethGateway
   const l1WethAddr = '0x0000000000000000000000000000000000004351'
-  let l2Weth: Contract
+  let l2Weth: AeWETH
 
   before(async function () {
     // constructor(uint256 _gasPrice, uint256 _maxGas, address erc777Template, address erc20Template)
     accounts = await ethers.getSigners()
     TestBridge = await ethers.getContractFactory('L2WethGateway')
-    const L2Weth = await ethers.getContractFactory('aeWETH')
+    const L2Weth = (await ethers.getContractFactory('aeWETH')) as any
     l2Weth = await L2Weth.deploy()
     testBridge = await TestBridge.deploy()
 
@@ -44,16 +46,28 @@ describe('Bridge peripherals weth layer 2', () => {
       '0x'
     )
 
-    testBridge = testBridge.attach(proxy.address)
+    const ArbSysMock = await ethers.getContractFactory('ArbSysMock')
+    const arbsysmock = await ArbSysMock.deploy()
+    await network.provider.send('hardhat_setCode', [
+      '0x0000000000000000000000000000000000000064',
+      await network.provider.send('eth_getCode', [arbsysmock.address]),
+    ])
+
+    testBridge = testBridge
+      .attach(proxy.address)
+      .connect(await impersonateAccount(applyAlias(accounts[0].address)))
 
     await expect(
       l2Weth.initialize('WETH9', 'WETH', 18, testBridge.address, l1WethAddr)
     ).to.be.revertedWith('Initializable: contract is already initialized')
-    l2Weth = await Proxy.deploy(l2Weth.address, accounts[1].address, '0x')
-    l2Weth = await L2Weth.attach(l2Weth.address)
+    const wethProxy = await Proxy.deploy(
+      l2Weth.address,
+      accounts[1].address,
+      '0x'
+    )
+    l2Weth = await L2Weth.attach(wethProxy.address)
 
     await l2Weth.initialize('WETH9', 'WETH', 18, testBridge.address, l1WethAddr)
-
     await testBridge.initialize(
       accounts[0].address, // l1 counterpart
       accounts[3].address, // l2 router
@@ -72,8 +86,6 @@ describe('Bridge peripherals weth layer 2', () => {
       ['0x', '0x']
     )
 
-    console.log('here')
-
     const tx = await testBridge.finalizeInboundTransfer(
       l1WethAddr,
       sender,
@@ -91,7 +103,7 @@ describe('Bridge peripherals weth layer 2', () => {
   })
 
   it('should burn on withdraw', async function () {
-    const sender = accounts[0].address
+    const sender = applyAlias(accounts[0].address)
     const dest = sender
     const amount = '10'
 

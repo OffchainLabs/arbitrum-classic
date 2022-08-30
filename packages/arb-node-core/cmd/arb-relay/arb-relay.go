@@ -80,10 +80,10 @@ func startup() error {
 	defer cancelFunc()
 
 	config, err := configuration.ParseRelay()
-	if err != nil || len(config.Feed.Input.URLs) == 0 || config.L2.ChainID == 0 {
+	if err != nil || len(config.Feed.Input.URLs) == 0 || config.Node.ChainID == 0 {
 		fmt.Printf("\n")
 		fmt.Printf("Sample usage: arb-relay --conf=<filename> \n")
-		fmt.Printf("          or: arb-relay --feed.input.url=<feed websocket> --l2.chain-id=<chain id>\n\n")
+		fmt.Printf("          or: arb-relay --feed.input.url=<feed websocket> --node.chain-id=<L2 chain id>\n\n")
 		if err != nil && !strings.Contains(err.Error(), "help requested") {
 			fmt.Printf("%s\n", err.Error())
 		}
@@ -127,17 +127,17 @@ func NewArbRelay(config *configuration.Config) (*ArbRelay, chan error) {
 	confirmedAccumulatorChan := make(chan common.Hash, 10)
 	broadcastClientErrChan := make(chan error, 1)
 	for _, address := range config.Feed.Input.URLs {
-		client := broadcastclient.NewBroadcastClient(address, config.L2.ChainID, nil, config.Feed.Input.Timeout, broadcastClientErrChan)
+		client := broadcastclient.NewBroadcastClient(address, config.Node.ChainID, nil, config.Feed.Input.Timeout, broadcastClientErrChan)
 		client.ConfirmedAccumulatorListener = confirmedAccumulatorChan
 		broadcastClients = append(broadcastClients, client)
 	}
 	arbRelay := &ArbRelay{
-		broadcaster:              broadcaster.NewBroadcaster(&config.Feed.Output, 0),
+		broadcaster:              broadcaster.NewBroadcaster(&config.Feed.Output, config.Node.ChainID),
 		broadcastClients:         broadcastClients,
 		confirmedAccumulatorChan: confirmedAccumulatorChan,
 	}
-	arbRelay.chainIdBig = new(big.Int).SetUint64(config.L2.ChainID)
-	arbRelay.chainIdHex = hexutil.Uint64(config.L2.ChainID)
+	arbRelay.chainIdBig = new(big.Int).SetUint64(config.Node.ChainID)
+	arbRelay.chainIdHex = hexutil.Uint64(config.Node.ChainID)
 	return arbRelay, broadcastClientErrChan
 }
 

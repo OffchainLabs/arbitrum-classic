@@ -68,6 +68,12 @@ const config = {
         ? [process.env['MAINNET_PRIVKEY']]
         : [],
     },
+    nova: {
+      url: 'https://nova.arbitrum.io/rpc',
+      accounts: process.env['MAINNET_PRIVKEY']
+        ? [process.env['MAINNET_PRIVKEY']]
+        : [],
+    },
     rinkeby: {
       url: 'https://rinkeby.infura.io/v3/' + process.env['INFURA_KEY'],
       accounts: process.env['DEVNET_PRIVKEY']
@@ -75,8 +81,19 @@ const config = {
         : [],
     },
     arbRinkeby: {
-      gasPrice: 0,
       url: 'https://rinkeby.arbitrum.io/rpc',
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
+    },
+    goerli: {
+      url: 'https://goerli.infura.io/v3/' + process.env['INFURA_KEY'],
+      accounts: process.env['DEVNET_PRIVKEY']
+        ? [process.env['DEVNET_PRIVKEY']]
+        : [],
+    },
+    arbGoerliRollup: {
+      url: 'https://goerli-rollup.arbitrum.io/rpc',
       accounts: process.env['DEVNET_PRIVKEY']
         ? [process.env['DEVNET_PRIVKEY']]
         : [],
@@ -118,7 +135,34 @@ const config = {
     bail: true,
   },
   etherscan: {
-    apiKey: process.env['ETHERSCAN_API_KEY'],
+    apiKey: {
+      mainnet: process.env['ETHERSCAN_API_KEY'],
+      kovan: process.env['ETHERSCAN_API_KEY'],
+      rinkeby: process.env['ETHERSCAN_API_KEY'],
+      goerli: process.env['ETHERSCAN_API_KEY'],
+      arbitrumOne: process.env['ARBISCAN_API_KEY'],
+      arbitrumTestnet: process.env['ARBISCAN_API_KEY'],
+      nova: '0',
+      arbGoerliRollup: '0',
+    },
+    customChains: [
+      {
+        network: 'nova',
+        chainId: 42170,
+        urls: {
+          apiURL: 'https://nova-explorer.arbitrum.io/api',
+          browserURL: 'https://nova-explorer.arbitrum.io/',
+        },
+      },
+      {
+        network: 'arbGoerliRollup',
+        chainId: 421613,
+        urls: {
+          apiURL: 'https://goerli-rollup-explorer.arbitrum.io/api',
+          browserURL: 'https://goerli-rollup-explorer.arbitrum.io/',
+        },
+      },
+    ],
   },
 }
 
@@ -144,6 +188,15 @@ if (process.env['KOVAN_URL'] && process.env['KOVAN_MNEMONIC']) {
   ;(config.networks as any)['kovan'] = {
     url: process.env['KOVAN_URL'] || '',
     accounts: [process.env['KOVAN_MNEMONIC'] || ''],
+    network_id: 42,
+    confirmations: 4,
+  }
+}
+
+if (process.env['GOERLI_URL'] && process.env['GOERLI_MNEMONIC']) {
+  ;(config.networks as any)['goerli'] = {
+    url: process.env['GOERLI_URL'] || '',
+    accounts: [process.env['GOERLI_MNEMONIC'] || ''],
     network_id: 42,
     confirmations: 4,
   }
