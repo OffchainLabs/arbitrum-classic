@@ -239,13 +239,16 @@ func (s *Server) Call(ctx context.Context, callArgs CallTxArgs, blockNum rpc.Blo
 	return res.ReturnData, nil
 }
 
-func (s *Server) EstimateGas(ctx context.Context, args CallTxArgs) (hexutil.Uint64, error) {
+func (s *Server) EstimateGas(ctx context.Context, args CallTxArgs, optBlockNum *rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
 	if args.To != nil && *args.To == arbos.ARB_NODE_INTERFACE_ADDRESS {
 		// Fake gas for call
 		return hexutil.Uint64(21000), nil
 	}
-	blockNum := rpc.PendingBlockNumber
-	snap, err := s.getSnapshot(ctx, &blockNum)
+	blockNum := rpc.BlockNumberOrHashWithNumber(rpc.PendingBlockNumber)
+	if optBlockNum != nil {
+		blockNum = *optBlockNum
+	}
+	snap, err := s.getSnapshotForNumberOrHash(ctx, blockNum)
 	if err != nil {
 		return 0, err
 	}

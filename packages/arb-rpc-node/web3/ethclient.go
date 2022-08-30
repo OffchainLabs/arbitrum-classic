@@ -152,7 +152,7 @@ func (c *EthClient) EstimateGas(ctx context.Context, call ethereum.CallMsg) (uin
 		Value:    (*hexutil.Big)(call.Value),
 		Data:     (*hexutil.Bytes)(&call.Data),
 	}
-	gas, err := c.srv.EstimateGas(ctx, args)
+	gas, err := c.srv.EstimateGas(ctx, args, nil)
 	if err != nil {
 		return 0, err
 	}

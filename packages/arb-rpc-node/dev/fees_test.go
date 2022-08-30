@@ -326,7 +326,7 @@ func TestNonAggregatorFee(t *testing.T) {
 			To:         &simpleAddr,
 			Data:       (*hexutil.Bytes)(&data),
 			Aggregator: &emptyAgg,
-		})
+		}, nil)
 		test.FailIfError(t, err)
 		userOpts.GasLimit = uint64(estimatedGas)
 		t.Log("estimate:", userOpts.GasLimit)
