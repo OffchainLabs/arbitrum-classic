@@ -243,6 +243,19 @@ func (r *RollupWatcher) LookupChallengedNode(ctx context.Context, address common
 	return challenge.ChallengedNode, nil
 }
 
+func (r *RollupWatcher) GetNodeStakerCount(ctx context.Context, nodeNum *big.Int) (*big.Int, error) {
+	callOpts := r.getCallOpts(ctx)
+	nodeAddr, err := r.con.GetNode(callOpts, nodeNum)
+	if err != nil {
+		return nil, err
+	}
+	nodeContract, err := ethbridgecontracts.NewINode(nodeAddr, r.client)
+	if err != nil {
+		return nil, err
+	}
+	return nodeContract.StakerCount(callOpts)
+}
+
 func (r *RollupWatcher) StakerInfo(ctx context.Context, staker common.Address) (*StakerInfo, error) {
 	info, err := r.con.StakerMap(r.getCallOpts(ctx), staker.ToEthAddress())
 	if err != nil {

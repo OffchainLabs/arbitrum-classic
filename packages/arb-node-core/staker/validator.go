@@ -159,10 +159,27 @@ func (v *Validator) resolveNextNode(ctx context.Context, info *ethbridge.StakerI
 			confCount = 10
 		}
 		totalSendSize := 0
+		var lastStakerCount *big.Int
 		for i := 0; i < confCount && unresolvedNodeIndex.Cmp(latestNodeCreated) <= 0; i++ {
 			nodeInfo, err := v.rollup.RollupWatcher.LookupNode(ctx, unresolvedNodeIndex)
 			if err != nil {
 				return err
+			}
+			stakerCount, err := v.rollup.RollupWatcher.GetNodeStakerCount(ctx, unresolvedNodeIndex)
+			if err != nil {
+				return err
+			}
+			if lastStakerCount != nil {
+				if lastStakerCount.Cmp(stakerCount) != 0 {
+					logger.
+						Info().
+						Int64("stakerCount", stakerCount.Int64()).
+						Int64("lastStakerCount", lastStakerCount.Int64()).
+						Msg("not batching further confirmations as number of stakers changed")
+					break
+				}
+			} else {
+				lastStakerCount = stakerCount
 			}
 			sendCount := new(big.Int).Sub(nodeInfo.Assertion.After.TotalSendCount, nodeInfo.Assertion.Before.TotalSendCount)
 			sends, err := v.lookup.GetSends(nodeInfo.Assertion.Before.TotalSendCount, sendCount)
