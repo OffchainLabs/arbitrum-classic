@@ -79,7 +79,7 @@ Note: If you’re interested in accessing an Arbitrum chain, but you don’t wan
 
 ### Arb-Relay
 
-- When running more than one node, you want to run a single arb-relay which can provide a feed for all your nodes.
+- When running more than one node, you want to run a single arb-relay per datacenter which can provide a feed for all your nodes, which will reduce ingress fees and increase stability.
   The arb-relay is in the same docker image.
 - Here is an example of how to run nitro-relay for Rinkeby:
   ```

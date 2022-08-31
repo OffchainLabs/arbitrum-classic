@@ -73,7 +73,7 @@ contract RollupCore is IRollupCore {
      * @param stakerNum Index of the staker
      * @return Address of the staker
      */
-    function getStakerAddress(uint256 stakerNum) external view override returns (address) {
+    function getStakerAddress(uint256 stakerNum) public view override returns (address) {
         return _stakerList[stakerNum];
     }
 

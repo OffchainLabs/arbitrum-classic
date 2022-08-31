@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
- * Copyright 2021, Offchain Labs, Inc.
+ * Copyright 2019-2021, Offchain Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,15 @@
  * limitations under the License.
  */
 
-// solhint-disable-next-line compiler-version
-pragma solidity >=0.6.9 <0.9.0;
+pragma solidity ^0.6.11;
 
-interface INodeFactory {
-    function createNode(
-        bytes32 _stateHash,
-        bytes32 _challengeHash,
-        bytes32 _confirmData,
-        uint256 _prev,
-        uint256 _deadlineBlock
-    ) external returns (address);
+interface NitroReadyContract {
+    function isNitroReady() external pure returns (uint256);
+}
 
-    function beacon() external view returns (address);
+contract NitroReadyQuery {
+    /// @dev queries a contract to know if its ready for the nitro upgrade
+    function isNitroReady(address target) external pure returns (uint256) {
+        return NitroReadyContract(target).isNitroReady();
+    }
 }

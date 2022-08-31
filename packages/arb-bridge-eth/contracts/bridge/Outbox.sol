@@ -21,13 +21,16 @@ pragma solidity ^0.6.11;
 import "./interfaces/IOutbox.sol";
 import "./interfaces/IBridge.sol";
 
+import { NitroReadyMagicNums } from "./NitroMigratorUtil.sol";
 import "./Messages.sol";
 import "../libraries/MerkleLib.sol";
 import "../libraries/BytesLib.sol";
 import "../libraries/Cloneable.sol";
+import "../rollup/Rollup.sol";
 
 import "@openzeppelin/contracts/proxy/BeaconProxy.sol";
 import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract Outbox is IOutbox, Cloneable {
     using BytesLib for bytes;
@@ -271,5 +274,14 @@ contract Outbox is IOutbox, Cloneable {
 
     function outboxEntryExists(uint256 batchNum) public view override returns (bool) {
         return outboxEntries[batchNum].root != bytes32(0);
+    }
+
+    function setBridge(IBridge newBridge) external override {
+        require(msg.sender == OwnableUpgradeable(address(bridge)).owner(), "NOT_BRIDGE_OWNER");
+        bridge = newBridge;
+    }
+
+    function isNitroReady() external pure override returns (uint256) {
+        return NitroReadyMagicNums.OUTBOX;
     }
 }

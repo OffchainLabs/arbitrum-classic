@@ -19,6 +19,8 @@
 // solhint-disable-next-line compiler-version
 pragma solidity >=0.6.9 <0.9.0;
 
+import "./IBridge.sol";
+
 interface IOutbox {
     event OutboxEntryCreated(
         uint256 indexed batchNum,
@@ -49,4 +51,8 @@ interface IOutbox {
         external;
 
     function outboxEntryExists(uint256 batchNum) external view returns (bool);
+
+    function setBridge(IBridge newBridge) external;
+
+    function isNitroReady() external pure returns (uint256);
 }

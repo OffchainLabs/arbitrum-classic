@@ -4,6 +4,7 @@ pragma solidity ^0.6.11;
 
 import "../Rollup.sol";
 import "./IRollupFacets.sol";
+import { NitroReadyMagicNums } from "../../bridge/NitroMigratorUtil.sol";
 
 abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     function initialize(address _stakeToken) public virtual override;
@@ -77,7 +78,7 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         uint256 afterSendCount,
         bytes32 afterLogAcc,
         uint256 afterLogCount
-    ) external onlyValidator whenNotPaused {
+    ) external onlyValidator whenInShutdownModeOrNotPaused {
         requireUnresolvedExists();
 
         // There is at least one non-zombie staker
@@ -87,11 +88,10 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
 
         // Verify the block's deadline has passed
         node.requirePastDeadline();
+        getNode(latestConfirmed()).requirePastChildConfirmDeadline();
 
         // Check that prev is latest confirmed
         require(node.prev() == latestConfirmed(), "INVALID_PREV");
-
-        getNode(latestConfirmed()).requirePastChildConfirmDeadline();
 
         removeOldZombies(0);
 
@@ -230,7 +230,12 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
      * and move it to the desired node.
      * @param stakerAddress Address of the staker whose stake is refunded
      */
-    function returnOldDeposit(address stakerAddress) external override onlyValidator whenNotPaused {
+    function returnOldDeposit(address stakerAddress)
+        external
+        override
+        onlyValidator
+        whenInShutdownModeOrNotPaused
+    {
         require(latestStakedNode(stakerAddress) <= latestConfirmed(), "TOO_RECENT");
         requireUnchallengedStaker(stakerAddress);
         withdrawStaker(stakerAddress);
@@ -410,7 +415,11 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
      * @notice Remove any zombies whose latest stake is earlier than the first unresolved node
      * @param startIndex Index in the zombie list to start removing zombies from (to limit the cost of this transaction)
      */
-    function removeOldZombies(uint256 startIndex) public onlyValidator whenNotPaused {
+    function removeOldZombies(uint256 startIndex)
+        public
+        onlyValidator
+        whenInShutdownModeOrNotPaused
+    {
         uint256 currentZombieCount = zombieCount();
         uint256 firstUnresolved = firstUnresolvedNode();
         for (uint256 i = startIndex; i < currentZombieCount; i++) {
@@ -557,6 +566,10 @@ abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
         require(currentChallenge(stakerAddress) == address(0), "IN_CHAL");
     }
 
+    function isNitroReady() external pure returns (uint256) {
+        return NitroReadyMagicNums.ROLLUP_USER;
+    }
+
     function withdrawStakerFunds(address payable destination) external virtual returns (uint256);
 }
 
@@ -591,7 +604,7 @@ contract RollupUserFacet is AbsRollupUserFacet {
         external
         override
         onlyValidator
-        whenNotPaused
+        whenInShutdownModeOrNotPaused
         returns (uint256)
     {
         uint256 amount = withdrawFunds(msg.sender);
@@ -647,7 +660,7 @@ contract ERC20RollupUserFacet is AbsRollupUserFacet {
         external
         override
         onlyValidator
-        whenNotPaused
+        whenInShutdownModeOrNotPaused
         returns (uint256)
     {
         uint256 amount = withdrawFunds(msg.sender);

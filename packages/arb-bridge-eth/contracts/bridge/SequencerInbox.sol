@@ -25,6 +25,7 @@ import "../libraries/Cloneable.sol";
 import "../rollup/Rollup.sol";
 import "../validator/IGasRefunder.sol";
 
+import { NitroReadyMagicNums } from "./NitroMigratorUtil.sol";
 import "./Messages.sol";
 
 interface OldRollup {
@@ -51,6 +52,15 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
     // Window in which only the Sequencer can update the Inbox; this delay is what allows the Sequencer to give receipts with sub-blocktime latency.
     uint256 public override maxDelayBlocks;
     uint256 public override maxDelaySeconds;
+
+    bool public isShutdownForNitro;
+
+    string internal constant SHUTDOWN_FOR_NITRO = "SHUTDOWN_FOR_NITRO";
+
+    modifier whenNotShutdownForNitro() {
+        require(!isShutdownForNitro, SHUTDOWN_FOR_NITRO);
+        _;
+    }
 
     function initialize(
         IBridge _delayedInbox,
@@ -89,10 +99,13 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         emit MaxDelayUpdated(newMaxDelayBlocks, newMaxDelaySeconds);
     }
 
+    function isNitroReady() external pure returns (uint256) {
+        return NitroReadyMagicNums.SEQ_INBOX;
+    }
+
     /**
      * @notice Move messages from the delayed inbox into the Sequencer inbox. Callable by any address. Necessary iff Sequencer hasn't included them before delay period expired.
      */
-
     function forceInclusion(
         uint256 _totalDelayedMessagesRead,
         uint8 kind,
@@ -102,8 +115,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         address sender,
         bytes32 messageDataHash,
         bytes32 delayedAcc
-    ) external {
-        require(_totalDelayedMessagesRead > totalDelayedMessagesRead, "DELAYED_BACKWARDS");
+    ) external whenNotShutdownForNitro {
         {
             bytes32 messageHash = Messages.messageHash(
                 kind,
@@ -129,6 +141,37 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
                 "DELAYED_ACCUMULATOR"
             );
         }
+        forceInclusionImpl(_totalDelayedMessagesRead, delayedAcc);
+    }
+
+    /// @dev this function is intended to force include the delayed inbox a final time in the nitro migration
+    function shutdownForNitro(uint256 _totalDelayedMessagesRead, bytes32 delayedAcc)
+        external
+        whenNotShutdownForNitro
+    {
+        // no delay on force inclusion, triggered only by rollup's owner
+        require(Rollup(payable(rollup)).owner() == msg.sender, "ONLY_ROLLUP_OWNER");
+
+        // if _totalDelayedMessagesRead == totalDelayedMessagesRead, we don't need to force include
+        // if _totalDelayedMessagesRead < totalDelayedMessagesRead we are trying to read backwards and will revert in forceInclusionImpl
+        // if _totalDelayedMessagesRead > totalDelayedMessagesRead we will force include the new delayed messages into the seqInbox
+        if (_totalDelayedMessagesRead != totalDelayedMessagesRead) {
+            forceInclusionImpl(_totalDelayedMessagesRead, delayedAcc);
+        }
+
+        isShutdownForNitro = true;
+        emit ShutdownForNitroSet(true);
+    }
+
+    function undoShutdownForNitro() external {
+        require(Rollup(payable(rollup)).owner() == msg.sender, "ONLY_ROLLUP_OWNER");
+        require(isShutdownForNitro, "NOT_SHUTDOWN");
+        isShutdownForNitro = false;
+        emit ShutdownForNitroSet(false);
+    }
+
+    function forceInclusionImpl(uint256 _totalDelayedMessagesRead, bytes32 delayedAcc) internal {
+        require(_totalDelayedMessagesRead > totalDelayedMessagesRead, "DELAYED_BACKWARDS");
 
         uint256 startNum = messageCount;
         bytes32 beforeAcc = 0;
@@ -161,7 +204,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         uint256[] calldata lengths,
         uint256[] calldata sectionsMetadata,
         bytes32 afterAcc
-    ) external {
+    ) external whenNotShutdownForNitro {
         // solhint-disable-next-line avoid-tx-origin
         require(msg.sender == tx.origin, "origin only");
         uint256 startNum = messageCount;
@@ -186,7 +229,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         uint256[] calldata sectionsMetadata,
         bytes32 afterAcc,
         IGasRefunder gasRefunder
-    ) external {
+    ) external whenNotShutdownForNitro {
         // solhint-disable-next-line avoid-tx-origin
         require(msg.sender == tx.origin, "origin only");
 
@@ -229,7 +272,7 @@ contract SequencerInbox is ISequencerInbox, Cloneable {
         uint256[] calldata lengths,
         uint256[] calldata sectionsMetadata,
         bytes32 afterAcc
-    ) external {
+    ) external whenNotShutdownForNitro {
         uint256 startNum = messageCount;
         bytes32 beforeAcc = addSequencerL2BatchImpl(
             transactions,
