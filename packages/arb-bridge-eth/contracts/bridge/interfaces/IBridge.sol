@@ -68,4 +68,6 @@ interface IBridge {
     function inboxAccs(uint256 index) external view returns (bytes32);
 
     function messageCount() external view returns (uint256);
+
+    function isNitroReady() external view returns (uint256);
 }

@@ -54,6 +54,7 @@ interface ISequencerInbox {
 
     event IsSequencerUpdated(address addr, bool isSequencer);
     event MaxDelayUpdated(uint256 newMaxDelayBlocks, uint256 newMaxDelaySeconds);
+    event ShutdownForNitroSet(bool shutdown);
 
     /// @notice DEPRECATED - look at MaxDelayUpdated for new updates
     // event MaxDelayBlocksUpdated(uint256 newValue);

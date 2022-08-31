@@ -209,3 +209,9 @@ interface IRollupAdmin {
         uint256 afterLogCount
     ) external;
 }
+
+interface INitroRollupCore {
+    function inbox() external view returns (address);
+
+    function owner() external view returns (address);
+}
