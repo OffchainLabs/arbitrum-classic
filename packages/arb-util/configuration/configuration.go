@@ -705,10 +705,12 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		if l1ChainId.Cmp(big.NewInt(1)) == 0 {
 			err := k.Load(confmap.Provider(map[string]interface{}{
 				"bridge-utils-address":             "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
-				"feed.input.url":                   []string{"wss://arb1.arbitrum.io/feed"},
+				"feed.input.url":                   []string{},
+				"l2.disable-upstream":              true,
 				"node.aggregator.inbox-address":    "0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f",
 				"node.chain-id":                    "42161",
-				"node.forwarder.target":            "https://arb1.arbitrum.io/rpc",
+				"node.forwarder.target":            "",
+				"node.forwarder.rpc-mode":          "non-mutating",
 				"persistent.chain":                 "mainnet",
 				"rollup.address":                   "0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A",
 				"rollup.from-block":                "12525700",
