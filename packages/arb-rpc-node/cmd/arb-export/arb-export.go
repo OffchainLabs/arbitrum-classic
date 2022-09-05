@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	golog "log"
+	"math/big"
 	"os"
 	"path"
 	"path/filepath"
@@ -65,6 +66,7 @@ func startup() error {
 
 	fs := flag.NewFlagSet("", flag.ContinueOnError)
 	chainDir := fs.String("chaindir", "", "chain directory to dump ArbOS state of")
+	chainId := fs.Uint64("chainId", 42161, "L2 chain ID")
 	arbosPath := fs.String("arbospath", "", "ArbOS mexe file path")
 	blockNum := fs.Uint64("blocknum", 0, "block number to import")
 	skipBlocks := fs.Bool("skipblocks", false, "don't import blocks")
@@ -112,7 +114,7 @@ func startup() error {
 	}
 	defer txDB.Close()
 
-	crossDB, err := nitroexport.NewCrossDB(txDB, path.Join(*chainDir, "ethdb"))
+	crossDB, err := nitroexport.NewCrossDB(txDB, path.Join(*chainDir, "ethdb"), new(big.Int).SetUint64(*chainId))
 	if err != nil {
 		return err
 	}

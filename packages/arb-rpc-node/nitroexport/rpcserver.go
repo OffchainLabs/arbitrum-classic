@@ -3,6 +3,7 @@ package nitroexport
 import (
 	"context"
 	"errors"
+	"math/big"
 	"os"
 	"path"
 
@@ -19,13 +20,13 @@ type ExportRPCServer struct {
 	pathPrefix string
 }
 
-func NewExportRPCServer(ctx context.Context, txDB *txdb.TxDB, arbcore core.ArbCore, pathPrefix string) (*ExportRPCServer, error) {
+func NewExportRPCServer(ctx context.Context, txDB *txdb.TxDB, arbcore core.ArbCore, pathPrefix string, chainId *big.Int) (*ExportRPCServer, error) {
 	ethDbPath := path.Join(pathPrefix, "nitro")
 	err := os.MkdirAll(ethDbPath, os.ModePerm)
 	if err != nil {
 		return nil, err
 	}
-	db, err := NewCrossDB(txDB, ethDbPath)
+	db, err := NewCrossDB(txDB, ethDbPath, chainId)
 	if err != nil {
 		return nil, err
 	}
