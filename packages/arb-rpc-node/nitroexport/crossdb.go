@@ -152,11 +152,11 @@ func (c *CrossDB) importBlock(ctx context.Context, blockNumber uint64) error {
 	blockHashBefore := block.Header().Hash()
 	_, err = rawdb.WriteAncientBlocks(c.ethDB, []*types.Block{block}, []types.Receipts{outputReceipts}, big.NewInt(0))
 	if err != nil {
-		return errors.Errorf("%w: while storing block %d", err, blockNumber)
+		return fmt.Errorf("%w: while storing block %d", err, blockNumber)
 	}
 	readBlock := rawdb.ReadBlock(c.ethDB, blockHashBefore, blockNumber)
 	if readBlock == nil {
-		return errors.Errorf("failed saving block %v", blockNumber)
+		return fmt.Errorf("failed saving block %v", blockNumber)
 	}
 	blockHash := readBlock.Header().Hash()
 	if blockHash != machineBlockInfo.Header.Hash() {
@@ -164,7 +164,7 @@ func (c *CrossDB) importBlock(ctx context.Context, blockNumber uint64) error {
 		for i, tx := range outputTxs {
 			errStr += fmt.Sprint(i, ": ", tx.Hash(), "\n")
 		}
-		return errors.Errorf("bad block %v", blockNumber)
+		return fmt.Errorf("bad block %v", blockNumber)
 	}
 	for i := range outputTxs {
 		if !reflect.DeepEqual(outputTxs[i].GetInner(), readBlock.Transactions()[i].GetInner()) {
