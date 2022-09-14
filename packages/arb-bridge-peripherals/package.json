@@ -56,7 +56,7 @@
     "eslint-plugin-mocha": "^9.0.0",
     "eslint-plugin-prettier": "^4.0.0",
     "ethereum-waffle": "^3.2.0",
-    "ethers": "^5.4.5",
+    "ethers": "^5.7.1",
     "hardhat-deploy": "^0.9.1",
     "hardhat-gas-reporter": "^1.0.4",
     "prettier": "^2.3.2",
