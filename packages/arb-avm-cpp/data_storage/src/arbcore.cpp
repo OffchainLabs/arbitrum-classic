@@ -3045,11 +3045,13 @@ ArbCore::getExecutionCursorAtEndOfBlock(const uint256_t& block_number,
     std::unique_ptr<ExecutionCursor> execution_cursor;
     {
         ReadSnapshotTransaction tx(data_storage);
-        auto gas_used_result = getGasAtBlock(tx, block_number);
-        if (!gas_used_result.status.ok()) {
-            return gas_used_result.status;
+        if (block_number > 0) {
+            auto gas_used_result = getGasAtBlock(tx, block_number);
+            if (!gas_used_result.status.ok()) {
+                return gas_used_result.status;
+            }
+            gas_target = gas_used_result.data;
         }
-        gas_target = gas_used_result.data;
 
         auto closest_checkpoint = findCloserExecutionCursor(
             tx, std::nullopt, gas_target, allow_slow_lookup);
