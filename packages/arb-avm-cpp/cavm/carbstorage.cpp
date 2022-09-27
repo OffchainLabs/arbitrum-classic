@@ -86,6 +86,7 @@ CArbStorage* createArbStorage(const char* db_path,
     coreConfig.test_load_count = arb_core_config.test_load_count;
     coreConfig.test_reset_db_except_inbox =
         arb_core_config.test_reset_db_except_inbox;
+    coreConfig.final_block = arb_core_config.final_block;
 
     try {
         auto storage = new ArbStorage(string_filename, coreConfig);

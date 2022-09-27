@@ -64,31 +64,6 @@ void printResult(const char* msg, const ValueResult<T>& result) {
         std::cout << result.data << "\n";
     }
 }
-
-void printMachineOutputInfo(const std::string& msg,
-                            MachineOutput& machine_output) {
-    std::cout << msg << ",  total gas used: " << machine_output.arb_gas_used
-              << ", L1 block: " << machine_output.l1_block_number
-              << ", L2 block: " << machine_output.l2_block_number
-              << ", log count: " << machine_output.log_count
-              << ", messages count: "
-              << machine_output.fully_processed_inbox.count << ", timestamp: "
-              << std::put_time(
-                     localtime((time_t*)&machine_output.last_inbox_timestamp),
-                     "%c")
-              << std::endl;
-}
-
-void printCheckpointResult(
-    const char* msg,
-    const std::variant<rocksdb::Status, CheckpointVariant>& result) {
-    if (std::holds_alternative<rocksdb::Status>(result)) {
-        std::cout << std::get<rocksdb::Status>(result).ToString() << "\n";
-    } else {
-        auto output = getMachineOutput(std::get<CheckpointVariant>(result));
-        printMachineOutputInfo(msg, output);
-    }
-}
 }  // namespace
 
 ArbCore::ArbCore(std::shared_ptr<DataStorage> data_storage_,
@@ -129,6 +104,37 @@ std::string ArbCore::messagesGetError() {
 
 bool ArbCore::checkError() {
     return core_error;
+}
+
+void ArbCore::printMachineOutputInfo(const std::string& msg,
+                                     MachineOutput& machine_output) {
+    std::string l2_block_string;
+    if (machine_output.l2_block_number > coreConfig.final_block) {
+        l2_block_string = "TERMINAL_BLOCK";
+    } else {
+        l2_block_string = to_string(machine_output.l2_block_number, 10);
+    }
+    std::cout << msg << ",  total gas used: " << machine_output.arb_gas_used
+              << ", L1 block: " << machine_output.l1_block_number
+              << ", L2 block: " << l2_block_string
+              << ", log count: " << machine_output.log_count
+              << ", messages count: "
+              << machine_output.fully_processed_inbox.count << ", timestamp: "
+              << std::put_time(
+                     localtime((time_t*)&machine_output.last_inbox_timestamp),
+                     "%c")
+              << std::endl;
+}
+
+void ArbCore::printCheckpointResult(
+    const char* msg,
+    const std::variant<rocksdb::Status, CheckpointVariant>& result) {
+    if (std::holds_alternative<rocksdb::Status>(result)) {
+        std::cout << std::get<rocksdb::Status>(result).ToString() << "\n";
+    } else {
+        auto output = getMachineOutput(std::get<CheckpointVariant>(result));
+        printMachineOutputInfo(msg, output);
+    }
 }
 
 std::string ArbCore::getErrorString() {
@@ -275,6 +281,18 @@ void ArbCore::printDatabaseMetadata() {
     printCheckpointResult("last    checkpoint", getLastCheckpoint(tx));
 }
 
+uint256_t ArbCore::getLastCheckpointL2BlockNumber() {
+    ReadTransaction tx(data_storage);
+
+    auto result = getLastCheckpoint(tx);
+    if (std::holds_alternative<rocksdb::Status>(result)) {
+        return 0;
+    }
+
+    auto output = getMachineOutput(std::get<CheckpointVariant>(result));
+    return output.l2_block_number;
+}
+
 InitializeResult ArbCore::applyConfig() {
     // Use latest existing checkpoint
     ValueCache cache{1, 0};
@@ -310,6 +328,14 @@ InitializeResult ArbCore::applyConfig() {
         }
 
         pruning_mode_result = pruningMode(tx);
+
+        auto l2BlockNumber = getLastCheckpointL2BlockNumber();
+        if (l2BlockNumber != 0 && l2BlockNumber >= coreConfig.final_block) {
+            // Safe to enable lazy loaded core because already fully synced.
+            std::cout << "final block synced, so lazy load enabled"
+                      << "\n";
+            coreConfig.lazy_load_core_machine = true;
+        }
     }
 
     auto pruning_status =
@@ -1717,7 +1743,8 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
                     std::chrono::seconds(coreConfig.database_save_interval);
             }
 
-            if (trigger_save_rocksdb_checkpoint ||
+            if (output.l2_block_number >= coreConfig.final_block ||
+                trigger_save_rocksdb_checkpoint ||
                 output.arb_gas_used >= thread_data.next_checkpoint_gas) {
                 // Save checkpoint after checkpoint_gas_frequency gas used
                 status = saveCheckpoint(tx);

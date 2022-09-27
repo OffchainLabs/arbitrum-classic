@@ -200,8 +200,11 @@ class ArbCore {
     ArbCore(std::shared_ptr<DataStorage> data_storage_,
             ArbCoreConfig coreConfig);
 
-    ~ArbCore() { abortThread(); }
+    ~ArbCore() {
+        abortThread();
+    }
     void printDatabaseMetadata();
+    uint256_t getLastCheckpointL2BlockNumber();
     InitializeResult initialize(const LoadedExecutable& executable);
     InitializeResult applyConfig();
 
@@ -209,6 +212,11 @@ class ArbCore {
     void operator()();
 
     void printCoreThreadBacktrace();
+    void printMachineOutputInfo(const std::string& msg,
+                                MachineOutput& machine_output);
+    void printCheckpointResult(
+        const char* msg,
+        const std::variant<rocksdb::Status, CheckpointVariant>& result);
 
    private:
     rocksdb::Status initializePruningMode(

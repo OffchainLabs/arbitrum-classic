@@ -62,6 +62,7 @@ typedef struct {
     int32_t test_run_until;
     int32_t test_load_count;
     int32_t test_reset_db_except_inbox;
+    int32_t final_block;
 } CArbCoreConfig;
 
 CArbStorage* createArbStorage(const char* db_path,
