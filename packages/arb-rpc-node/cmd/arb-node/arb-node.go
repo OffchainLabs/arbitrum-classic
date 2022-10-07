@@ -341,8 +341,10 @@ func startup() error {
 		}
 	}
 
-	if err := cmdhelp.UpdatePrunePoint(ctx, rollup, mon.Core); err != nil {
-		logger.Error().Err(err).Msg("error pruning database")
+	if config.Core.CheckpointPruningMode != "off" {
+		if err := cmdhelp.UpdatePrunePoint(ctx, rollup, mon.Core); err != nil {
+			logger.Error().Err(err).Msg("error pruning database")
+		}
 	}
 
 	var dataSigner func([]byte) ([]byte, error)
@@ -531,7 +533,7 @@ func startup() error {
 		}()
 	}
 
-	if config.Core.CheckpointPruningMode == "on" {
+	if config.Core.CheckpointPruningMode != "off" {
 		ticker := time.NewTicker(time.Minute)
 		go func() {
 			defer ticker.Stop()
