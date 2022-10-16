@@ -4,6 +4,7 @@ pragma solidity >0.6.0 <0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
+/// @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
 interface ITransferAndCall is IERC20Upgradeable {
     function transferAndCall(
         address to,

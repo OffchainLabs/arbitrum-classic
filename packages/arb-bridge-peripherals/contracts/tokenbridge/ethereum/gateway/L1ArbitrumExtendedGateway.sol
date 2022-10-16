@@ -22,6 +22,7 @@ import "../../libraries/ITransferAndCall.sol";
 
 import "./L1ArbitrumGateway.sol";
 
+/// @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
 interface ITradeableExitReceiver {
     function onExitTransfer(
         address sender,

@@ -19,6 +19,7 @@
 pragma solidity ^0.6.11;
 
 /// @notice this library manages encoding and decoding of gateway communication
+/// @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
 library GatewayMessageHandler {
     // these are for communication from L1 to L2 gateway
 

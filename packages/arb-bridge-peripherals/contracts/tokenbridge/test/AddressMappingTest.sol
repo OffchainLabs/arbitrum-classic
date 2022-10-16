@@ -21,6 +21,7 @@ pragma solidity ^0.6.11;
 import "../arbitrum/L2ArbitrumMessenger.sol";
 import "arb-bridge-eth/contracts/libraries/AddressAliasHelper.sol";
 
+/// @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
 contract AddressMappingTest is L2ArbitrumMessenger {
     function getL1AddressTest(address sender) external pure returns (address l1Address) {
         return AddressAliasHelper.undoL1ToL2Alias(sender);

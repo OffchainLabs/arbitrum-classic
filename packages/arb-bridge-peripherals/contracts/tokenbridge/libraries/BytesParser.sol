@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 
 import "arb-bridge-eth/contracts/libraries/BytesLib.sol";
 
+/// @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
 library BytesParser {
     using BytesLib for bytes;
 

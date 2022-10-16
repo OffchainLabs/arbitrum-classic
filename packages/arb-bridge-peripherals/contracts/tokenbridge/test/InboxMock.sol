@@ -22,6 +22,7 @@ import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IBridge.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 
+/// @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
 contract InboxMock {
     address l2ToL1SenderMock = address(0);
 

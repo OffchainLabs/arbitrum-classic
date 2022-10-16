@@ -36,6 +36,7 @@ import "../../libraries/ERC165.sol";
 
 /**
  * @title Common interface for gatways on L1 messaging to Arbitrum.
+ * @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
  */
 abstract contract L1ArbitrumGateway is
     L1ArbitrumMessenger,

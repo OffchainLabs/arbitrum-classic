@@ -21,6 +21,7 @@ pragma solidity ^0.6.11;
 import "arb-bridge-eth/contracts/bridge/interfaces/IInbox.sol";
 import "arb-bridge-eth/contracts/bridge/interfaces/IOutbox.sol";
 
+/// @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
 /// @notice L1 utility contract to assist with L1 <=> L2 interactions
 /// @dev this is an abstract contract instead of library so the functions can be easily overriden when testing
 abstract contract L1ArbitrumMessenger {

@@ -27,6 +27,7 @@ import "arb-bridge-eth/contracts/libraries/Whitelist.sol";
  * @notice This contract handles token deposits, holds the escrowed tokens on layer 1, and (ultimately) finalizes withdrawals.
  * @dev Any ERC20 that requires non-standard functionality should use a separate gateway.
  * Messages to layer 2 use the inbox's createRetryableTicket method.
+ * @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
  */
 contract L1ERC20Gateway is L1ArbitrumExtendedGateway {
     // used for create2 address calculation
