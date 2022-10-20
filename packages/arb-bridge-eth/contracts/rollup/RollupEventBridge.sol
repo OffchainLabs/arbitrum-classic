@@ -26,6 +26,10 @@ import "../bridge/interfaces/IMessageProvider.sol";
 import "./INode.sol";
 import "../libraries/Cloneable.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts) 
+ * for new updates
+ */
 contract RollupEventBridge is IMessageProvider, Cloneable {
     uint8 internal constant INITIALIZATION_MSG_TYPE = 11;
     uint8 internal constant ROLLUP_PROTOCOL_EVENT_TYPE = 8;

@@ -20,6 +20,10 @@ pragma solidity ^0.6.11;
 
 import "../../libraries/Cloneable.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts) 
+ * for new updates
+ */
 contract OutboxEntry is Cloneable {
     address outbox;
     bytes32 public root;

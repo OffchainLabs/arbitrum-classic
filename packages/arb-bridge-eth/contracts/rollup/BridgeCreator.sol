@@ -29,6 +29,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 import "../libraries/Whitelist.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts) 
+ * for new updates
+ */
 contract BridgeCreator is Ownable {
     Bridge public delayedBridgeTemplate;
     SequencerInbox public sequencerInboxTemplate;

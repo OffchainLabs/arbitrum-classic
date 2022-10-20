@@ -23,6 +23,10 @@ import "./IChallengeFactory.sol";
 import "@openzeppelin/contracts/proxy/BeaconProxy.sol";
 import "@openzeppelin/contracts/proxy/UpgradeableBeacon.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts) 
+ * for new updates
+ */
 contract ChallengeFactory is IChallengeFactory {
     IOneStepProof[] public executors;
     UpgradeableBeacon public beacon;

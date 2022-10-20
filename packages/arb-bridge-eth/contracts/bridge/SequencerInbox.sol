@@ -28,6 +28,10 @@ import "../validator/IGasRefunder.sol";
 import { NitroReadyMagicNums } from "./NitroMigratorUtil.sol";
 import "./Messages.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts) 
+ * for new updates
+ */
 interface OldRollup {
     function sequencerInboxMaxDelayBlocks() external view returns (uint256);
 

@@ -21,6 +21,10 @@ pragma solidity >=0.6.9 <0.9.0;
 
 import "./INode.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts) 
+ * for new updates
+ */
 interface IRollupCore {
     function _stakerMap(address stakerAddress)
         external

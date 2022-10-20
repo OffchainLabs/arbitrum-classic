@@ -40,6 +40,10 @@ import "../libraries/ProxyUtil.sol";
 import "../libraries/Cloneable.sol";
 import "./facets/IRollupFacets.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts) 
+ * for new updates
+ */
 abstract contract RollupBase is Cloneable, RollupCore, Pausable {
     // Rollup Config
     uint256 public confirmPeriodBlocks;

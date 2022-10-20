@@ -23,6 +23,10 @@ import "./Hashing.sol";
 
 import "../libraries/BytesLib.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts) 
+ * for new updates
+ */
 library Marshaling {
     using BytesLib for bytes;
     using Value for Value.Data;

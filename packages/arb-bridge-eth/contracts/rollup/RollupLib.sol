@@ -23,6 +23,10 @@ import "./INode.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts) 
+ * for new updates
+ */
 library RollupLib {
     using SafeMath for uint256;
 

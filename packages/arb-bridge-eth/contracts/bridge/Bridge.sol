@@ -26,6 +26,10 @@ import "@openzeppelin/contracts/utils/Address.sol";
 
 import "./interfaces/IBridge.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts) 
+ * for new updates
+ */
 contract Bridge is OwnableUpgradeable, IBridge {
     using Address for address;
     struct InOutInfo {

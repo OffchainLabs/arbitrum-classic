@@ -22,6 +22,10 @@ pragma solidity >=0.6.9 <0.9.0;
 import "../bridge/interfaces/IBridge.sol";
 import "../bridge/interfaces/ISequencerInbox.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/token-bridge-contracts) 
+ * for new updates
+ */
 interface IOneStepProof {
     // Bridges is sequencer bridge then delayed bridge
     function executeStep(

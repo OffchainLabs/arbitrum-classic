@@ -20,6 +20,10 @@ pragma solidity ^0.6.11;
 
 import "../arch/IOneStepProof.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts) 
+ * for new updates
+ */
 contract OneStepProofTester {
     event OneStepProofResult(uint64 gas, uint256 totalMessagesRead, bytes32[4] fields);
 

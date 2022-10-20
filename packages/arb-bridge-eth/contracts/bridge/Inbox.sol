@@ -32,6 +32,10 @@ import "../libraries/AddressAliasHelper.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./Bridge.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts) 
+ * for new updates
+ */
 contract Inbox is IInbox, WhitelistConsumer, Cloneable {
     uint8 internal constant ETH_TRANSFER = 0;
     uint8 internal constant L2_MSG = 3;

@@ -20,6 +20,10 @@ pragma solidity ^0.6.11;
 
 import "../challenge/ChallengeFactory.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts) 
+ * for new updates
+ */
 contract ChallengeTester {
     address public challenge;
     bool public challengeCompleted;

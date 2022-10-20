@@ -24,6 +24,10 @@ import "./Machine.sol";
 import "../bridge/interfaces/IBridge.sol";
 import "../bridge/interfaces/ISequencerInbox.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts) 
+ * for new updates
+ */
 abstract contract OneStepProofCommon is IOneStepProof {
     using Machine for Machine.Data;
     using Hashing for Value.Data;
