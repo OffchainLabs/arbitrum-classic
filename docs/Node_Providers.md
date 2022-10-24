@@ -4,13 +4,15 @@ title: Alternatives
 sidebar_label: Node Providers
 ---
 
-To interact with Arbitrum One and the RinkArby testnet, you can rely on the same popular node providers that you are already using on Ethereum. There are multiple providers that may help you build on Arbitrum, here is a list of a couple of them.
+To interact with Arbitrum One and the Goerli testnet, you can rely on the same popular node providers that you are already using on Ethereum. There are multiple providers that may help you build on Arbitrum, here is a list of a couple of them.
 
 ## [Alchemy](https://alchemy.com/?a=arbitrum-docs)
 
-Alchemy provides endpoints for both Arbitrum One (Mainnet) and Rinkeby testnet. To use these RPC endpoints, you need to create a free account and set up an **_Alchemy API key_** to authenticate your requests. For detailed steps of how to create one, see the [Alchemy's documentation](https://docs.alchemy.com/alchemy/introduction/getting-started#1.create-an-alchemy-key).
+Alchemy is a developer platform and node infrastructure provider that allows for instantaneous access to Arbitrum One (Mainnet) and Arbitrum Goerli (testnet). It's used by over 70% of major dApps because of its scalability, reliability, and data accuracy.
 
-Next, depending one which network you want to interact with, you can choose between the two RPC endpoints provided by Alchemy and interact with them directly in the command line or point your [wallet's](https://portal.arbitrum.one/#wallets) RPC endpoints to them. For more information on Arbitrum JSON-RPC API methods supported by Alchemy, check out the [official documentation](https://docs.alchemy.com/alchemy/apis/arbitrum).
+The easiest way to get started with Alchemy is via the [Alchemy SDK](https://docs.alchemy.com/reference/alchemy-sdk-quickstart), a library that allows you to start making make Arbitrum requests in only a couple lines of code. You can see this guide on [Getting Started with Alchemy](https://docs.alchemy.com/docs/alchemy-quickstart-guide) to learn how to connect to the blockchain in minutes.
+
+For more information on Arbitrum JSON-RPC API methods supported by Alchemy, check out the [official Arbitrum API documentation](https://docs.alchemy.com/alchemy/apis/arbitrum).
 
 Alchemy provides 300M compute units per month for free, or the equivalent of 30M getLatestBlock requests. Additional usage requires upgrading to a Growth Tier ($49 / month).
 
