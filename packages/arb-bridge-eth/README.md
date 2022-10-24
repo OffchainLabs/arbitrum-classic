@@ -13,4 +13,4 @@ This repository is offered under the Apache 2.0 license. See LICENSE for details
 
 This package has been deprecated!
 
-If you want to use what was once called `arb-bridge-eth`, look into the latest and greatest [`token-bridge-contracts`](https://github.com/OffchainLabs/token-bridge-contracts)!
+If you want to use what was once called `arb-bridge-eth`, look into the latest and greatest [`nitro/contracts`](https://github.com/OffchainLabs/nitro/tree/master/contracts)!
