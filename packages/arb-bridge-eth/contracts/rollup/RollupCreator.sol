@@ -38,7 +38,7 @@ import "./RollupLib.sol";
 import "../libraries/ICloneable.sol";
 
 /**
- * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts) 
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts)
  * for new updates
  */
 contract RollupCreator is Ownable {

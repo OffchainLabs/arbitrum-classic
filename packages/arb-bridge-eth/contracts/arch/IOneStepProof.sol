@@ -23,7 +23,7 @@ import "../bridge/interfaces/IBridge.sol";
 import "../bridge/interfaces/ISequencerInbox.sol";
 
 /**
- * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/token-bridge-contracts) 
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/token-bridge-contracts)
  * for new updates
  */
 interface IOneStepProof {
