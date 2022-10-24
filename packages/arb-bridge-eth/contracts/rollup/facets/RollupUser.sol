@@ -6,6 +6,10 @@ import "../Rollup.sol";
 import "./IRollupFacets.sol";
 import { NitroReadyMagicNums } from "../../bridge/NitroMigratorUtil.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts)
+ * for new updates
+ */
 abstract contract AbsRollupUserFacet is RollupBase, IRollupUser {
     function initialize(address _stakeToken) public virtual override;
 

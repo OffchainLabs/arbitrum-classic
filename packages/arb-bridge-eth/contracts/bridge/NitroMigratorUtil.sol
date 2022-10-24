@@ -24,6 +24,10 @@ import "./interfaces/IInbox.sol";
 import "@arbitrum/nitro-contracts/src/bridge/IBridge.sol" as INitroBridge;
 import "@arbitrum/nitro-contracts/src/bridge/IInbox.sol" as INitroInbox;
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts)
+ * for new updates
+ */
 interface INitroRollup {
     struct GlobalState {
         bytes32[2] bytes32Vals;

@@ -24,6 +24,7 @@ import "../libraries/BytesParser.sol";
 import "./IArbToken.sol";
 
 /**
+ * @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
  * @title Standard (i.e., non-custom) contract deployed by L2Gateway.sol as L2 ERC20. Includes standard ERC20 interface plus additional methods for deposits/withdraws
  */
 contract StandardArbERC20 is IArbToken, L2GatewayToken, Cloneable {

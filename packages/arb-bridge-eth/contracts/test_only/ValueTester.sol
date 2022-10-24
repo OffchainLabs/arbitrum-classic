@@ -21,6 +21,10 @@ pragma solidity ^0.6.11;
 import "../arch/Value.sol";
 import "../arch/Marshaling.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts)
+ * for new updates
+ */
 contract ValueTester {
     using Hashing for Value.Data;
 

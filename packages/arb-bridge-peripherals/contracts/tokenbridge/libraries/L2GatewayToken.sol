@@ -24,6 +24,7 @@ import "../arbitrum/IArbToken.sol";
 
 /**
  * @title Standard (i.e., non-custom) contract used as a base for different L2 Gateways
+ * @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
  */
 abstract contract L2GatewayToken is aeERC20, IArbToken {
     address public l2Gateway;

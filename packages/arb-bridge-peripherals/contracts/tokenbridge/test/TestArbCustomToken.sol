@@ -21,6 +21,7 @@ pragma solidity ^0.6.11;
 import "../arbitrum/IArbToken.sol";
 import "../libraries/aeERC20.sol";
 
+/// @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
 contract TestArbCustomToken is aeERC20, IArbToken {
     address public l2Gateway;
     address public override l1Address;

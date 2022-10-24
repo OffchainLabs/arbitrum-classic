@@ -23,6 +23,7 @@ import "./TransferAndCallToken.sol";
 
 /// @title Arbitrum extended ERC20
 /// @notice The recommended ERC20 implementation for Layer 2 tokens
+/// @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
 /// @dev This implements the ERC20 standard with transferAndCall extenstion/affordances
 contract aeERC20 is ERC20PermitUpgradeable, TransferAndCallToken {
     using AddressUpgradeable for address;

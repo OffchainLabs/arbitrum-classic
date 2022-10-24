@@ -20,6 +20,10 @@ pragma solidity ^0.6.11;
 
 import "../bridge/Bridge.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts)
+ * for new updates
+ */
 contract BridgeMock is Bridge {
     constructor() public {
         activeOutbox = msg.sender;
