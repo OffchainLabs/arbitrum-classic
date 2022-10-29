@@ -23,6 +23,10 @@ import "../bridge/interfaces/IBridge.sol";
 import "../bridge/interfaces/ISequencerInbox.sol";
 import "../arch/IOneStepProof.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts)
+ * for new updates
+ */
 interface IChallenge {
     function initializeChallenge(
         IOneStepProof[] calldata _executors,

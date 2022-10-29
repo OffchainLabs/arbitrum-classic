@@ -24,6 +24,7 @@ import "../../libraries/IERC165.sol";
 
 /**
  * @title Common interface for gatways on L1 messaging to Arbitrum.
+ * @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
  */
 interface IL1ArbitrumGateway is ITokenGateway, IERC165 {
     function inbox() external view returns (address);

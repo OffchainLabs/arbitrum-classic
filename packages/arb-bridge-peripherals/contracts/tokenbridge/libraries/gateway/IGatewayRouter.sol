@@ -25,6 +25,7 @@ import "./GatewayMessageHandler.sol";
 
 /**
  * @title Common interface for L1 and L2 Gateway Routers
+ * @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
  */
 interface IGatewayRouter is ITokenGateway {
     function defaultGateway() external view returns (address gateway);

@@ -27,6 +27,10 @@ import "../bridge/interfaces/ISequencerInbox.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts)
+ * for new updates
+ */
 contract RollupCore is IRollupCore {
     using SafeMath for uint256;
 

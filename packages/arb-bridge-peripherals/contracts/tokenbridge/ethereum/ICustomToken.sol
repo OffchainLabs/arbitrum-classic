@@ -26,6 +26,7 @@ interface ArbitrumEnabledToken {
 
 /**
  * @title Minimum expected interface for L1 custom token (see TestCustomTokenL1.sol for an example implementation)
+ * @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
  */
 interface ICustomToken is ArbitrumEnabledToken {
     /**

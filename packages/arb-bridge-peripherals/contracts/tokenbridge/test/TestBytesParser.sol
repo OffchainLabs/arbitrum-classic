@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 
 import "../libraries/BytesParser.sol";
 
+/// @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
 contract TestBytesParser {
     function bytesToString(bytes memory input)
         public

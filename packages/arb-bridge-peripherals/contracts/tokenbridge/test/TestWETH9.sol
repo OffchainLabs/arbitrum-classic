@@ -6,6 +6,7 @@ import "../libraries/IWETH9.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/proxy/ProxyAdmin.sol";
 
+/// @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
 contract TestWETH9 is ERC20, IWETH9 {
     constructor(string memory name_, string memory symbol_) public ERC20(name_, symbol_) {}
 

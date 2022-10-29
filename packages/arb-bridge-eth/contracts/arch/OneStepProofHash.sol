@@ -23,7 +23,10 @@ import "./OneStepProofCommon.sol";
 import "../libraries/Precompiles.sol";
 
 // Originally forked from https://github.com/leapdao/solEVM-enforcer/tree/master
-
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts)
+ * for new updates
+ */
 contract OneStepProofHash is OneStepProofCommon {
     function executeHashInsn(AssertionContext memory context) internal pure {
         Value.Data memory val = popVal(context.stack);

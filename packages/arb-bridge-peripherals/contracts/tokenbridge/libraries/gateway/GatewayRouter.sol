@@ -26,6 +26,7 @@ import "./IGatewayRouter.sol";
 
 /**
  * @title Common interface for L1 and L2 Gateway Routers
+ * @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
  */
 abstract contract GatewayRouter is TokenGateway, IGatewayRouter {
     using Address for address;

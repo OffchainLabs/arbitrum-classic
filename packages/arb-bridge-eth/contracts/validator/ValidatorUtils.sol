@@ -23,6 +23,10 @@ pragma experimental ABIEncoderV2;
 import "../rollup/Rollup.sol";
 import "../challenge/IChallenge.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts)
+ * for new updates
+ */
 contract ValidatorUtils {
     enum ConfirmType {
         NONE,

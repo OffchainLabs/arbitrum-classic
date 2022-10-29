@@ -22,6 +22,10 @@ import "./IGasRefunder.sol";
 
 import "@openzeppelin/contracts-0.8/access/Ownable.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts)
+ * for new updates
+ */
 contract GasRefunder is IGasRefunder, Ownable {
     mapping(address => bool) public allowedContracts;
     mapping(address => bool) public allowedRefundees;
