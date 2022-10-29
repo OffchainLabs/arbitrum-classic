@@ -109,7 +109,8 @@ bool ArbCore::checkError() {
 void ArbCore::printMachineOutputInfo(const std::string& msg,
                                      MachineOutput& machine_output) {
     std::string l2_block_string;
-    if (machine_output.l2_block_number > coreConfig.final_block) {
+    if (coreConfig.final_block != 0 &&
+        machine_output.l2_block_number > coreConfig.final_block) {
         l2_block_string = "TERMINAL_BLOCK";
     } else {
         l2_block_string = to_string(machine_output.l2_block_number, 10);
@@ -330,7 +331,8 @@ InitializeResult ArbCore::applyConfig() {
         pruning_mode_result = pruningMode(tx);
 
         auto l2BlockNumber = getLastCheckpointL2BlockNumber();
-        if (l2BlockNumber != 0 && l2BlockNumber >= coreConfig.final_block) {
+        if (coreConfig.final_block != 0 &&
+            l2BlockNumber >= coreConfig.final_block) {
             // Safe to enable lazy loaded core because already fully synced.
             std::cout << "final block synced, so lazy load enabled"
                       << "\n";
@@ -1743,7 +1745,8 @@ bool ArbCore::threadBody(ThreadDataStruct& thread_data) {
                     std::chrono::seconds(coreConfig.database_save_interval);
             }
 
-            if (output.l2_block_number >= coreConfig.final_block ||
+            if ((coreConfig.final_block != 0 &&
+                 output.l2_block_number >= coreConfig.final_block) ||
                 trigger_save_rocksdb_checkpoint ||
                 output.arb_gas_used >= thread_data.next_checkpoint_gas) {
                 // Save checkpoint after checkpoint_gas_frequency gas used
