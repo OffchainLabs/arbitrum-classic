@@ -9,6 +9,7 @@ import "./ITransferAndCall.sol";
 /**
  * @notice based on Implementation from https://github.com/smartcontractkit/LinkToken/blob/master/contracts/v0.6/ERC677Token.sol
  * The implementation doesn't return a bool on onTokenTransfer. This is similar to the proposed 677 standard, but still incompatible - thus we don't refer to it as such.
+ * @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
  */
 abstract contract TransferAndCallToken is ERC20Upgradeable, ITransferAndCall {
     /**

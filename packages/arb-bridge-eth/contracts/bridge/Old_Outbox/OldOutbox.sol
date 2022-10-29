@@ -35,6 +35,10 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import { NitroReadyMagicNums } from "../NitroMigratorUtil.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts)
+ * for new updates
+ */
 contract OldOutbox is IOutbox, Cloneable {
     using BytesLib for bytes;
 

@@ -35,6 +35,10 @@ import "../rollup/facets/RollupAdmin.sol";
 
 import "../libraries/Whitelist.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts)
+ * for new updates
+ */
 contract RollupTester is Rollup {
     constructor() public Rollup(1) {
         // this undoes the proxy safety from the main rollup contract

@@ -22,6 +22,10 @@ import "../arch/Machine.sol";
 import "../arch/Marshaling.sol";
 import "../arch/Value.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts)
+ * for new updates
+ */
 contract MachineTester {
     using Hashing for Value.Data;
     using Machine for Machine.Data;

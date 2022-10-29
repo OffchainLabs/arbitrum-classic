@@ -21,6 +21,7 @@ pragma solidity ^0.6.11;
 import "../libraries/aeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/drafts/ERC20PermitUpgradeable.sol";
 
+/// @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
 contract TestERC20 is aeERC20 {
     constructor() public {
         aeERC20._initialize("IntArbTestToken", "IARB", uint8(18));

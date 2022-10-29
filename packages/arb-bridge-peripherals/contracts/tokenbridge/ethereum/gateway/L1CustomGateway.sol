@@ -29,6 +29,7 @@ import "arb-bridge-eth/contracts/libraries/Whitelist.sol";
 /**
  * @title Gatway for "custom" bridging functionality
  * @notice Handles some (but not all!) custom Gateway needs.
+ * @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
  */
 contract L1CustomGateway is L1ArbitrumExtendedGateway, ICustomGateway {
     using Address for address;

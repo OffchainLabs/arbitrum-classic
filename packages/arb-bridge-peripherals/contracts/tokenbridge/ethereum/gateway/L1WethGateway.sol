@@ -25,6 +25,7 @@ import "../../libraries/IWETH9.sol";
 import "../../test/TestWETH9.sol";
 import "./L1ArbitrumExtendedGateway.sol";
 
+/// @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
 contract L1WethGateway is L1ArbitrumExtendedGateway {
     using SafeERC20 for IERC20;
 

@@ -21,6 +21,7 @@ pragma solidity ^0.6.11;
 import "./ITokenGateway.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
+/// @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
 abstract contract TokenGateway is ITokenGateway {
     using Address for address;
 

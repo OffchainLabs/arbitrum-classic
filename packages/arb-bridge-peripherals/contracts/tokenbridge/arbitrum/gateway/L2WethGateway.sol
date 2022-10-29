@@ -23,6 +23,7 @@ import "../../libraries/IWETH9.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
+/// @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
 contract L2WethGateway is L2ArbitrumGateway {
     using SafeERC20 for IERC20;
 

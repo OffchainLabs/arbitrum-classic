@@ -21,6 +21,10 @@ pragma solidity ^0.6.11;
 import "./interfaces/IBridge.sol";
 import "./interfaces/ISequencerInbox.sol";
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts)
+ * for new updates
+ */
 contract BridgeUtils {
     function getCountsAndAccumulators(IBridge delayedBridge, ISequencerInbox sequencerInbox)
         external

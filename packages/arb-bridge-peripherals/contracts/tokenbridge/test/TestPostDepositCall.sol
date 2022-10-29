@@ -20,6 +20,7 @@ pragma solidity ^0.6.11;
 
 import "../libraries/ITransferAndCall.sol";
 
+/// @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
 contract L2Called is ITransferAndCallReceiver {
     event Called(uint256 num);
 

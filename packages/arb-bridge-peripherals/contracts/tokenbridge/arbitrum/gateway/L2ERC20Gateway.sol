@@ -24,6 +24,7 @@ import "./L2ArbitrumGateway.sol";
 import "../StandardArbERC20.sol";
 import "../../libraries/ClonableBeaconProxy.sol";
 
+/// @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
 contract L2ERC20Gateway is L2ArbitrumGateway {
     address public beaconProxyFactory;
 

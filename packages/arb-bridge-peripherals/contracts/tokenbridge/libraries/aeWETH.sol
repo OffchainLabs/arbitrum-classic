@@ -22,6 +22,7 @@ import "./L2GatewayToken.sol";
 import "./IWETH9.sol";
 
 /// @title Arbitrum extended WETH
+/// @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
 contract aeWETH is L2GatewayToken, IWETH9 {
     function initialize(
         string memory name_,

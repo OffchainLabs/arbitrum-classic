@@ -26,12 +26,15 @@ import (
 	"reflect"
 	"sync/atomic"
 
+	"github.com/pkg/errors"
+
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
-	"github.com/pkg/errors"
 
 	"github.com/offchainlabs/arbitrum/packages/arb-evm/evm"
 	"github.com/offchainlabs/arbitrum/packages/arb-rpc-node/txdb"
@@ -46,6 +49,8 @@ type CrossDB struct {
 	ethDB ethdb.Database
 	msgDB ethdb.Database
 
+	signer types.Signer
+
 	err error
 
 	// atomic reads / writes:
@@ -58,6 +63,7 @@ type CrossDB struct {
 func NewCrossDB(
 	txDB *txdb.TxDB,
 	exportPath string,
+	chainId *big.Int,
 ) (*CrossDB, error) {
 	ethDBPath := filepath.Join(exportPath, "l2chaindata")
 	freezer := filepath.Join(ethDBPath, "ancient")
@@ -70,12 +76,13 @@ func NewCrossDB(
 	if err != nil {
 		return nil, err
 	}
-
+	signer := types.NewEIP2930Signer(chainId)
 	return &CrossDB{
 		err:               nil,
 		txDB:              txDB,
 		ethDB:             ethDB,
 		msgDB:             msgDB,
+		signer:            signer,
 		targetChangedChan: make(chan struct{}),
 	}, nil
 }
@@ -108,11 +115,25 @@ func (c *CrossDB) importBlock(ctx context.Context, blockNumber uint64) error {
 
 		txHash := txRes.IncomingRequest.MessageID.ToEthHash()
 		effectiveGasPrice := txRes.FeeStats.Price.L2Computation.Uint64()
-		tx, err := types.NewArbitrumLegacyTx(processedTx.Tx, txHash, effectiveGasPrice, blockInfo.L1BlockNum.Uint64())
+		var senderOverride *common.Address
+		txResFrom := txRes.IncomingRequest.Sender.ToEthAddress()
+		legacyTxFrom, err := c.signer.Sender(processedTx.Tx)
+		if err != nil || legacyTxFrom != txResFrom {
+			senderOverride = &txResFrom
+		}
+		tx, err := types.NewArbitrumLegacyTx(processedTx.Tx, txHash, effectiveGasPrice, blockInfo.L1BlockNum.Uint64(), senderOverride)
 		if err != nil {
 			return err
 		}
-
+		encoded, err := rlp.EncodeToBytes(tx)
+		if err != nil {
+			return fmt.Errorf("failed encoding tx block: %d, tx: %d, err: %w", blockNumber, i, err)
+		}
+		var tmp types.Transaction
+		err = rlp.DecodeBytes(encoded, &tmp)
+		if err != nil {
+			return fmt.Errorf("failed decoding tx block: %d, tx: %d, err: %w", blockNumber, i, err)
+		}
 		outputTxs = append(outputTxs, tx)
 		receipt := txRes.ToEthReceipt(arbcommon.NewHashFromEth(machineBlockInfo.Header.Hash()))
 		receipt.TransactionIndex = uint(i)
@@ -124,15 +145,32 @@ func (c *CrossDB) importBlock(ctx context.Context, blockNumber uint64) error {
 	header := types.CopyHeader(machineBlockInfo.Header)
 
 	block := types.NewBlock(header, outputTxs, nil, outputReceipts, trie.NewStackTrie(nil))
-	blockHash := block.Header().Hash()
+	if err != nil {
+		return err
+	}
+
+	blockHashBefore := block.Header().Hash()
+	_, err = rawdb.WriteAncientBlocks(c.ethDB, []*types.Block{block}, []types.Receipts{outputReceipts}, big.NewInt(0))
+	if err != nil {
+		return fmt.Errorf("%w: while storing block %d", err, blockNumber)
+	}
+	readBlock := rawdb.ReadBlock(c.ethDB, blockHashBefore, blockNumber)
+	if readBlock == nil {
+		return fmt.Errorf("failed saving block %v", blockNumber)
+	}
+	blockHash := readBlock.Header().Hash()
 	if blockHash != machineBlockInfo.Header.Hash() {
 		errStr := ""
 		for i, tx := range outputTxs {
 			errStr += fmt.Sprint(i, ": ", tx.Hash(), "\n")
 		}
-		return errors.Errorf("bad block %v", blockNumber)
+		return fmt.Errorf("bad block %v", blockNumber)
 	}
-	_, err = rawdb.WriteAncientBlocks(c.ethDB, []*types.Block{block}, []types.Receipts{outputReceipts}, big.NewInt(0))
+	for i := range outputTxs {
+		if !reflect.DeepEqual(outputTxs[i].GetInner(), readBlock.Transactions()[i].GetInner()) {
+			return errors.New(fmt.Sprintf("block %d tx %d inner tx stored %v != original %v", blockNumber, i, readBlock.Transactions()[i].GetInner(), outputTxs[i].GetInner()))
+		}
+	}
 	receiptsRead := rawdb.ReadReceipts(c.ethDB, blockHash, blockNumber, params.ArbitrumRinkebyDevTestChainConfig())
 	for i := range receiptsRead {
 		if !reflect.DeepEqual(receiptsRead[i], outputReceipts[i]) {

@@ -37,6 +37,10 @@ import { INitroRollup, IArbOwner, NitroReadyMagicNums } from "./NitroMigratorUti
 pragma solidity ^0.6.11;
 pragma experimental ABIEncoderV2;
 
+/**
+ * @notice DEPRECATED - only for classic version, see new repo (https://github.com/OffchainLabs/nitro/tree/master/contracts)
+ * for new updates
+ */
 contract NitroMigrator is OwnableUpgradeable, IMessageProvider {
     uint8 internal constant L1MessageType_shutdownForNitro = 128;
 
