@@ -72,7 +72,7 @@ func runExecutableFile(b *testing.B, filePath string) {
 	b.ResetTimer()
 
 	// Last parameter returned is number of steps executed
-	_, _, _, err = mach.ExecuteAssertion(ctx, uint64(b.N)*insnMultiplier, true, nil)
+	_, _, _, err = mach.ExecuteAssertion(ctx, uint64(b.N)*insnMultiplier, true, nil, false)
 	if err != nil {
 		b.Fatal(err)
 	}

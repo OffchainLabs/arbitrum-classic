@@ -41,15 +41,16 @@ struct Assertion {
 
 class MachineExecutionConfig {
    public:
-    uint256_t max_gas;
-    bool go_over_gas;
+    uint256_t max_gas{0};
+    bool go_over_gas{false};
     std::vector<MachineMessage> inbox_messages;
     std::deque<InboxMessage> sideloads;
-    bool stop_on_sideload;
-    bool stop_on_breakpoint;
+    bool stop_on_sideload{false};
+    bool stop_on_breakpoint{false};
     std::optional<uint256_t> stop_after_log_count;
+    bool trace{false};
 
-    MachineExecutionConfig();
+    MachineExecutionConfig() = default;
 
     void setInboxMessagesFromBytes(
         const std::vector<std::vector<unsigned char>>&);

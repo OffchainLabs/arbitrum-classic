@@ -887,6 +887,7 @@ rocksdb::Status ArbCore::advanceCoreToTarget(const MachineOutput& target_output,
         MachineExecutionConfig execConfig;
         execConfig.stop_on_sideload = cache_sideloads;
         execConfig.stop_on_breakpoint = false;
+        execConfig.trace = false;
         execConfig.max_gas = target_output.arb_gas_used;
 
         // Add messages and run machine
@@ -1914,6 +1915,7 @@ void ArbCore::operator()() {
         maxGas + coreConfig.basic_machine_cache_interval);
     thread_data.execConfig.stop_on_sideload = true;
     thread_data.execConfig.stop_on_breakpoint = false;
+    thread_data.execConfig.trace = false;
 
     if (coreConfig.database_save_interval > 0) {
         thread_data.next_rocksdb_save_timepoint =

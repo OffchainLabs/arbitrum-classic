@@ -129,7 +129,7 @@ func handleEstimateRetryableTicket(ctx context.Context, srv *Server, calldata []
 		Data:              data,
 	}
 
-	res, _, err := snap.EstimateRetryableGas(ctx, createTicket, common.NewAddressFromEth(sender), srv.maxAVMGas)
+	res, err := snap.EstimateRetryableGas(ctx, createTicket, common.NewAddressFromEth(sender), srv.maxAVMGas)
 	if err != nil {
 		return nil, err
 	}

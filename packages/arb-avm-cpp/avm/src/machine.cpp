@@ -37,14 +37,6 @@ void convertInboxMessagesFromBytes(
 }
 }  // namespace
 
-MachineExecutionConfig::MachineExecutionConfig()
-    : max_gas(0),
-      go_over_gas(false),
-      inbox_messages(),
-      sideloads(),
-      stop_on_sideload(false),
-      stop_on_breakpoint(false) {}
-
 void MachineExecutionConfig::setInboxMessagesFromBytes(
     const std::vector<std::vector<unsigned char>>& bytes) {
     inbox_messages.clear();

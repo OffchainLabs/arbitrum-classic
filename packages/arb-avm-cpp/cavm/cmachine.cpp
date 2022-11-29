@@ -178,7 +178,7 @@ void machineExecutionConfigSetMaxGas(CMachineExecutionConfig* c,
     assert(c);
     auto config = static_cast<MachineExecutionConfig*>(c);
     config->max_gas = max_gas;
-    config->go_over_gas = go_over_gas;
+    config->go_over_gas = go_over_gas != 0;
 }
 
 void machineExecutionConfigSetInboxMessages(CMachineExecutionConfig* c,
@@ -199,14 +199,20 @@ void machineExecutionConfigSetStopOnSideload(CMachineExecutionConfig* c,
                                              int stop_on_sideload) {
     assert(c);
     auto config = static_cast<MachineExecutionConfig*>(c);
-    config->stop_on_sideload = stop_on_sideload;
+    config->stop_on_sideload = stop_on_sideload != 0;
 }
 
 void machineExecutionConfigSetStopOnBreakpoint(CMachineExecutionConfig* c,
                                                int stop_on_breakpoint) {
     assert(c);
     auto config = static_cast<MachineExecutionConfig*>(c);
-    config->stop_on_breakpoint = stop_on_breakpoint;
+    config->stop_on_breakpoint = stop_on_breakpoint != 0;
+}
+
+void machineExecutionConfigSetTrace(CMachineExecutionConfig* c, int trace) {
+    assert(c);
+    auto config = static_cast<MachineExecutionConfig*>(c);
+    config->trace = trace != 0;
 }
 
 RawAssertionResult executeAssertion(CMachine* m,
@@ -240,8 +246,12 @@ RawAssertionResult executeAssertion(CMachine* m,
         }
 
         std::vector<unsigned char> debugPrintData;
-        for (const auto& debugPrint : assertion.debug_prints) {
-            marshal_value(debugPrint.val, debugPrintData, nullptr);
+        int debugPrintDataCount = 0;
+        if (config->trace) {
+            for (const auto& debugPrint : assertion.debug_prints) {
+                debugPrintDataCount++;
+                marshal_value(debugPrint.val, debugPrintData, nullptr);
+            }
         }
 
         // TODO extend usage of uint256
@@ -250,8 +260,7 @@ RawAssertionResult executeAssertion(CMachine* m,
              returnCharVector(sendData),
              static_cast<int>(assertion.sends.size()),
              returnCharVector(logData), static_cast<int>(assertion.logs.size()),
-             returnCharVector(debugPrintData),
-             static_cast<int>(assertion.debug_prints.size()),
+             returnCharVector(debugPrintData), debugPrintDataCount,
              intx::narrow_cast<uint64_t>(assertion.step_count),
              intx::narrow_cast<uint64_t>(assertion.gas_count)},
             false};

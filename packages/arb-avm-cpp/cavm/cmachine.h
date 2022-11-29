@@ -90,6 +90,7 @@ void machineExecutionConfigSetStopOnSideload(CMachineExecutionConfig* c,
                                              int stop_on_sideload);
 void machineExecutionConfigSetStopOnBreakpoint(CMachineExecutionConfig* c,
                                                int stop_on_breakpoint);
+void machineExecutionConfigSetTrace(CMachineExecutionConfig* c, int trace);
 
 int dumpRetryables(CArbCore* a, CMachine* m, const char* filename);
 
