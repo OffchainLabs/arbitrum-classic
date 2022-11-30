@@ -229,7 +229,7 @@ func (s *Server) Call(ctx context.Context, callArgs CallTxArgs, blockNum rpc.Blo
 
 	from, msg := buildCallMsg(callArgs)
 
-	res, _, err := snap.CallWithOverrides(ctx, msg, from, overrides, s.maxAVMGas)
+	res, _, err := snap.CallWithOverrides(ctx, msg, from, overrides, s.maxAVMGas, false)
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +263,7 @@ func (s *Server) EstimateGas(ctx context.Context, args CallTxArgs, optBlockNum *
 	} else if s.aggregator != nil {
 		agg = *s.aggregator
 	}
-	res, _, err := snap.EstimateGas(ctx, tx, agg, from, s.maxAVMGas)
+	res, _, err := snap.EstimateGas(ctx, tx, agg, from, s.maxAVMGas, false)
 	if err == nil && res.ResultCode != evm.ReturnCode {
 		err = evm.HandleCallError(res, s.ganacheMode)
 	}

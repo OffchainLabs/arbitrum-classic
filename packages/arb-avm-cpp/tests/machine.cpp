@@ -80,8 +80,12 @@ TEST_CASE("Checkpoint State") {
     machine->run();
     REQUIRE(!machine->isAborted());
 
-    SECTION("default") { checkpointState(storage, *machine); }
-    SECTION("save twice") { checkpointStateTwice(storage, *machine); }
+    SECTION("default") {
+        checkpointState(storage, *machine);
+    }
+    SECTION("save twice") {
+        checkpointStateTwice(storage, *machine);
+    }
     SECTION("assert machine hash") {
         auto transaction = storage.makeReadWriteTransaction();
         auto results = saveTestMachine(*transaction, *machine);
@@ -267,6 +271,7 @@ TEST_CASE("Stopping on sideload") {
     execConfig.sideloads.emplace_back(InboxMessage());
     execConfig.stop_on_sideload = true;  // Shouldn't matter
     execConfig.stop_on_breakpoint = false;
+    execConfig.trace = false;
     machine.machine_state.context = AssertionContext(execConfig);
     assertion = machine.run();
     REQUIRE(!machine.isAborted());
@@ -279,6 +284,7 @@ TEST_CASE("Stopping on sideload") {
     execConfig.sideloads.clear();
     execConfig.stop_on_sideload = true;
     execConfig.stop_on_breakpoint = false;
+    execConfig.trace = false;
     machine.machine_state.context = AssertionContext(execConfig);
     assertion = machine.run();
     REQUIRE(!machine.isAborted());

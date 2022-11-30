@@ -144,7 +144,7 @@ func TestTransfer(t *testing.T) {
 	test.FailIfError(t, err)
 	snap, err := srv.PendingSnapshot(ctx)
 	test.FailIfError(t, err)
-	_, debugPrints, err := snap.EstimateGas(ctx, arbTx, common.Address{}, common.NewAddressFromEth(senderAuth.From), 100000000)
+	_, debugPrints, err := snap.EstimateGas(ctx, arbTx, common.Address{}, common.NewAddressFromEth(senderAuth.From), 100000000, true)
 	test.FailIfError(t, err)
 	trace, err := getEVMTrace(debugPrints)
 	test.FailIfError(t, err)
@@ -170,7 +170,7 @@ func TestTransfer(t *testing.T) {
 				Payment:     big.NewInt(0),
 				Data:        transferABI.Methods["send3"].ID,
 			},
-		}, common.NewAddressFromEth(senderAuth.From), math.MaxUint64)
+		}, common.NewAddressFromEth(senderAuth.From), math.MaxUint64, true)
 		test.FailIfError(t, err)
 		trace, err := getEVMTrace(debugPrints)
 		test.FailIfError(t, err)

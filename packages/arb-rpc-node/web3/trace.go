@@ -316,6 +316,7 @@ func (t *Trace) getSnapAfterTx(ctx context.Context, cursor core.ExecutionCursor)
 		nil,
 		true,
 		false,
+		false,
 	)
 	if err != nil {
 		return nil, err
@@ -455,7 +456,7 @@ func (t *Trace) handleCallRequest(ctx context.Context, callArgs CallTxArgs, trac
 	from, msg := buildCallMsg(callArgs)
 	// We're mutating so we need unique ownership
 	snap = snap.Clone()
-	callRes, debugPrints, err := snap.AddContractMessage(ctx, msg, from, t.s.maxAVMGas)
+	callRes, debugPrints, err := snap.AddContractMessage(ctx, msg, from, t.s.maxAVMGas, true)
 	if err != nil {
 		return nil, err
 	}

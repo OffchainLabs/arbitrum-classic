@@ -80,7 +80,7 @@ func NewSnapshot(ctx context.Context, mach machine.Machine, time inbox.ChainTime
 		}
 		// Note: this .Call actually uses arbosRemappingEnabled which isn't set yet,
 		// but that's fine because the zero address is never rewritten regardless.
-		arbOwnerRes, _, err := snap.Call(ctx, arbOwnerMsg, common.Address{}, math.MaxUint64)
+		arbOwnerRes, _, err := snap.Call(ctx, arbOwnerMsg, common.Address{}, math.MaxUint64, false)
 		if err != nil {
 			return nil, err
 		}
@@ -109,7 +109,7 @@ func (s *Snapshot) MaxGasPriceBid() *big.Int {
 // If an error is returned, s is unmodified
 func (s *Snapshot) AddMessage(ctx context.Context, msg message.Message, sender common.Address, targetHash common.Hash) (*evm.TxResult, error) {
 	mach := s.mach.Clone()
-	res, _, err := s.addMessage(ctx, msg, sender, targetHash, addMessageMaxAVMGas)
+	res, _, err := s.addMessage(ctx, msg, sender, targetHash, addMessageMaxAVMGas, false)
 	if err != nil {
 		// Revert the machine
 		s.mach = mach
@@ -121,13 +121,20 @@ const addMessageMaxAVMGas = 100000000000
 
 // addMessage can only be called if the snapshot is uniquely owned
 // leaves the machine in an undefined state on error
-func (s *Snapshot) addMessage(ctx context.Context, msg message.Message, sender common.Address, targetHash common.Hash, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
+func (s *Snapshot) addMessage(
+	ctx context.Context,
+	msg message.Message,
+	sender common.Address,
+	targetHash common.Hash,
+	maxAVMGas uint64,
+	trace bool,
+) (*evm.TxResult, []value.Value, error) {
 	chainTime := inbox.ChainTime{
 		BlockNum:  common.NewTimeBlocksInt(0),
 		Timestamp: big.NewInt(0),
 	}
 	inboxMsg := message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, big.NewInt(0), chainTime)
-	res, debugPrints, err := runTxUnchecked(ctx, s.mach, inboxMsg, maxAVMGas)
+	res, debugPrints, err := runTxUnchecked(ctx, s.mach, inboxMsg, maxAVMGas, trace)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -164,7 +171,14 @@ func (s *Snapshot) Height() *common.TimeBlocks {
 	return s.time.BlockNum
 }
 
-func (s *Snapshot) EstimateGas(ctx context.Context, tx *types.Transaction, aggregator, sender common.Address, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
+func (s *Snapshot) EstimateGas(
+	ctx context.Context,
+	tx *types.Transaction,
+	aggregator,
+	sender common.Address,
+	maxAVMGas uint64,
+	trace bool,
+) (*evm.TxResult, []value.Value, error) {
 	if s.arbosVersion < 3 {
 		var dest common.Address
 		if tx.To() != nil {
@@ -179,7 +193,7 @@ func (s *Snapshot) EstimateGas(ctx context.Context, tx *types.Transaction, aggre
 				Data:        tx.Data(),
 			},
 		}
-		return s.Call(ctx, msg, sender, maxAVMGas)
+		return s.Call(ctx, msg, sender, maxAVMGas, trace)
 	} else {
 		gasEstimationMessage, err := message.NewGasEstimationMessage(aggregator, big.NewInt(0), message.NewCompressedECDSAFromEth(tx))
 		if err != nil {
@@ -191,11 +205,16 @@ func (s *Snapshot) EstimateGas(ctx context.Context, tx *types.Transaction, aggre
 			targetHash = hashing.SoliditySHA3(hashing.Bytes32(targetHash), hashing.Uint256(big.NewInt(0)))
 		}
 		inboxMsg := s.makeInboxMessage(gasEstimationMessage, sender)
-		return runTx(ctx, s.mach.Clone(), inboxMsg, targetHash, maxAVMGas)
+		return runTx(ctx, s.mach.Clone(), inboxMsg, targetHash, maxAVMGas, trace)
 	}
 }
 
-func (s *Snapshot) EstimateRetryableGas(ctx context.Context, msg message.RetryableTx, sender common.Address, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
+func (s *Snapshot) EstimateRetryableGas(
+	ctx context.Context,
+	msg message.RetryableTx,
+	sender common.Address,
+	maxAVMGas uint64,
+) (*evm.TxResult, error) {
 	redeemGas := new(big.Int).Set(msg.MaxGas)
 	redeemGasPriceBid := new(big.Int).Set(msg.GasPriceBid)
 	msg.MaxGas = msg.MaxGas.SetUint64(0)
@@ -218,7 +237,7 @@ func (s *Snapshot) EstimateRetryableGas(ctx context.Context, msg message.Retryab
 	})
 	gasEstimationMessage, err := message.NewGasEstimationMessage(common.Address{}, big.NewInt(0), message.NewCompressedECDSAFromEth(redeemTx))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	estimateSeqNum := new(big.Int).Add(s.nextInboxSeqNum, big.NewInt(1))
 	var targetHash2 common.Hash
@@ -233,7 +252,7 @@ func (s *Snapshot) EstimateRetryableGas(ctx context.Context, msg message.Retryab
 	inboxMsg2 := message.NewInboxMessage(gasEstimationMessage, redeemer, estimateSeqNum, big.NewInt(0), s.time)
 
 	mach := s.mach.Clone()
-	assertion, debugPrints, _, err := mach.ExecuteAssertionAdvanced(
+	assertion, _, _, err := mach.ExecuteAssertionAdvanced(
 		ctx,
 		maxAVMGas,
 		false,
@@ -241,54 +260,61 @@ func (s *Snapshot) EstimateRetryableGas(ctx context.Context, msg message.Retryab
 		[]inbox.InboxMessage{inboxMsg2, inboxMsg1},
 		true,
 		false,
+		false,
 	)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	avmLogs := assertion.Logs
 	if len(avmLogs) == 0 {
-		return nil, nil, errors.New("no logs emitted processing retryable")
+		return nil, errors.New("no logs emitted processing retryable")
 	}
 	res, err := evm.NewTxResultFromValue(avmLogs[0])
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if res.ResultCode != evm.ReturnCode {
-		return nil, nil, errors.New("ticket creation failed")
+		return nil, errors.New("ticket creation failed")
 	}
 	if res.IncomingRequest.MessageID != targetHash {
-		return nil, debugPrints, errors.Errorf("ticket creation got unexpected result %v instead of %v", res.IncomingRequest.MessageID, targetHash)
+		return nil, errors.Errorf("ticket creation got unexpected result %v instead of %v", res.IncomingRequest.MessageID, targetHash)
 	}
 
 	if len(avmLogs) == 2 {
 		// Redeem must have failed
 		res2, err := evm.NewTxResultFromValue(avmLogs[1])
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		if res2.ResultCode != evm.ReturnCode {
-			return nil, nil, evm.HandleCallError(res2, false)
+			return nil, evm.HandleCallError(res2, false)
 		} else {
-			return nil, nil, errors.New("Redeem succeeded, but failed to trigger redeemed tx")
+			return nil, errors.New("Redeem succeeded, but failed to trigger redeemed tx")
 		}
 	}
 
 	if len(avmLogs) != 3 {
-		return nil, nil, errors.Errorf("unexpected result count %v", len(avmLogs))
+		return nil, errors.Errorf("unexpected result count %v", len(avmLogs))
 	}
 
 	res2, err := evm.NewTxResultFromValue(avmLogs[2])
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if res2.IncomingRequest.MessageID != targetHash2 {
-		return nil, debugPrints, errors.Errorf("estimation got unexpected result %v instead of %v", res2.IncomingRequest.MessageID, targetHash2)
+		return nil, errors.Errorf("estimation got unexpected result %v instead of %v", res2.IncomingRequest.MessageID, targetHash2)
 	}
-	return res2, debugPrints, err
+	return res2, err
 }
 
-func (s *Snapshot) Call(ctx context.Context, msg message.ContractTransaction, sender common.Address, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
+func (s *Snapshot) Call(
+	ctx context.Context,
+	msg message.ContractTransaction,
+	sender common.Address,
+	maxAVMGas uint64,
+	trace bool,
+) (*evm.TxResult, []value.Value, error) {
 	var targetHash common.Hash
 	if s.chainId != nil {
 		targetHash = hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
@@ -297,7 +323,7 @@ func (s *Snapshot) Call(ctx context.Context, msg message.ContractTransaction, se
 		sender = message.L1RemapAccount(sender)
 	}
 	inboxMsg := s.makeInboxMessage(message.NewSafeL2Message(msg), sender)
-	return runTx(ctx, s.mach.Clone(), inboxMsg, targetHash, maxAVMGas)
+	return runTx(ctx, s.mach.Clone(), inboxMsg, targetHash, maxAVMGas, trace)
 }
 
 type EthCallOverride struct {
@@ -308,11 +334,18 @@ type EthCallOverride struct {
 	StateDiff *map[ethcommon.Hash]ethcommon.Hash `json:"stateDiff"`
 }
 
-func (s *Snapshot) CallWithOverrides(ctx context.Context, msg message.ContractTransaction, sender common.Address, overrides *map[ethcommon.Address]EthCallOverride, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
+func (s *Snapshot) CallWithOverrides(
+	ctx context.Context,
+	msg message.ContractTransaction,
+	sender common.Address,
+	overrides *map[ethcommon.Address]EthCallOverride,
+	maxAVMGas uint64,
+	trace bool,
+) (*evm.TxResult, []value.Value, error) {
 	snap := s.Clone()
 	snap.mach = snap.mach.Clone()
 	if overrides != nil {
-		// We'll be mutating this scapshot so we need to make a copy
+		// We'll be mutating this snapshot so we need to make a copy
 		for address, override := range *overrides {
 			account := common.NewAddressFromEth(address)
 			if override.Nonce != nil {
@@ -362,26 +395,33 @@ func (s *Snapshot) CallWithOverrides(ctx context.Context, msg message.ContractTr
 		sender = message.L1RemapAccount(sender)
 	}
 	inboxMsg := snap.makeInboxMessage(message.NewSafeL2Message(msg), sender)
-	return runTx(ctx, snap.mach, inboxMsg, targetHash, maxAVMGas)
+	return runTx(ctx, snap.mach, inboxMsg, targetHash, maxAVMGas, trace)
 }
 
 func (s *Snapshot) makeInboxMessage(msg message.Message, sender common.Address) inbox.InboxMessage {
 	return message.NewInboxMessage(msg, sender, s.nextInboxSeqNum, big.NewInt(0), s.time)
 }
 
-func runTx(ctx context.Context, mach machine.Machine, inboxMsg inbox.InboxMessage, targetHash common.Hash, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
-	res, debugPrints, err := runTxUnchecked(ctx, mach, inboxMsg, maxAVMGas)
+func runTx(
+	ctx context.Context,
+	mach machine.Machine,
+	inboxMsg inbox.InboxMessage,
+	targetHash common.Hash,
+	maxAVMGas uint64,
+	trace bool,
+) (*evm.TxResult, []value.Value, error) {
+	res, debugPrints, err := runTxUnchecked(ctx, mach, inboxMsg, maxAVMGas, trace)
 	if err != nil {
 		return nil, nil, err
 	}
 	var emptyHash common.Hash
 	if targetHash != emptyHash && res.IncomingRequest.MessageID != targetHash {
-		return nil, debugPrints, errors.Errorf("call got unexpected result %v instead of %v", res.IncomingRequest.MessageID, targetHash)
+		return nil, nil, errors.Errorf("call got unexpected result %v instead of %v", res.IncomingRequest.MessageID, targetHash)
 	}
 	return res, debugPrints, nil
 }
 
-func (s *Snapshot) basicCallUnsafe(ctx context.Context, data []byte, dest common.Address) (*evm.TxResult, []value.Value, error) {
+func (s *Snapshot) basicCallUnsafe(ctx context.Context, data []byte, dest common.Address) (*evm.TxResult, error) {
 	msg := message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(1000000000),
@@ -392,7 +432,12 @@ func (s *Snapshot) basicCallUnsafe(ctx context.Context, data []byte, dest common
 		},
 	}
 	inboxMsg := message.NewInboxMessage(message.NewSafeL2Message(msg), common.Address{}, s.nextInboxSeqNum, big.NewInt(0), s.time)
-	return runTxUnchecked(ctx, s.mach.Clone(), inboxMsg, 1000000000)
+	res, _, err := runTxUnchecked(ctx, s.mach.Clone(), inboxMsg, 1000000000, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func (s *Snapshot) basicCall(ctx context.Context, data []byte, dest common.Address) (*evm.TxResult, error) {
@@ -405,11 +450,11 @@ func (s *Snapshot) basicCall(ctx context.Context, data []byte, dest common.Addre
 			Data:        data,
 		},
 	}
-	res, _, err := s.Call(ctx, msg, common.Address{}, math.MaxUint64)
+	res, _, err := s.Call(ctx, msg, common.Address{}, math.MaxUint64, false)
 	return res, err
 }
 
-func (s *Snapshot) basicAddMessage(ctx context.Context, data []byte, dest common.Address) (*evm.TxResult, error) {
+func (s *Snapshot) basicAddTestMessage(ctx context.Context, data []byte, dest common.Address) (*evm.TxResult, error) {
 	msg := message.ContractTransaction{
 		BasicTx: message.BasicTx{
 			MaxGas:      big.NewInt(1000000000),
@@ -419,11 +464,17 @@ func (s *Snapshot) basicAddMessage(ctx context.Context, data []byte, dest common
 			Data:        data,
 		},
 	}
-	res, _, err := s.AddContractMessage(ctx, msg, common.Address{}, addMessageMaxAVMGas)
+	res, _, err := s.AddContractMessage(ctx, msg, common.Address{}, addMessageMaxAVMGas, false)
 	return res, err
 }
 
-func (s *Snapshot) AddContractMessage(ctx context.Context, msg message.ContractTransaction, sender common.Address, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
+func (s *Snapshot) AddContractMessage(
+	ctx context.Context,
+	msg message.ContractTransaction,
+	sender common.Address,
+	maxAVMGas uint64,
+	trace bool,
+) (*evm.TxResult, []value.Value, error) {
 	if s.arbosRemappingEnabled && sender != (common.Address{}) {
 		sender = message.L1RemapAccount(sender)
 	}
@@ -431,11 +482,11 @@ func (s *Snapshot) AddContractMessage(ctx context.Context, msg message.ContractT
 	if s.chainId != nil {
 		targetHash = hashing.SoliditySHA3(hashing.Uint256(s.chainId), hashing.Uint256(s.nextInboxSeqNum))
 	}
-	return s.addMessage(ctx, message.NewSafeL2Message(msg), sender, targetHash, maxAVMGas)
+	return s.addMessage(ctx, message.NewSafeL2Message(msg), sender, targetHash, maxAVMGas, trace)
 }
 
 func (s *Snapshot) addArbosTestMessage(ctx context.Context, data []byte) error {
-	res, err := s.basicAddMessage(ctx, (data), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
+	res, err := s.basicAddTestMessage(ctx, (data), common.NewAddressFromEth(arbos.ARB_TEST_ADDRESS))
 	if err != nil {
 		return err
 	}
@@ -517,7 +568,7 @@ func (s *Snapshot) store(ctx context.Context, account common.Address, key, val c
 }
 
 func (s *Snapshot) ArbOSVersion(ctx context.Context) (*big.Int, error) {
-	res, _, err := s.basicCallUnsafe(ctx, arbos.ArbOSVersionData(), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+	res, err := s.basicCallUnsafe(ctx, arbos.ArbOSVersionData(), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
@@ -528,7 +579,7 @@ func (s *Snapshot) ArbOSVersion(ctx context.Context) (*big.Int, error) {
 }
 
 func (s *Snapshot) ChainId(ctx context.Context) (*big.Int, error) {
-	res, _, err := s.basicCallUnsafe(ctx, arbos.ChainIdData(), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
+	res, err := s.basicCallUnsafe(ctx, arbos.ChainIdData(), common.NewAddressFromEth(arbos.ARB_SYS_ADDRESS))
 	if err != nil {
 		return nil, err
 	}
@@ -549,8 +600,14 @@ func (s *Snapshot) GetPricesInWei(ctx context.Context) ([6]*big.Int, error) {
 	return arbos.ParseGetPricesInWeiResult(res.ReturnData)
 }
 
-func runTxUnchecked(ctx context.Context, mach machine.Machine, msg inbox.InboxMessage, maxAVMGas uint64) (*evm.TxResult, []value.Value, error) {
-	assertion, debugPrints, steps, err := mach.ExecuteAssertionAdvanced(ctx, maxAVMGas, false, nil, []inbox.InboxMessage{msg}, true, false)
+func runTxUnchecked(
+	ctx context.Context,
+	mach machine.Machine,
+	msg inbox.InboxMessage,
+	maxAVMGas uint64,
+	trace bool,
+) (*evm.TxResult, []value.Value, error) {
+	assertion, debugPrints, steps, err := mach.ExecuteAssertionAdvanced(ctx, maxAVMGas, false, nil, []inbox.InboxMessage{msg}, true, false, trace)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -266,14 +266,14 @@ func runBasicAssertion(t *testing.T, inboxMessages []inbox.InboxMessage) ([]evm.
 	var logs []value.Value
 	var sends [][]byte
 	var debugPrints [][]evm.EVMLogLine
-	assertion, _, _, err := mach.ExecuteAssertion(ctx, 10000000000, false, nil)
+	assertion, _, _, err := mach.ExecuteAssertion(ctx, 10000000000, false, nil, false)
 	failIfError(t, err)
 	logs = append(logs, assertion.Logs...)
 	sends = append(sends, assertion.Sends...)
 	totalExecutionGas := uint64(0)
 	for i, msg := range inboxMessages {
 		t.Log("Message", i)
-		assertion, dPrints, _, err := mach.ExecuteAssertion(ctx, 10000000000, false, []inbox.InboxMessage{msg})
+		assertion, dPrints, _, err := mach.ExecuteAssertion(ctx, 10000000000, false, []inbox.InboxMessage{msg}, true)
 		failIfError(t, err)
 		totalExecutionGas += assertion.NumGas
 		parsedDebugPrints := processDebugPrints(t, dPrints)
@@ -316,7 +316,7 @@ func runBasicAssertion(t *testing.T, inboxMessages []inbox.InboxMessage) ([]evm.
 				Timestamp: big.NewInt(0),
 			},
 		)
-		_, _, _, err = mach.ExecuteAssertionAdvanced(ctx, 10000000000, false, []inbox.InboxMessage{msg}, nil, true, false)
+		_, _, _, err = mach.ExecuteAssertionAdvanced(ctx, 10000000000, false, []inbox.InboxMessage{msg}, nil, true, false, false)
 		test.FailIfError(t, err)
 		snap, err = snapshot.NewSnapshot(ctx, mach.Clone(), lastMessage.ChainTime, seq)
 		test.FailIfError(t, err)

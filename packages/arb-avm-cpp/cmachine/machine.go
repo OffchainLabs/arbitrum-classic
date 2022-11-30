@@ -167,6 +167,7 @@ func (m *Machine) ExecuteAssertion(
 	maxGas uint64,
 	goOverGas bool,
 	messages []inbox.InboxMessage,
+	trace bool,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
 	defer runtime.KeepAlive(m)
 	return m.ExecuteAssertionAdvanced(
@@ -177,6 +178,7 @@ func (m *Machine) ExecuteAssertion(
 		nil,
 		false,
 		false,
+		trace,
 	)
 }
 
@@ -188,6 +190,7 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	sideloads []inbox.InboxMessage,
 	stopOnSideload bool,
 	stopOnBreakpoint bool,
+	trace bool,
 ) (*protocol.ExecutionAssertion, []value.Value, uint64, error) {
 	defer runtime.KeepAlive(m)
 	conf := C.machineExecutionConfigCreate()
@@ -206,6 +209,8 @@ func (m *Machine) ExecuteAssertionAdvanced(
 	C.machineExecutionConfigSetStopOnSideload(conf, boolToCInt(stopOnSideload))
 
 	C.machineExecutionConfigSetStopOnBreakpoint(conf, boolToCInt(stopOnBreakpoint))
+
+	C.machineExecutionConfigSetTrace(conf, boolToCInt(trace))
 
 	resultChan := make(chan C.RawAssertionResult, 1)
 	go func() {
