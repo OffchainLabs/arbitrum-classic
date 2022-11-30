@@ -245,7 +245,7 @@ func startup() error {
 		config.Core.CheckpointMaxExecutionGas = 0
 	}
 
-	mon, err := monitor.NewMonitor(config.GetDatabasePath(), &config.Core)
+	mon, err := monitor.NewMonitorWithFinalBlock(config.GetDatabasePath(), &config.Core, config.L2.FinalClassicBlock)
 	if err != nil {
 		return err
 	}
@@ -289,7 +289,9 @@ func startup() error {
 	var sequencerFeed chan broadcaster.BroadcastFeedMessage
 	broadcastClientErrChan := make(chan error)
 	if len(config.Feed.Input.URLs) == 0 || len(config.Feed.Input.URLs[0]) == 0 {
-		logger.Warn().Msg("Missing --feed.input.url so not subscribing to feed")
+		if !config.L2.DisableUpstream {
+			logger.Warn().Msg("Missing --feed.input.url so not subscribing to feed")
+		}
 	} else if config.Node.Type() == configuration.ValidatorNodeType {
 		logger.Info().Msg("Ignoring feed because running as validator")
 	} else {

@@ -63,7 +63,11 @@ func NewInitializedMonitor(dbDir string, contractFile string, coreConfig *config
 }
 
 func NewMonitor(dbDir string, coreConfig *configuration.Core) (*Monitor, error) {
-	storage, err := cmachine.NewArbStorage(dbDir, coreConfig)
+	return NewMonitorWithFinalBlock(dbDir, coreConfig, 0)
+}
+
+func NewMonitorWithFinalBlock(dbDir string, coreConfig *configuration.Core, finalBlock uint64) (*Monitor, error) {
+	storage, err := cmachine.NewArbStorageWithFinalBlock(dbDir, coreConfig, finalBlock)
 	if err != nil {
 		return nil, err
 	}
