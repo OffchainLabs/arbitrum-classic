@@ -449,7 +449,8 @@ type Config struct {
 		URL     string `koanf:"url"`
 	} `koanf:"l1"`
 	L2 struct {
-		DisableUpstream bool `koanf:"disable-upstream"`
+		FinalClassicBlock uint64 `koanf:"final-classic-block"`
+		DisableUpstream   bool   `koanf:"disable-upstream"`
 	} `koanf:"l2"`
 	Log           Log        `koanf:"log"`
 	Node          Node       `koanf:"node"`
@@ -705,7 +706,9 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		if l1ChainId.Cmp(big.NewInt(1)) == 0 {
 			err := k.Load(confmap.Provider(map[string]interface{}{
 				"bridge-utils-address":             "0x84efa170dc6d521495d7942e372b8e4b2fb918ec",
+				"core.checkpoint-pruning-mode":     "off",
 				"feed.input.url":                   []string{},
+				"l2.final-classic-block":           22207816,
 				"l2.disable-upstream":              true,
 				"node.aggregator.inbox-address":    "0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f",
 				"node.chain-id":                    "42161",
@@ -725,7 +728,9 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		} else if l1ChainId.Cmp(big.NewInt(4)) == 0 {
 			err := k.Load(confmap.Provider(map[string]interface{}{
 				"bridge-utils-address":             "0xA556F0eF1A0E37a7837ceec5527aFC7771Bf9a67",
+				"core.checkpoint-pruning-mode":     "off",
 				"feed.input.url":                   []string{},
+				"l2.final-classic-block":           13919177,
 				"l2.disable-upstream":              true,
 				"node.aggregator.inbox-address":    "0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e",
 				"node.chain-id":                    "421611",
@@ -1000,6 +1005,7 @@ func beginCommonParse(f *flag.FlagSet) (*koanf.Koanf, error) {
 	f.String("log.rpc", "info", "log level for rpc")
 	f.String("log.core", "info", "log level for general arb node logging")
 
+	f.Int("l2.final-classic-block", 0, "last classic block before Nitro conversion")
 	f.Bool("l2.disable-upstream", false, "disable feed and transaction forwarding")
 
 	f.Bool("pprof-enable", false, "enable profiling server")

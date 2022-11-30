@@ -109,6 +109,9 @@ struct ArbCoreConfig {
     // Delete all database entries except for inbox
     bool test_reset_db_except_inbox{false};
 
+    // Final classic block before Nitro
+    uint64_t final_block{0};
+
     // Whether to lazy load the core machine
     bool lazy_load_core_machine{false};
 

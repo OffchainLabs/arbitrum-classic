@@ -58,6 +58,10 @@ func stringToPruningMode(mode string) (C.PruningMode, error) {
 }
 
 func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, error) {
+	return NewArbStorageWithFinalBlock(dbPath, coreConfig, 0)
+}
+
+func NewArbStorageWithFinalBlock(dbPath string, coreConfig *configuration.Core, finalBlock uint64) (*ArbStorage, error) {
 	cDbPath := C.CString(dbPath)
 	defer C.free(unsafe.Pointer(cDbPath))
 
@@ -108,6 +112,7 @@ func NewArbStorage(dbPath string, coreConfig *configuration.Core) (*ArbStorage, 
 		test_run_until:                     C.int(coreConfig.Test.RunUntil),
 		test_load_count:                    C.int(coreConfig.Test.LoadCount),
 		test_reset_db_except_inbox:         boolToCInt(coreConfig.Test.ResetAllExceptInbox),
+		final_block:                        C.int(finalBlock),
 	}
 
 	cArbStorage := C.createArbStorage(cDbPath, cConfig)
