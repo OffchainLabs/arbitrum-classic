@@ -824,6 +824,11 @@ func ParseNonRelay(ctx context.Context, f *flag.FlagSet, defaultWalletPathname s
 		return nil, nil, nil, nil, errors.New("can't create validator wallet contract with watchtower validator strategy")
 	}
 
+	if len(out.Feed.Input.URLs) > 0 {
+		logger.Info().Msg("Classic Arbitrum sequencer no longer running, so feed is nonexistent")
+		out.Feed.Input.URLs = []string{}
+	}
+
 	return out, wallet, l1Client, l1ChainId, nil
 }
 
