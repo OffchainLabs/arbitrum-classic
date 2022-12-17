@@ -70,9 +70,18 @@ func main() {
 	// Print line number that log was created on
 	logger = arblog.Logger.With().Str("component", "arb-relay").Logger()
 
-	if err := startup(); err != nil {
-		logger.Error().Err(err).Msg("Error running relay")
+	logger.Info().Msg("Classic Arbitrum sequencer no longer running, so feed is nonexistent")
+	logger.Info().Msg("Sleeping forever")
+	for {
+		// Sleep forever
+		select {}
 	}
+
+	/*
+		if err := startup(); err != nil {
+			logger.Error().Err(err).Msg("Error running relay")
+		}
+	*/
 }
 
 func startup() error {
