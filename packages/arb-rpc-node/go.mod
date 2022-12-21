@@ -3,10 +3,9 @@ module github.com/offchainlabs/arbitrum/packages/arb-rpc-node
 go 1.13
 
 require (
-	github.com/btcsuite/btcd v0.22.1 // indirect
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/ethereum/go-ethereum v1.10.18
-	github.com/ethersphere/bee v1.6.1
+	github.com/ethersphere/bee v1.10.0
 	github.com/go-redis/redis/v8 v8.11.4
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
