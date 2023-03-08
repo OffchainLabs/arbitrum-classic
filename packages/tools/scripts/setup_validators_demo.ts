@@ -35,6 +35,23 @@ async function setupRollup(
   const file = fs.readFileSync(`../arb-bridge-eth/${fileName}`).toString()
   const ev = JSON.parse(file)
 
+  // Disable whitelist
+  const inbox = Inbox__factory.connect(ev.inboxAddress, provider)
+  const oldWhitelistAddress = await inbox.whitelist()
+  const newWhitelistAddress = "0x0000000000000000000000000000000000000000"
+  const whitelistConsumers = `${ev.inboxAddress.toLowerCase()}`
+
+  execSync(
+    `
+      yarn workspace arb-bridge-eth hardhat update-whitelist-consumers \
+        --rollup ${ev.rollupAddress.toLowerCase()} \
+        --oldwhitelist ${oldWhitelistAddress.toLowerCase()} \
+        --newwhitelist ${newWhitelistAddress.toLowerCase()} \
+        --whitelistconsumers ${whitelistConsumers} \
+        --network ${network}
+    `
+  )
+
   return {
     rollupAddress: ev.rollupAddress,
     inboxAddress: ev.inboxAddress,
