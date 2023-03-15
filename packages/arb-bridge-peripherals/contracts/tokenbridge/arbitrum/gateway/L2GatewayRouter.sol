@@ -24,7 +24,7 @@ import "../L2ArbitrumMessenger.sol";
 import "arb-bridge-eth/contracts/libraries/AddressAliasHelper.sol";
 
 /**
- * @title Handles withdrawals from Ethereum into Arbitrum. Tokens are routered to their appropriate L2 gateway (Router itself also conforms to the Gateway interface).
+ * @title Handles withdrawals from Arbitrum into Ethereum. Tokens are routered to their appropriate L2 gateway (Router itself also conforms to the Gateway interface).
  * @notice Router also serves as an L2-L1 token address oracle.
  * @notice DEPRECATED - see new repo(https://github.com/OffchainLabs/token-bridge-contracts) for new updates
  */
