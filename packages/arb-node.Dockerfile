@@ -70,7 +70,8 @@ RUN cd arb-node-core && \
     go install -v ./cmd/arb-db && \
     cd ../arb-rpc-node && \
     go install -v ./cmd/arb-node && \
-    go install -v ./cmd/arb-dev-node
+    go install -v ./cmd/arb-dev-node && \
+    go install -v ./cmd/arb-fork-node
 
 FROM offchainlabs/dist-base:0.6.1 as arb-node
 # Export binary
