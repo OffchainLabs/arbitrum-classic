@@ -278,7 +278,10 @@ func (ir *InboxReader) getMessages(ctx context.Context, temporarilyParanoid bool
 				}
 				if arbCorePosition.Cmp(ir.caughtUpTarget) >= 0 {
 					ir.caughtUp = true
-					ir.caughtUpChan <- true
+					select {
+					case ir.caughtUpChan <- true:
+					default:
+					}
 				}
 			}
 			if from.Cmp(currentHeight) >= 0 {
