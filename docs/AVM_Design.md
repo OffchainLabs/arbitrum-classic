@@ -1,4 +1,4 @@
----
+
 id: AVM_Design
 title: AVM design rationale
 sidebar_label: AVM design rationale
