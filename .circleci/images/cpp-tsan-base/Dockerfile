@@ -19,7 +19,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     curl -L https://github.com/facebook/rocksdb/archive/refs/tags/v6.20.3.tar.gz --output rocksdb-6.20.3.tar.gz && \
     tar xf rocksdb-6.20.3.tar.gz && \
     cd rocksdb-6.20.3 && \
-    COMPILE_WITH_TSAN=1 PREFIX=/usr PORTABLE=1 make shared_lib install-shared && \
+    COMPILE_WITH_TSAN=1 EXTRA_CXXFLAGS="-Wno-error=maybe-uninitialized" PREFIX=/usr PORTABLE=1 make shared_lib install-shared && \
     strip --strip-unneeded /usr/lib/librocksdb.so.6.20.3 && \
     cd .. && \
     rm -rf rocksdb-6.20.3*
