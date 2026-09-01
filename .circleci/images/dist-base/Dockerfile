@@ -3,7 +3,7 @@
 ### dist-base
 ### --------------------------------------------------------------------
 
-FROM offchainlabs/backend-base:0.6.1
+FROM offchainlabs/backend-base:0.6.2
 
 USER root
 WORKDIR /
@@ -13,14 +13,14 @@ RUN export CARGO_HOME=/usr/local/cargo && \
 
 USER user
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update && \
     apt-get install -y curl \
     procps jq rsync \
     node-ws vim-tiny libatomic1 python3 \
-    libgmp10 libssl1.1 \
+    libgmp10 libssl3 \
     libgoogle-perftools4 \
     libgflags2.2 libsnappy1v5 libzstd1 dnsutils && \
     apt-get clean && \

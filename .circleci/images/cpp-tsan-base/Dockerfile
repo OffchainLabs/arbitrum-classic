@@ -3,7 +3,7 @@
 ### cpp-tsan-base
 ### --------------------------------------------------------------------
 
-FROM offchainlabs/cpp-base:0.6.1
+FROM offchainlabs/cpp-base:0.6.2
 
 USER root
 WORKDIR /
