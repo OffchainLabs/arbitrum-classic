@@ -59,6 +59,7 @@ typedef struct {
     int32_t test_reorg_to_l2_block;
     int32_t test_reorg_to_log;
     int32_t test_reorg_to_message;
+    int32_t test_reorg_messages;
     int32_t test_run_until;
     int32_t test_load_count;
     int32_t test_reset_db_except_inbox;

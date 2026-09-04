@@ -416,20 +416,18 @@ InitializeResult ArbCore::applyConfig() {
     rocksdb::Status status = rocksdb::Status::OK();
     if (coreConfig.test_reorg_to_l1_block != 0) {
         // Reset database for profile testing
-        status =
-            reorgToL1Block(coreConfig.test_reorg_to_l1_block, false, cache);
+        status = reorgToL1Block(coreConfig.test_reorg_to_l1_block, true, cache);
     } else if (coreConfig.test_reorg_to_l2_block != 0) {
         // Reset database for profile testing
-        status =
-            reorgToL2Block(coreConfig.test_reorg_to_l2_block, false, cache);
+        status = reorgToL2Block(coreConfig.test_reorg_to_l2_block, true, cache);
     } else if (coreConfig.test_reorg_to_log != 0) {
         // Reset database for profile testing
         status =
-            reorgToLogCountOrBefore(coreConfig.test_reorg_to_log, false, cache);
+            reorgToLogCountOrBefore(coreConfig.test_reorg_to_log, true, cache);
     } else if (coreConfig.test_reorg_to_message != 0) {
         // Reset database for profile testing
         status = reorgToMessageCountOrBefore(coreConfig.test_reorg_to_message,
-                                             false, cache);
+                                             true, cache);
     } else if (coreConfig.seed_cache_on_startup) {
         status = reorgToTimestampOrBefore(
             combined_machine_cache.currentTimeExpired(), true, cache);
@@ -1311,6 +1309,16 @@ rocksdb::Status ArbCore::reorgCheckpoints(
         reorgDatabaseToMachineOutput(selected_machine_output, value_cache);
     if (!status.ok()) {
         return status;
+    }
+
+    if (initial_start && coreConfig.test_reorg_messages) {
+        ReadWriteTransaction tx(data_storage);
+        status = deleteBatchItemsStartingAt(
+                     tx, selected_machine_output.fully_processed_inbox.count)
+                     .status;
+        if (!status.ok()) {
+            return status;
+        }
     }
 
     if (initial_start && (core_machine->machine_state.output.l2_block_number !=
@@ -3260,6 +3268,27 @@ ValueResult<uint256_t> ArbCore::totalDelayedMessagesSequencedImpl(
     }
 }
 
+// returns true if any batch items were deleted
+ValueResult<bool> ArbCore::deleteBatchItemsStartingAt(ReadWriteTransaction& tx,
+                                                      uint256_t start) {
+    std::vector<uint8_t> tmp;
+    marshal_uint256_t(start, tmp);
+    rocksdb::Slice start_slice = vecToSlice(tmp);
+
+    auto seq_batch_it = tx.sequencerBatchItemGetIterator(&start_slice);
+    seq_batch_it->Seek(start_slice);
+    bool deleted_any = false;
+    while (seq_batch_it->Valid()) {
+        auto status = tx.sequencerBatchItemDelete(seq_batch_it->key());
+        if (!status.ok()) {
+            return {status, false};
+        }
+        deleted_any = true;
+        seq_batch_it->Next();
+    }
+    return {seq_batch_it->status(), deleted_any};
+}
+
 // addMessages adds the next batch of messages to the machine.  If there is
 // a reorg, the amount of gas used by the last checkpoint is returned.
 ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
@@ -3297,32 +3326,13 @@ ValueResult<std::optional<uint256_t>> ArbCore::addMessages(
         size_t duplicate_seq_batch_items = 0;
 
         if (data.reorg_batch_items) {
-            tmp.clear();
-            marshal_uint256_t(*data.reorg_batch_items, tmp);
-            rocksdb::Slice start_slice = vecToSlice(tmp);
-
-            auto seq_batch_it = tx.sequencerBatchItemGetIterator(&start_slice);
-            seq_batch_it->Seek(start_slice);
-            bool deleted_any = false;
-            while (seq_batch_it->Valid()) {
-                auto status = tx.sequencerBatchItemDelete(seq_batch_it->key());
-                if (!status.ok()) {
-                    std::cerr << "addMessages: issue deleting batch item "
-                                 "during reorg: "
-                              << seq_batch_it->key().ToString()
-                              << ", error: " << status.ToString() << std::endl;
-                    return {status, std::nullopt};
-                }
-                deleted_any = true;
-                seq_batch_it->Next();
+            auto result =
+                deleteBatchItemsStartingAt(tx, *data.reorg_batch_items);
+            if (!result.status.ok()) {
+                std::cerr << "addMessages: issue deleting batch items: "
+                          << result.status.ToString() << std::endl;
             }
-            if (!seq_batch_it->status().ok()) {
-                std::cerr
-                    << "addMessages: error with batch iterator during reorg: "
-                    << seq_batch_it->status().ToString() << std::endl;
-                return {seq_batch_it->status(), std::nullopt};
-            }
-            if (deleted_any) {
+            if (result.data) {
                 reorging_to_count = *data.reorg_batch_items;
             }
         }

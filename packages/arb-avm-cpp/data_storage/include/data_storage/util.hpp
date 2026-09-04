@@ -100,6 +100,9 @@ struct ArbCoreConfig {
     // Reorg database to message
     uint64_t test_reorg_to_message{0};
 
+    // When reorging database on startup, also delete future messages
+    uint64_t test_reorg_messages{0};
+
     // Run until message reached
     uint64_t test_run_until{0};
 
