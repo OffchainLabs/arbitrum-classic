@@ -154,6 +154,11 @@ if (CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
     endif()
 endif()
 
+# Hunter 0.23.260 bundles a FindOpenSSL that cannot parse OpenSSL 3 headers, where
+# OPENSSL_VERSION_NUMBER is a computed macro rather than a hex literal. Dropping its
+# module directory routes this and libff's find_package(OpenSSL) to CMake's module;
+# Hunter's own packages resolve in CONFIG mode and so are unaffected.
+list(FILTER CMAKE_MODULE_PATH EXCLUDE REGEX "/Unpacked/cmake/find$")
 find_package(OpenSSL REQUIRED)
 
 set(Boost_USE_STATIC_LIBS ON)
