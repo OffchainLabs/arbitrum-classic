@@ -11,7 +11,7 @@
   },
   "devDependencies": {
     "@ethersproject/providers": "^5.4.5",
-    "@ethersproject/units": "^5.4.0",
+    "@ethersproject/units": "^5.7.0",
     "@ethersproject/wallet": "^5.4.0",
     "@types/fs-extra": "^9.0.1",
     "@types/yargs": "^17.0.2",
