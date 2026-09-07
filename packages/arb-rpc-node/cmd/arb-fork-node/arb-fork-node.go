@@ -81,6 +81,7 @@ func startup() error {
 	dbDir := fs.String("dbdir", "", "directory to load dev node on. Use temporary if empty")
 	aggStr := fs.String("aggregator", "", "aggregator to use as the sender from this node")
 	chainId64 := fs.Uint64("chainId", 68799, "chain id of chain")
+	lazyloadcore := fs.Bool("lazyloadcore", false, "lazy load core thread")
 	mnemonic := fs.String(
 		"mnemonic",
 		"jar deny prosper gasp flush glass core corn alarm treat leg smart",
@@ -157,6 +158,7 @@ func startup() error {
 		agg,
 		fork.LastMessage,
 		*persistState,
+		*lazyloadcore,
 	)
 	if err != nil {
 		return err

@@ -35,13 +35,14 @@ func NewForkNode(
 	agg common.Address,
 	reorgMessage int64,
 	persistState bool,
+	lazyLoadCore bool,
 ) (*Backend, *txdb.TxDB, *monitor.Monitor, func(), <-chan error, error) {
 	returnErr := func(err error, msg string) (*Backend, *txdb.TxDB, *monitor.Monitor, func(), <-chan error, error) {
 		return nil, nil, nil, nil, nil, errors.Wrap(err, msg)
 	}
 	nodeConfig := configuration.DefaultNodeSettings()
 	coreConfig := configuration.DefaultCoreSettingsMaxExecution()
-	coreConfig.LazyLoadCoreMachine = true
+	coreConfig.LazyLoadCoreMachine = lazyLoadCore
 	coreConfig.Cache.Last = true
 	coreConfig.CheckpointPruneOnStartup = false
 	coreConfig.CheckpointPruningMode = "off"
